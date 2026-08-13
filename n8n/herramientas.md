@@ -7,6 +7,13 @@ La **descripción** de cada herramienta es lo que el LLM lee para decidir
 cuándo llamarla — por eso se redacta en términos de la situación de la
 conversación, no de la implementación.
 
+> 🛑 **Nunca interpolar `$fromAI()` dentro del SQL.** Los valores del modelo
+> van SIEMPRE como `$1`, `$2` en `query` + `options.queryReplacement`.
+> Interpolarlos con `{{ }}` es inyección SQL: el valor lo decide el LLM, que
+> responde a mensajes de WhatsApp de cualquier desconocido. Un mensaje
+> diseñado para ello podría hacer que el modelo produzca
+> `0; drop table leads; --` como "cantidad de invitados".
+
 > ⚠️ **El teléfono del lead nunca va por `$fromAI()`.** Las herramientas que
 > escriben en `leads` (#5, #6, #7) filtran por teléfono; si el modelo lo
 > rellena, se lo inventa. Se conecta desde el webhook igual que el
@@ -27,14 +34,18 @@ conversación, no de la implementación.
 
 **Parámetro:** `invitados` (number)
 
+`query`:
 ```sql
-select s.nombre_sede,
-       p.precio_total,
-       s.incluye_pista_cristal
+select s.nombre_sede, p.precio_total, s.incluye_pista_cristal
 from precios_sedes p
 join sedes s on s.id_sede = p.sede_id
-where p.capacidad_invitados = {{ $fromAI('invitados') }}
-order by p.precio_total;
+where p.capacidad_invitados = $1
+order by p.precio_total
+```
+
+`options.queryReplacement`:
+```
+={{ $fromAI('invitados', 'Cantidad de invitados. Escalón exacto entre 50 y 200 de a 10 (50, 60, 70...). Si el cliente dice un número intermedio como 55, usa el superior: 60.', 'number') }}
 ```
 
 ---
@@ -49,10 +60,16 @@ order by p.precio_total;
 
 **Parámetro:** `tipo_evento` (string)
 
+`query`:
 ```sql
 select nombre_paquete, inclusiones_base, obsequios, excepciones
 from tipos_evento
-where nombre_paquete ilike '%' || {{ $fromAI('tipo_evento') }} || '%';
+where nombre_paquete ilike '%' || $1 || '%'
+```
+
+`options.queryReplacement`:
+```
+={{ $fromAI('tipo_evento', 'Tipo de evento. Uno de: 15 Años, Matrimonio, Grado, Cumpleaños, Empresa, Primera Comunión, Baby Shower.', 'string') }}
 ```
 
 ---
@@ -66,11 +83,15 @@ where nombre_paquete ilike '%' || {{ $fromAI('tipo_evento') }} || '%';
 
 **Parámetro:** ninguno (devuelve el catálogo completo, son 10 filas)
 
+`query`:
 ```sql
 select servicio, precio, detalles, promociones
 from servicios_adicionales_upselling
-order by precio desc;
+order by precio desc
 ```
+
+Sin `queryReplacement` — no recibe entrada del modelo, así que no hay
+superficie de inyección.
 
 ---
 
