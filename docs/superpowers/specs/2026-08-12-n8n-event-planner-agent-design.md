@@ -108,9 +108,11 @@ mensajes (eso lo maneja la memoria de conversación de n8n).
 | requiere_humano | boolean, default false |
 | created_at / updated_at | timestamptz |
 
-## Herramientas del AI Agent (6)
+## Herramientas del AI Agent (7)
 
-Las 4 que definió el negocio + 2 adicionales aprobadas explícitamente:
+Las 4 que definió el negocio + 3 adicionales aprobadas explícitamente. El
+detalle de implementación (SQL, descripciones para el LLM) vive en
+`n8n/herramientas.md`.
 
 1. `consultar_precios_sedes(invitados)` — SELECT en `precios_sedes` JOIN
    `sedes` WHERE `capacidad_invitados = {{invitados}}`. Si el número de
@@ -122,14 +124,39 @@ Las 4 que definió el negocio + 2 adicionales aprobadas explícitamente:
 4. `bloquear_fecha_calendario(fecha, sede, nombre_cliente)` — crea evento
    "SEPARADO - [Nombre Cliente]" en el calendario de la sede + upsert en
    `agenda_reservas` (estado `separado`) + actualiza `leads.estado`.
-5. `enviar_cotizacion_email(email, contenido)` *(agregada)* — Gmail, para
+5. `consultar_servicios_upselling()` *(agregada)* — SELECT en
+   `servicios_adicionales_upselling`. Necesaria porque el prompt prohíbe
+   inventar precios y fotografía/pirotecnia no tenían fuente consultable.
+6. `enviar_cotizacion_email(email, contenido)` *(agregada)* — Gmail, para
    enviar cotización o confirmación por escrito. El guion de ventas no tiene
    un paso explícito para pedir el correo; se agrega un paso opcional al
    prompt para solicitarlo antes de cotizar/confirmar por escrito.
-6. `escalar_a_humano(motivo)` *(agregada)* — marca `leads.requiere_humano =
+7. `escalar_a_humano(motivo)` *(agregada)* — marca `leads.requiere_humano =
    true` y envía WhatsApp al equipo interno con el resumen del caso. Una vez
    marcado, el flujo dejará de responder automáticamente a ese lead (ver
    Flujo n8n).
+
+### Decisiones de construcción del agente
+
+Derivadas de la skill `n8n-agents` (2026-08-13):
+
+- **Aprobación humana**: `bloquear_fecha_calendario` pasa por un nodo de
+  human-in-the-loop por WhatsApp antes de ejecutarse — separar una fecha
+  ocupa una sede real y revertirlo es costoso. `enviar_cotizacion_email` se
+  ejecuta sin aprobación (bajo riesgo). Decisión del negocio, 2026-08-13.
+- **Identidad plumbed, no inferida**: el teléfono del lead se conecta desde
+  el webhook, nunca por `$fromAI()` — las herramientas que escriben en
+  `leads` filtran por él y el modelo lo fabricaría.
+- **`{{ $now }}` en el system prompt**: sin fecha actual el agente no puede
+  resolver "el fin de semana anterior o el siguiente" ni validar fechas.
+- **`options.maxIterations`** elevado (~50): con 7 herramientas el agente
+  encadena varias llamadas por turno y el default de un dígito lo corta.
+- **Memoria**: `memoryPostgresChat` con `sessionKey` = teléfono y
+  `contextWindowLength` elevado desde el default de 5 — el embudo de ventas
+  tiene 7 pasos y perdería el contexto inicial.
+- **Herramientas multi-paso como sub-workflows** (`.toolWorkflow`):
+  `verificar_disponibilidad_calendario`, `bloquear_fecha_calendario` y
+  `escalar_a_humano` combinan varias operaciones.
 
 ## System Prompt (Brian Otero)
 

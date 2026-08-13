@@ -7,6 +7,13 @@ La **descripción** de cada herramienta es lo que el LLM lee para decidir
 cuándo llamarla — por eso se redacta en términos de la situación de la
 conversación, no de la implementación.
 
+> ⚠️ **El teléfono del lead nunca va por `$fromAI()`.** Las herramientas que
+> escriben en `leads` (#5, #6, #7) filtran por teléfono; si el modelo lo
+> rellena, se lo inventa. Se conecta desde el webhook igual que el
+> `sessionKey` de la memoria. Solo van por `$fromAI()` los datos que el
+> agente genuinamente decide: invitados, tipo de evento, fecha, sede,
+> nombre y motivo.
+
 ---
 
 ## 1. `consultar_precios_sedes`
@@ -94,10 +101,17 @@ completo. Sin eventos → disponible.
 
 **Parámetros:** `fecha` (string), `sede` (string), `nombre_cliente` (string)
 
-**Implementación:** tres pasos —
+> 🔒 **Requiere aprobación humana** (decisión del negocio, 2026-08-13).
+> Separar una fecha ocupa una sede real y revertirlo es costoso, así que la
+> herramienta va detrás de un nodo human-in-the-loop por WhatsApp: el equipo
+> aprueba antes de que se cree el evento. El mensaje de aprobación debe
+> mostrar los parámetros reales con `{{ $tool.parameters.fecha }}` etc., no
+> una paráfrasis generada por el modelo.
+
+**Implementación:** sub-workflow (`.toolWorkflow`), tres pasos —
 1. Google Calendar *Create Event*: título `SEPARADO - {nombre_cliente}`, todo el día.
 2. `insert into agenda_reservas (sede_id, lead_id, fecha_solicitada, nombre_cliente, estado, google_event_id) values (..., 'separado', ...)`
-3. `update leads set estado = 'separado' where telefono = <sesión>`
+3. `update leads set estado = 'separado' where telefono = <plumbed desde el webhook>`
 
 ---
 
