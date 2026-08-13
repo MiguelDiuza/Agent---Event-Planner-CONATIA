@@ -149,6 +149,27 @@ al upsert del lead — a partir de ahí ese cliente lo atiende una persona.
 
 ---
 
+## Nodos n8n a usar
+
+Verificado contra la instancia real vía `search_nodes` / `get_node`
+(2026-08-13, n8n-mcp 2.69.0):
+
+| Pieza | Node type | Nota |
+|---|---|---|
+| Entrada WhatsApp | `n8n-nodes-base.whatsAppTrigger` | nativo; el flujo anterior usaba webhook genérico |
+| Salida WhatsApp | `n8n-nodes-base.whatsApp` | operación `send` |
+| **Aprobación humana** | `n8n-nodes-base.whatsApp` | operación **`sendAndWait`** — confirmado disponible |
+| Herramientas #1–#3 (consultas) | `n8n-nodes-base.postgresTool` | variante AI Tool; evita 3 sub-workflows |
+| Herramientas #4, #5, #7 | `@n8n/n8n-nodes-langchain.toolWorkflow` | multi-paso |
+| Agente | `@n8n/n8n-nodes-langchain.agent` | |
+| Modelo | `@n8n/n8n-nodes-langchain.lmChatGoogleGemini` | |
+| Memoria | `@n8n/n8n-nodes-langchain.memoryPostgresChat` | `sessionKey` = teléfono |
+
+La operación `sendAndWait` del nodo de WhatsApp resuelve la aprobación de
+`bloquear_fecha_calendario` sin nodos community: el sub-workflow envía los
+parámetros reales al número interno y espera la respuesta antes de crear el
+evento en Calendar.
+
 ## Nota sobre el conteo
 
 El documento del negocio definía 4 herramientas. Aquí hay 7 porque:
