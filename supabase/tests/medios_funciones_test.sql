@@ -80,10 +80,14 @@ $$, $$ values (0) $$, 'referencia vacía no empareja nada');
 -- se le envió a este lead. Antes de esta llamada envios_medios ya tiene una
 -- fila para este teléfono (la del anti-repetición arriba); esta suma la
 -- segunda.
+-- count(*) sobre una subconsulta que envuelve la llamada siempre da 1, sin
+-- importar si la función insertó algo o devolvió NULL: una función escalar
+-- en el SELECT list produce exactamente una fila de salida. count(expr), en
+-- cambio, cuenta valores no nulos: si la función devuelve NULL (el teléfono
+-- no resuelve a ningún lead), el conteo cae a 0. Así la aserción sí puede
+-- fallar cuando la función falla.
 select results_eq($$
-    select count(*)::int from (
-        select fn_registrar_envio('11111111-1111-1111-1111-111111111114', '573001112233')
-    ) t
+    select count(fn_registrar_envio('11111111-1111-1111-1111-111111111114', '573001112233'))::int
 $$, $$ values (1) $$, 'registrar un envío devuelve el id de la fila creada');
 
 select results_eq($$
