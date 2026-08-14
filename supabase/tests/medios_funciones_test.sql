@@ -1,7 +1,7 @@
 -- Funciones que consume el sub-workflow enviar_medios.
 -- Correr con: supabase test db
 begin;
-select plan(8);
+select plan(11);
 
 insert into sedes (id_sede, nombre_sede)
 values ('11111111-1111-1111-1111-111111111111', 'Salón Prueba Alfa'),
@@ -15,7 +15,10 @@ values ('11111111-1111-1111-1111-111111111113', 'imagen', 'https://ejemplo.test/
         '11111111-1111-1111-1111-111111111111', 1),
        ('11111111-1111-1111-1111-111111111114', 'video', 'https://ejemplo.test/b.mp4',
         'Recorrido', 'cuando el cliente duda antes de cerrar',
-        '11111111-1111-1111-1111-111111111111', 2);
+        '11111111-1111-1111-1111-111111111111', 2),
+       ('11111111-1111-1111-1111-111111111115', 'imagen', 'https://ejemplo.test/c.jpg',
+        'Entrada', 'para salón Beta',
+        '11111111-1111-1111-1111-111111111116', 1);
 
 select results_eq($$
     select count(*)::int from fn_medios_para_enviar('sede', 'Salón Prueba Alfa', '573001112233', 'ambos')
@@ -54,6 +57,21 @@ $$, $$ values (1) $$, 'diagnóstico: la referencia existe, el material ya se env
 select results_eq($$
     select total_existentes::int from fn_medios_diagnostico('sede', 'Sede Inexistente', 'ambos')
 $$, $$ values (0) $$, 'diagnóstico: la referencia no existe, el agente eligió mal');
+
+-- Escaping de metacaracteres LIKE: % no debe emparejar todo.
+select results_eq($$
+    select count(*)::int from fn_medios_para_enviar('sede', '%', '573001112233', 'ambos')
+$$, $$ values (0) $$, 'metacaracteres LIKE escapados: % no empareja todas las sedes');
+
+-- Referencias vacías o solo espacios no deben emparejar nada.
+select results_eq($$
+    select count(*)::int from fn_medios_para_enviar('sede', '', '573001112233', 'ambos')
+$$, $$ values (0) $$, 'referencia vacía no empareja nada');
+
+-- Nombres exactos ganan sobre subcadenas ambiguas: Beta no debe devolver media de Alfa.
+select results_eq($$
+    select count(*)::int from fn_medios_para_enviar('sede', 'Salón Prueba Beta', '573001112233', 'ambos')
+$$, $$ values (1) $$, 'nombre exacto gana: Beta devuelve solo media de Beta');
 
 select * from finish();
 rollback;
