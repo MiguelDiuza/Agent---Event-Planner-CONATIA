@@ -1,7 +1,7 @@
 -- Funciones que consume el sub-workflow enviar_medios.
 -- Correr con: supabase test db
 begin;
-select plan(11);
+select plan(14);
 
 insert into sedes (id_sede, nombre_sede)
 values ('11111111-1111-1111-1111-111111111116', 'Salón Prueba Alfa Anexo'),
@@ -75,6 +75,30 @@ $$, $$ values (0) $$, 'metacaracteres LIKE escapados: % no empareja todas las se
 select results_eq($$
     select count(*)::int from fn_medios_para_enviar('sede', '', '573001112233', 'ambos')
 $$, $$ values (0) $$, 'referencia vacía no empareja nada');
+
+-- Registro de envíos: fn_registrar_envio deja constancia de que un medio ya
+-- se le envió a este lead. Antes de esta llamada envios_medios ya tiene una
+-- fila para este teléfono (la del anti-repetición arriba); esta suma la
+-- segunda.
+select results_eq($$
+    select count(*)::int from (
+        select fn_registrar_envio('11111111-1111-1111-1111-111111111114', '573001112233')
+    ) t
+$$, $$ values (1) $$, 'registrar un envío devuelve el id de la fila creada');
+
+select results_eq($$
+    select count(*)::int from envios_medios e
+    join leads l on l.id = e.lead_id
+    where l.telefono = '573001112233'
+$$, $$ values (2) $$, 'el envío queda asociado al lead por su teléfono');
+
+-- Resumen del catálogo: fn_catalogo_digest debe mencionar las referencias
+-- reales para que el system message del agente sepa qué existe.
+select matches(
+    fn_catalogo_digest(),
+    'Salón Prueba Alfa',
+    'el resumen del catálogo menciona la referencia y llega al system message'
+);
 
 select * from finish();
 rollback;
