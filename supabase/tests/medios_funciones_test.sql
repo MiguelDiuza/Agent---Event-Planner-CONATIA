@@ -5,7 +5,7 @@ select plan(11);
 
 insert into sedes (id_sede, nombre_sede)
 values ('11111111-1111-1111-1111-111111111111', 'Salón Prueba Alfa'),
-       ('11111111-1111-1111-1111-111111111116', 'Salón Prueba Beta');
+       ('11111111-1111-1111-1111-111111111116', 'Salón Prueba Alfa Anexo');
 insert into leads (id, telefono)
 values ('11111111-1111-1111-1111-111111111117', '573001112233');
 
@@ -17,7 +17,7 @@ values ('11111111-1111-1111-1111-111111111113', 'imagen', 'https://ejemplo.test/
         'Recorrido', 'cuando el cliente duda antes de cerrar',
         '11111111-1111-1111-1111-111111111111', 2),
        ('11111111-1111-1111-1111-111111111115', 'imagen', 'https://ejemplo.test/c.jpg',
-        'Entrada', 'para salón Beta',
+        'Entrada Anexo', 'para salón Alfa Anexo',
         '11111111-1111-1111-1111-111111111116', 1);
 
 select results_eq($$
@@ -35,6 +35,14 @@ $$, $$ values ('video') $$, 'tipo_medio filtra: fotos y videos sirven en momento
 select results_eq($$
     select count(*)::int from fn_medios_para_enviar('sede', 'Sede Inexistente', '573001112233', 'ambos')
 $$, $$ values (0) $$, 'una referencia que no existe devuelve cero filas, sin error');
+
+-- Nombres exactos ganan sobre substrings ambigüos: 'Salón Prueba Alfa' es un
+-- substring exacto de ambos 'Salón Prueba Alfa' y 'Salón Prueba Alfa Anexo'.
+-- Sin ORDER BY con preferencia exacta, Postgres elige arbitrariamente. Con la
+-- nueva lógica, el match exacto gana y solo retorna media de Alfa (2).
+select results_eq($$
+    select count(*)::int from fn_medios_para_enviar('sede', 'Salón Prueba Alfa', '573001112233', 'ambos')
+$$, $$ values (2) $$, 'nombre exacto gana sobre substring: ''Alfá'' ≠ ''Alfá Anexo''');
 
 -- Anti-repetición: se marca la foto como ya enviada a este lead.
 insert into envios_medios (lead_id, medio_id)
@@ -67,11 +75,6 @@ $$, $$ values (0) $$, 'metacaracteres LIKE escapados: % no empareja todas las se
 select results_eq($$
     select count(*)::int from fn_medios_para_enviar('sede', '', '573001112233', 'ambos')
 $$, $$ values (0) $$, 'referencia vacía no empareja nada');
-
--- Nombres exactos ganan sobre subcadenas ambiguas: Beta no debe devolver media de Alfa.
-select results_eq($$
-    select count(*)::int from fn_medios_para_enviar('sede', 'Salón Prueba Beta', '573001112233', 'ambos')
-$$, $$ values (1) $$, 'nombre exacto gana: Beta devuelve solo media de Beta');
 
 select * from finish();
 rollback;
