@@ -4,8 +4,8 @@ begin;
 select plan(11);
 
 insert into sedes (id_sede, nombre_sede)
-values ('11111111-1111-1111-1111-111111111111', 'Salón Prueba Alfa'),
-       ('11111111-1111-1111-1111-111111111116', 'Salón Prueba Alfa Anexo');
+values ('11111111-1111-1111-1111-111111111116', 'Salón Prueba Alfa Anexo'),
+       ('11111111-1111-1111-1111-111111111111', 'Salón Prueba Alfa');
 insert into leads (id, telefono)
 values ('11111111-1111-1111-1111-111111111117', '573001112233');
 
