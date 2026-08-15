@@ -1,3 +1,8 @@
+-- SUPERSEDIDO — reemplaza por `create or replace` el cuerpo definido en
+-- 20260814000003, y a su vez queda reemplazado por 20260814000008
+-- (normalización de parámetros, validación del enum y guard de teléfono), que
+-- es la versión vigente de `fn_medios_para_enviar` y `fn_medios_diagnostico`.
+--
 -- Escaping de metacaracteres LIKE y ordenamiento determinista en funciones de medios.
 --
 -- El parámetro p_referencia proviene de mensajes WhatsApp relayados por un modelo de LLM,

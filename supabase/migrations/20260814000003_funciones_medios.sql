@@ -1,3 +1,9 @@
+-- SUPERSEDIDO — no copiar de aquí. El cuerpo de estas dos funciones se
+-- reemplazó por `create or replace` en 20260814000006 (escape de
+-- metacaracteres LIKE) y en 20260814000008 (normalización de parámetros,
+-- validación del enum y guard de teléfono). Lo que sigue conserva el ILIKE sin
+-- escapar y sin recortar: es la versión vulnerable, se deja solo por historia.
+--
 -- Funciones que consume el sub-workflow enviar_medios en n8n.
 --
 -- La lógica vive aquí y no como texto dentro de los nodos para poder
