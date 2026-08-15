@@ -35,7 +35,7 @@ Dos ajustes de implementación, ambos al servicio de lo mismo — poder probar l
 | `supabase/migrations/20260814000002_vista_catalogo.sql` | Vista `vista_catalogo_medios` |
 | `supabase/migrations/20260814000003_funciones_medios.sql` | Funciones de selección y diagnóstico |
 | `supabase/migrations/20260814000004_funciones_registro.sql` | Funciones de registro de envío y de resumen del catálogo |
-| `supabase/migrations/20260814000005_seed_medios.sql` | Carga inicial del contenido real |
+| `supabase/migrations/20260814000009_seed_medios.sql` | Carga inicial del contenido real |
 | `supabase/tests/medios_esquema_test.sql` | Pruebas de tablas, constraints y bucket |
 | `supabase/tests/medios_catalogo_test.sql` | Pruebas de la vista de resumen |
 | `supabase/tests/medios_funciones_test.sql` | Pruebas de selección, diagnóstico, registro y digest |
@@ -753,7 +753,7 @@ EOF
 Trabajo manual sobre el material del negocio. Sin esto, la herramienta funciona pero no tiene nada que enviar.
 
 **Files:**
-- Create: `supabase/migrations/20260814000005_seed_medios.sql`
+- Create: `supabase/migrations/20260814000009_seed_medios.sql`
 - Modify: `README.md`
 
 **Interfaces:**
@@ -798,7 +798,7 @@ http://127.0.0.1:54321/storage/v1/object/public/medios/sedes/salon-cristal-01.jp
 
 - [ ] **Step 4: Escribir el seed**
 
-Crear `supabase/migrations/20260814000005_seed_medios.sql`. Una fila por archivo; `cuando_usar` se redacta en términos de la conversación, no del archivo — es lo que el agente lee para decidir:
+Crear `supabase/migrations/20260814000009_seed_medios.sql`. Una fila por archivo; `cuando_usar` se redacta en términos de la conversación, no del archivo — es lo que el agente lee para decidir:
 
 ```sql
 -- Carga inicial del catálogo de medios.
@@ -994,6 +994,15 @@ hay medios que enviar el nodo no emite ítems y n8n salta el resto del
 sub-workflow, así que la rama de diagnóstico del Step 4 nunca se ejecutaría y
 el agente se quedaría sin respuesta.
 
+> ⚠️ **`tipo_medio` nunca puede llegar como cadena vacía.** Las funciones ahora
+> validan ese parámetro y lanzan excepción con un valor inválido — es lo que
+> convierte un error de orden de parámetros en un fallo ruidoso durante la
+> construcción en vez de una mentira silenciosa a un cliente. Pero n8n suele
+> materializar un parámetro de herramienta sin rellenar como `''`, y el
+> `default 'ambos'` solo aplica cuando el argumento se **omite**, cosa que una
+> llamada posicional de cuatro placeholders nunca hace. Envuelve el valor:
+> `{{ $json.tipo_medio || 'ambos' }}`.
+
 - [ ] **Step 3: Nodo IF "¿Hay medios?"**
 
 Condición: *String* → `{{ $json.id }}` → **is not empty**.
@@ -1057,6 +1066,19 @@ select fn_registrar_envio($1, $2)
 ```
 
 Conectar de vuelta al Loop Over Items para la siguiente iteración.
+
+> ⚠️ **No asumas que devolvió algo.** `fn_registrar_envio` devuelve NULL sin
+> error si el teléfono no existe en `leads` — inserta cero filas y calla. En el
+> flujo real el lead se hace upsert al inicio de cada ejecución, así que no
+> debería pasar; pero el nodo no debe tratar el resultado como un id garantizado.
+>
+> ⚠️ **Los nodos de WhatsApp van con `continueRegularOutput`, así que un envío
+> fallido también emite un ítem por la salida normal** y llegaría hasta aquí,
+> quedando registrado como enviado. Eso contradice la prueba del spec ("con una
+> URL inválida no se registra el envío") y es peor de lo que parece: el filtro
+> anti-repetición suprimiría para siempre cualquier archivo que Meta haya
+> rechazado. Hace falta un IF sobre el campo de error del nodo de WhatsApp antes
+> de registrar.
 
 - [ ] **Step 8: Nodo Set "Resumen" a la salida del loop**
 
