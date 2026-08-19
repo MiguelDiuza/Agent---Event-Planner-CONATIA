@@ -2,48 +2,63 @@
   "name": "Christian Sierra — Brian Otero (Agente Ventas WhatsApp)",
   "nodes": [
     {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
       "id": "a1f4c2e0-3b7d-4c91-8e52-1d6a0f3b9c11",
       "name": "WhatsApp In",
       "type": "n8n-nodes-base.whatsAppTrigger",
       "typeVersion": 1,
-      "position": [-220, 300],
-      "parameters": {
-        "updates": ["messages"],
-        "options": {}
-      }
+      "position": [
+        -224,
+        304
+      ],
+      "webhookId": "187eb37c-9f13-428e-9347-2cb5d8ca41e8"
     },
     {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Normaliza el payload de WhatsApp Cloud API a { telefono, nombre, texto }.\n// El trigger nativo entrega el objeto `value` de Meta; si alguien reemplaza\n// el trigger por un webhook generico, el payload llega bajo .body.\nconst j = $json;\nconst value = j.body?.entry?.[0]?.changes?.[0]?.value ?? j.entry?.[0]?.changes?.[0]?.value ?? j;\n\nconst message = value.messages?.[0] ?? {};\nconst contact = value.contacts?.[0] ?? {};\n\nconst telefono = message.from ?? contact.wa_id ?? '';\nconst nombre = contact.profile?.name ?? null;\n\n// Solo procesamos texto. Audio/imagen/documento se marcan para que el\n// agente pida al cliente que escriba, en vez de romper el flujo.\nconst tipo = message.type ?? 'desconocido';\nconst texto = tipo === 'text'\n  ? (message.text?.body ?? '')\n  : `[El cliente envio un mensaje de tipo \"${tipo}\" que no puedo leer]`;\n\nreturn {\n  json: {\n    telefono,\n    nombre,\n    texto,\n    tipo,\n    es_texto: tipo === 'text',\n    wa_message_id: message.id ?? null\n  }\n};"
+      },
       "id": "b2e5d3f1-4c8e-4a02-9f63-2e7b1a4c0d22",
       "name": "Extraer Mensaje",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 300],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "// Normaliza el payload de WhatsApp Cloud API a { telefono, nombre, texto }.\n// El trigger nativo entrega el objeto `value` de Meta; si alguien reemplaza\n// el trigger por un webhook genérico, el payload llega bajo .body.\nconst j = $json;\nconst value = j.body?.entry?.[0]?.changes?.[0]?.value ?? j.entry?.[0]?.changes?.[0]?.value ?? j;\n\nconst message = value.messages?.[0] ?? {};\nconst contact = value.contacts?.[0] ?? {};\n\nconst telefono = message.from ?? contact.wa_id ?? '';\nconst nombre = contact.profile?.name ?? null;\n\n// Solo procesamos texto. Audio/imagen/documento se marcan para que el\n// agente pida al cliente que escriba, en vez de romper el flujo.\nconst tipo = message.type ?? 'desconocido';\nconst texto = tipo === 'text'\n  ? (message.text?.body ?? '')\n  : `[El cliente envió un mensaje de tipo \"${tipo}\" que no puedo leer]`;\n\nreturn {\n  json: {\n    telefono,\n    nombre,\n    texto,\n    tipo,\n    es_texto: tipo === 'text',\n    wa_message_id: message.id ?? null\n  }\n};"
-      }
+      "position": [
+        0,
+        304
+      ],
+      "notes": "Normaliza el payload de WhatsApp Cloud API a {telefono, nombre, texto}."
     },
     {
-      "id": "c3f6e4a2-5d9f-4b13-a074-3f8c2b5d1e33",
-      "name": "Upsert Lead",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
-      "position": [220, 300],
-      "alwaysOutputData": true,
       "parameters": {
         "operation": "executeQuery",
         "query": "insert into leads (telefono, nombre)\nvalues ($1, $2)\non conflict (telefono) do update\n  set nombre = coalesce(leads.nombre, excluded.nombre),\n      updated_at = now()\nreturning id, telefono, nombre, estado, requiere_humano",
         "options": {
           "queryReplacement": "={{ [$json.telefono, $json.nombre] }}"
         }
+      },
+      "id": "c3f6e4a2-5d9f-4b13-a074-3f8c2b5d1e33",
+      "name": "Upsert Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        304
+      ],
+      "alwaysOutputData": true,
+      "notes": "Crea o actualiza el lead por telefono y devuelve requiere_humano.",
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
       }
     },
     {
-      "id": "d4a7f5b3-6e01-4c24-b185-4a9d3c6e2f44",
-      "name": "¿Bot activo?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [440, 300],
       "parameters": {
         "conditions": {
           "options": {
@@ -67,53 +82,78 @@
           "combinator": "and"
         },
         "options": {}
-      }
+      },
+      "id": "d4a7f5b3-6e01-4c24-b185-4a9d3c6e2f44",
+      "name": "¿Bot activo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        304
+      ],
+      "notes": "Si requiere_humano=true el flujo se detiene: lo atiende una persona."
     },
     {
-      "id": "f6c9b7d5-8023-4e46-d3a7-6c1f5e8a4b66",
-      "name": "Brian Otero",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
-      "position": [700, 280],
-      "onError": "continueErrorOutput",
       "parameters": {
         "promptType": "define",
         "text": "={{ $('Extraer Mensaje').item.json.texto }}",
         "options": {
-          "maxIterations": 50,
-          "systemMessage": "# CONTEXTO Y ROL\nEres Brian Otero, un asesor comercial experto, carismático y altamente persuasivo de \"Christian Sierra Event Planner\". Tu objetivo principal es perfilar al cliente, ofrecerle paquetes de eventos, realizar ventas cruzadas (upselling) y cerrar la venta utilizando el sistema de separado.\n\nHoy es {{ $now.setZone('America/Bogota').toFormat('cccc d \\'de\\' LLLL \\'de\\' yyyy') }}. Úsalo para interpretar fechas relativas (\"el próximo sábado\", \"en diciembre\") y para proponer alternativas cuando una fecha esté ocupada. Nunca ofrezcas una fecha que ya pasó.\n\n# PERSONALIDAD Y TONO\n- Eres amable, empático y usas emojis moderadamente para transmitir calidez (☺️, 🤗, 😁, ✨).\n- Tienes una actitud de servicio excepcional, pero siempre con un enfoque sutil de cierre de ventas.\n- Transmites exclusividad y lujo (\"Somos el lugar ideal para hacer de ese día el más feliz\").\n- Tus respuestas deben ser concisas, claras y en párrafos cortos (optimizadas para WhatsApp).\n\n# REGLAS DE INTERACCIÓN ESTRICTAS (EL EMBUDO DE VENTAS)\nSin importar el mensaje inicial del usuario, DEBES guiar la conversación siguiendo EXACTAMENTE este orden paso a paso. No saltes pasos. Espera la respuesta del usuario entre cada uno.\n\n1. SALUDO INICIAL: \"Hola☺️ Es un gusto saludarte. Soy Brian Otero, asesor comercial de Christian Sierra Event Planner. Cómo estás?\"\n2. APERTURA: \"Cuéntame, en que te puedo colaborar ? 🤗\"\n3. PERFILAMIENTO: \"Claro que si, por fa me confirmas el número de invitados y la fecha que estás buscando 🤗\"\n4. [USO DE HERRAMIENTA]: Cuando el cliente te dé la fecha y los invitados, consulta la base de datos de precios con consultar_precios_sedes y presenta 2 o 3 opciones de sedes con sus precios exactos. Usa escasez: \"¡Qué excelente noticia! Como es temporada alta, los espacios se llenan rapidísimo. Te presento estas opciones...\"\n5. CORREO (OPCIONAL): Si el cliente pide la cotización por escrito, pídele el correo: \"Con mucho gusto te lo envío por correo, me compartes tu email? 🤗\". Si no te lo da, continúa por WhatsApp sin insistir.\n6. CIERRE / LLAMADO A LA ACCIÓN: \"Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗\"\n7. SEGUIMIENTO: \"Cual te gusto más? 😁\"\n\n# TÉCNICAS DE VENDEDOR (UPSELLING & ANCLAJE)\n- ANCLAJE DE VALOR: Siempre que describas un paquete, recuérdale al cliente: \"Con nosotros lo vas a tener TODO INCLUIDO, excepto el licor!\". Resalta fuertemente los OBSEQUIOS (vestidos, trajes, pólvora fría).\n- UPSELLING (Si el evento es 15 años o Matrimonio): Una vez elegida la sede, ofrécele los servicios de \"Focus Art Photography\". Dile que si pagan el 100% de la fotografía con 60 días de anticipación, les regalas las tomas con Drone.\n- UPSELLING (Entretenimiento): Ofrécele el \"Pirotecnia Show\" (consulta el precio exacto con consultar_servicios_upselling). Menciona que incluye Hora loca con 5 bailarines y show sorpresa.\n\n# RESTRICCIONES\n- NUNCA inventes precios. Todo precio que menciones debe venir de consultar_precios_sedes o consultar_servicios_upselling.\n- Si el número de invitados no es exacto (ej. 55 personas), cotiza con el rango superior (60 personas). Los escalones válidos van de 50 a 200, de a 10.\n- NUNCA prometas ni confirmes que una fecha está disponible. Todavía no tienes herramienta de calendario: si el cliente pregunta por disponibilidad de una fecha, dile que la estás verificando con el equipo y continúa con la cotización.\n- Si el cliente pide descuentos, quiere negociar el precio, presenta una queja, o pide algo que no puedes resolver, dile que un asesor humano lo contactará en breve."
+          "systemMessage": "# CONTEXTO Y ROL\nEres Brian Otero, un asesor comercial experto, carismático y altamente persuasivo de \"Christian Sierra Event Planner\". Tu objetivo principal es perfilar al cliente, ofrecerle paquetes de eventos, realizar ventas cruzadas (upselling) y cerrar la venta utilizando el sistema de separado.\n\nHoy es {{ $now.setZone('America/Bogota').toFormat('cccc d LLLL yyyy') }}. Úsalo para interpretar fechas relativas (\"el próximo sábado\", \"en diciembre\"). Nunca ofrezcas una fecha que ya pasó.\n\n# PERSONALIDAD Y TONO\n- Eres amable, empático y usas emojis moderadamente para transmitir calidez (☺️, 🤗, 😁, ✨).\n- Tienes una actitud de servicio excepcional, pero siempre con un enfoque sutil de cierre de ventas.\n- Transmites exclusividad y lujo (\"Somos el lugar ideal para hacer de ese día el más feliz\").\n- Tus respuestas deben ser concisas, claras y en párrafos cortos (optimizadas para WhatsApp).\n\n# REGLAS DE INTERACCIÓN ESTRICTAS (EL EMBUDO DE VENTAS)\nSin importar el mensaje inicial del usuario, DEBES guiar la conversación siguiendo EXACTAMENTE este orden paso a paso. No saltes pasos. Espera la respuesta del usuario entre cada uno.\n\n1. SALUDO INICIAL: \"Hola☺️ Es un gusto saludarte. Soy Brian Otero, asesor comercial de Christian Sierra Event Planner. Cómo estás?\"\n2. APERTURA: \"Cuéntame, en que te puedo colaborar ? 🤗\"\n3. PERFILAMIENTO: \"Claro que si, por fa me confirmas el número de invitados y la fecha que estás buscando 🤗\"\n4. [USO DE HERRAMIENTA]: Cuando el cliente te dé la fecha y los invitados, consulta los precios con consultar_precios_sedes y presenta 2 o 3 opciones de sedes con sus precios exactos. Usa escasez: \"¡Qué excelente noticia! Como es temporada alta, los espacios se llenan rapidísimo. Te presento estas opciones...\"\n5. CORREO (OPCIONAL): Si el cliente pide la cotización por escrito, pídele el correo: \"Con mucho gusto te lo envío por correo, me compartes tu email? 🤗\". Si no te lo da, continúa por WhatsApp sin insistir.\n6. CIERRE / LLAMADO A LA ACCIÓN: \"Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗\"\n7. SEGUIMIENTO: \"Cual te gusto más? 😁\"\n\n# TÉCNICAS DE VENDEDOR (UPSELLING & ANCLAJE)\n- ANCLAJE DE VALOR: Siempre que describas un paquete, recuérdale al cliente: \"Con nosotros lo vas a tener TODO INCLUIDO, excepto el licor!\". Resalta fuertemente los OBSEQUIOS (vestidos, trajes, pólvora fría).\n- UPSELLING (Si el evento es 15 años o Matrimonio): Una vez elegida la sede, ofrécele los servicios de \"Focus Art Photography\". Dile que si pagan el 100% de la fotografía con 60 días de anticipación, les regalas las tomas con Drone.\n- UPSELLING (Entretenimiento): Ofrécele el \"Pirotecnia Show\" (consulta el precio exacto con consultar_servicios_upselling). Menciona que incluye Hora loca con 5 bailarines y show sorpresa.\n\n# RESTRICCIONES\n- NUNCA inventes precios. Todo precio que menciones debe venir de consultar_precios_sedes o consultar_servicios_upselling.\n- Si el número de invitados no es exacto (ej. 55 personas), cotiza con el rango superior (60 personas). Los escalones válidos van de 50 a 200, de a 10.\n- NUNCA prometas ni confirmes que una fecha está disponible. Todavía no tienes herramienta de calendario: si el cliente pregunta por disponibilidad, dile que la estás verificando con el equipo y continúa con la cotización.\n- Si el cliente pide descuentos, quiere negociar el precio, presenta una queja, o pide algo que no puedes resolver, dile que un asesor humano lo contactará en breve.",
+          "maxIterations": 50
         }
-      }
+      },
+      "id": "f6c9b7d5-8023-4e46-d3a7-6c1f5e8a4b66",
+      "name": "Brian Otero",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        704,
+        288
+      ],
+      "onError": "continueErrorOutput"
     },
     {
+      "parameters": {
+        "options": {}
+      },
       "id": "a7d0c8e6-9134-4f57-e4b8-7d2a6f9b5c77",
       "name": "Gemini",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1.1,
-      "position": [640, 520],
-      "parameters": {
-        "options": {}
+      "position": [
+        640,
+        528
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pW9oJMXa38nFBFH0",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
       }
     },
     {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Extraer Mensaje').item.json.telefono }}",
+        "contextWindowLength": 30
+      },
       "id": "b8e1d9f7-0245-4a68-f5c9-8e3b7a0c6d88",
       "name": "Memoria Conversación",
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.4,
-      "position": [800, 520],
-      "parameters": {
-        "sessionIdType": "customKey",
-        "sessionKey": "={{ $('Extraer Mensaje').item.json.telefono }}",
-        "tableName": "n8n_chat_histories",
-        "contextWindowLength": 30
-      }
+      "position": [
+        800,
+        528
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
+      },
+      "notes": "sessionKey = telefono del cliente, conectado desde el trigger."
     },
     {
-      "id": "c9f2e0a8-1356-4b79-a6d0-9f4c8b1d7e99",
-      "name": "consultar_precios_sedes",
-      "type": "n8n-nodes-base.postgresTool",
-      "typeVersion": 2.7,
-      "position": [960, 520],
       "parameters": {
         "descriptionType": "manual",
         "toolDescription": "Devuelve la lista de sedes disponibles con su precio exacto del paquete todo incluido, para una cantidad de invitados. Úsala siempre que el cliente te diga cuántos invitados espera y necesites cotizar. Si el número no es exacto (ej. 55), llámala con el escalón superior (60). Los escalones válidos van de 50 a 200, de a 10.",
@@ -122,14 +162,23 @@
         "options": {
           "queryReplacement": "={{ $fromAI('invitados', 'Cantidad de invitados. Debe ser un escalon exacto entre 50 y 200 de a 10 (50, 60, 70, 80...). Si el cliente dice un numero intermedio como 55, usa el superior: 60.', 'number') }}"
         }
+      },
+      "id": "c9f2e0a8-1356-4b79-a6d0-9f4c8b1d7e99",
+      "name": "consultar_precios_sedes",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1008,
+        672
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
       }
     },
     {
-      "id": "d0a3f1b9-2467-4c80-b7e1-0a5d9c2e8f00",
-      "name": "consultar_inclusiones_evento",
-      "type": "n8n-nodes-base.postgresTool",
-      "typeVersion": 2.7,
-      "position": [1120, 520],
       "parameters": {
         "descriptionType": "manual",
         "toolDescription": "Devuelve qué incluye el paquete de un tipo de evento y qué obsequios trae. Úsala cuando el cliente pregunte qué incluye, o cuando presentes un paquete y necesites detallar inclusiones y obsequios.",
@@ -138,90 +187,207 @@
         "options": {
           "queryReplacement": "={{ $fromAI('tipo_evento', 'Tipo de evento. Uno de: 15 Anos, Matrimonio, Grado, Cumpleanos, Empresa, Primera Comunion, Baby Shower.', 'string') }}"
         }
+      },
+      "id": "d0a3f1b9-2467-4c80-b7e1-0a5d9c2e8f00",
+      "name": "consultar_inclusiones_evento",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1184,
+        672
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
       }
     },
     {
-      "id": "e1b4a2c0-3578-4d91-c8f2-1b6e0d3f9a11",
-      "name": "consultar_servicios_upselling",
-      "type": "n8n-nodes-base.postgresTool",
-      "typeVersion": 2.7,
-      "position": [1280, 520],
       "parameters": {
         "descriptionType": "manual",
         "toolDescription": "Devuelve los servicios adicionales (paquetes de fotografía Focus Art y Pirotecnia Show) con precio, detalle y promociones vigentes. Úsala antes de ofrecer fotografía o pirotecnia, para no equivocarte en precios ni promociones.",
         "operation": "executeQuery",
         "query": "select servicio, precio, detalles, promociones\nfrom servicios_adicionales_upselling\norder by precio desc",
         "options": {}
+      },
+      "id": "e1b4a2c0-3578-4d91-c8f2-1b6e0d3f9a11",
+      "name": "consultar_servicios_upselling",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1376,
+        672
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
       }
     },
     {
+      "parameters": {
+        "operation": "send",
+        "recipientPhoneNumber": "={{ $('Extraer Mensaje').item.json.telefono }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
       "id": "f2c5b3d1-4689-4e02-d9a3-2c7f1e4a0b22",
       "name": "Enviar WhatsApp",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
-      "position": [980, 260],
-      "parameters": {
-        "operation": "send",
-        "phoneNumberId": "",
-        "textBody": "={{ $json.output }}",
-        "recipientPhoneNumber": "={{ $('Extraer Mensaje').item.json.telefono }}",
-        "additionalFields": {}
-      }
+      "position": [
+        1120,
+        176
+      ],
+      "webhookId": "cc70fe42-4260-4168-a5db-1c3c05140633",
+      "notes": "FALTA: poner el Sender Phone Number ID de Meta."
     },
     {
+      "parameters": {
+        "operation": "send",
+        "recipientPhoneNumber": "={{ $('Extraer Mensaje').item.json.telefono }}",
+        "textBody": "Disculpa, tuve un inconveniente técnico ☺️ Dame un momento y un asesor te contacta enseguida.",
+        "additionalFields": {}
+      },
       "id": "a3d6c4e2-579a-4f13-e0b4-3d8a2f5b1c33",
       "name": "Aviso Fallo Agente",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
-      "position": [980, 440],
-      "parameters": {
-        "operation": "send",
-        "phoneNumberId": "",
-        "textBody": "Disculpa, tuve un inconveniente técnico ☺️ Dame un momento y un asesor te contacta enseguida.",
-        "recipientPhoneNumber": "={{ $('Extraer Mensaje').item.json.telefono }}",
-        "additionalFields": {}
-      }
+      "position": [
+        1120,
+        400
+      ],
+      "webhookId": "fffb1526-7689-4414-8713-9812217a2c1c",
+      "notes": "FALTA: poner el Sender Phone Number ID de Meta."
     }
   ],
   "connections": {
     "WhatsApp In": {
-      "main": [[{ "node": "Extraer Mensaje", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extraer Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extraer Mensaje": {
-      "main": [[{ "node": "Upsert Lead", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Upsert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Upsert Lead": {
-      "main": [[{ "node": "¿Bot activo?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "¿Bot activo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "¿Bot activo?": {
       "main": [
-        [{ "node": "Brian Otero", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "Brian Otero",
+            "type": "main",
+            "index": 0
+          }
+        ],
         []
       ]
     },
     "Brian Otero": {
       "main": [
-        [{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }],
-        [{ "node": "Aviso Fallo Agente", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso Fallo Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Gemini": {
-      "ai_languageModel": [[{ "node": "Brian Otero", "type": "ai_languageModel", "index": 0 }]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Memoria Conversación": {
-      "ai_memory": [[{ "node": "Brian Otero", "type": "ai_memory", "index": 0 }]]
+      "ai_memory": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
     },
     "consultar_precios_sedes": {
-      "ai_tool": [[{ "node": "Brian Otero", "type": "ai_tool", "index": 0 }]]
+      "ai_tool": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     },
     "consultar_inclusiones_evento": {
-      "ai_tool": [[{ "node": "Brian Otero", "type": "ai_tool", "index": 0 }]]
+      "ai_tool": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     },
     "consultar_servicios_upselling": {
-      "ai_tool": [[{ "node": "Brian Otero", "type": "ai_tool", "index": 0 }]]
+      "ai_tool": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "America/Bogota",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "binaryMode": "separate"
   }
 }
