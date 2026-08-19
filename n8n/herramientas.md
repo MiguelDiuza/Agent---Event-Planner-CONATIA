@@ -170,6 +170,77 @@ al upsert del lead — a partir de ahí ese cliente lo atiende una persona.
 
 ---
 
+## 8. `enviar_medios`
+
+**Descripción para el LLM:**
+> Envía fotos o videos al cliente por WhatsApp. El material disponible y el
+> momento en que conviene usar cada pieza están en la sección MATERIAL VISUAL
+> DISPONIBLE de tus instrucciones. Envía máximo un grupo de medios por turno.
+
+**Parámetros:** `categoria`, `referencia`, `tipo_medio` (por `$fromAI()`) y
+`telefono`, que **no** va por `$fromAI()`: sale de
+`{{ $('Upsert Lead').item.json.telefono }}`.
+
+> El plan original decía tomarlo de `Extraer Mensaje`. No sirve: ese nodo solo
+> corre en la ruta de WhatsApp, no en la del chat de prueba. `Upsert Lead` corre
+> en las dos.
+
+**El "cuándo enviar" no vive en el prompt.** Vive en la columna
+`medios.cuando_usar`, y el nodo `Catálogo de Medios`
+(`select fn_catalogo_digest() as digest`) lo inyecta al system message en cada
+turno. Agregar un video es un `insert`, nunca editar el prompt.
+
+**Implementación:** sub-workflow `n8n/workflow-enviar-medios.json`, 13 nodos.
+Usa `fn_medios_para_enviar`, `fn_medios_diagnostico` y `fn_registrar_envio`.
+
+1. `Seleccionar Medios` — `fn_medios_para_enviar(categoria, referencia, telefono, tipo_medio)`.
+   El filtro anti-repetición vive ahí: nunca devuelve algo que ese teléfono ya recibió.
+2. `¿Hay medios?` → si no hay, `Diagnóstico` distingue **"ya se lo enviaste
+   todo"** de **"esa referencia no existe"** y devuelve la lista de referencias
+   válidas. Sin esa distinción el agente le diría a un cliente que no hay fotos
+   de una sede de la que acaba de mandarle fotos.
+3. `Recorrer Medios` (batch 1) → `¿Es video?` → `Enviar Video` / `Enviar Foto`.
+4. `¿Envío exitoso?` → solo la rama buena llega a `Registrar Envío`.
+5. `Resumen` — cuenta únicamente lo que Meta aceptó.
+
+> ⚠️ **Por qué hace falta el IF `¿Envío exitoso?`.** Los dos nodos de WhatsApp
+> van con `onError: continueRegularOutput`, para que un archivo que Meta
+> rechace no tumbe el turno del agente. Pero eso hace que un envío **fallido
+> también salga por la salida normal**: sin el IF quedaría registrado como
+> enviado, y como el filtro anti-repetición se apoya en ese registro, ese
+> archivo quedaría suprimido **para siempre** para ese cliente.
+
+> ⚠️ **`tipo_medio` nunca puede llegar vacío.** Las funciones lanzan excepción
+> con un valor inválido, y el `default 'ambos'` solo aplica cuando el argumento
+> se **omite**, cosa que una llamada posicional de cuatro placeholders nunca
+> hace. Por eso el nodo envuelve el valor: `$json.tipo_medio || 'ambos'`.
+
+> ⚠️ **`fn_registrar_envio` devuelve NULL sin error** si el teléfono no está en
+> `leads`. No tratar su resultado como un id garantizado.
+
+**Campos del nodo WhatsApp**, leídos del paquete instalado (no de la UI):
+
+| Campo | Valor |
+|---|---|
+| `operation` | `send` |
+| `messageType` | `image` / `video` |
+| `mediaPath` | `useMediaLink` — manda la URL pública y Meta la descarga |
+| `mediaLink` | `={{ $json.url }}` |
+| `additionalFields.mediaCaption` | `={{ $json.caption }}` |
+| `recipientPhoneNumber` | el teléfono del lead |
+| `phoneNumberId` | **pendiente** |
+
+> 🔑 **Pendiente para que funcione:** la credencial *WhatsApp Business Cloud* y,
+> con ella, el campo `phoneNumberId` ("Sender Phone Number") de `Enviar Video` y
+> `Enviar Foto` — es una lista desplegable que solo carga con la credencial
+> conectada. Mientras tanto el nodo `enviar_medios` del workflow principal está
+> `disabled` y la sección `MATERIAL VISUAL DISPONIBLE` **no** está en el nodo
+> del agente, solo en `n8n/system-prompt-brian-otero.md`.
+
+> 📌 El catálogo cargado hoy son **sedes** e **institucional** (promoción y
+> testimonios). No hay material de `categoria = servicio`, así que la prueba de
+> Pirotecnia del plan (Task 9) no se puede correr hasta que se cargue.
+
 ## 9. `agendar_cita`
 
 **Descripción para el LLM:**
@@ -252,9 +323,10 @@ Verificado contra la instancia real vía `search_nodes` / `get_node`
 |---|---|---|
 | Entrada WhatsApp | `n8n-nodes-base.whatsAppTrigger` | nativo; el flujo anterior usaba webhook genérico |
 | Salida WhatsApp | `n8n-nodes-base.whatsApp` | operación `send` |
+| Envío de fotos y videos | `n8n-nodes-base.whatsApp` | operación `send`, messageType `image` / `video` |
 | **Aprobación humana** | `n8n-nodes-base.whatsApp` | operación **`sendAndWait`** — confirmado disponible |
 | Herramientas #1–#3 (consultas) | `n8n-nodes-base.postgresTool` | variante AI Tool; evita 3 sub-workflows |
-| Herramientas #4, #5, #7, #9 | `@n8n/n8n-nodes-langchain.toolWorkflow` | multi-paso |
+| Herramientas #4, #5, #7, #8, #9 | `@n8n/n8n-nodes-langchain.toolWorkflow` | multi-paso |
 | Agente | `@n8n/n8n-nodes-langchain.agent` | |
 | Modelo | `@n8n/n8n-nodes-langchain.lmChatGoogleGemini` | |
 | Memoria | `@n8n/n8n-nodes-langchain.memoryPostgresChat` | `sessionKey` = teléfono |

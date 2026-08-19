@@ -1,7 +1,7 @@
 # Estado del proyecto y prompt de continuación
 
 Documento de traspaso entre sesiones. Actualizado: 2026-08-18.
-Rama de trabajo: **`gestorVideos`** (19 commits por delante de `main`, sin mergear).
+Rama de trabajo: **`gestorVideos`** (20 commits por delante de `main`, sin mergear).
 
 ---
 
@@ -16,9 +16,11 @@ Rama de trabajo: **`gestorVideos`** (19 commits por delante de `main`, sin merge
 > verificado, las credenciales, los errores ya diagnosticados que NO hay que
 > volver a investigar, y la lista ordenada de lo que falta.
 >
-> Retomamos en la **Tarea B: construir el sub-workflow `enviar_medios`**
-> (el plan detallado está en
-> `docs/superpowers/plans/2026-08-14-envio-medios-whatsapp.md`, tareas 6-9).
+> Las tareas A y B ya están construidas y **bloqueadas solo por credenciales
+> que debe crear el usuario** (Google Calendar y WhatsApp Business Cloud).
+> Ver la sección 7 para desbloquearlas. Si no hay credenciales todavía,
+> lo único que avanza sin ellas es la **Tarea F** (parte Postgres de
+> `escalar_a_humano`).
 
 ---
 
@@ -138,12 +140,49 @@ Los institucionales se distinguen por la columna `etiqueta`
   Hecho eso, hay que habilitar el nodo `agendar_cita` y probar los tres
   caminos: entrada inválida, horario libre y horario ocupado.
 
+### ✅ Sub-workflow `enviar_medios` — construido, sin probar
+- Workflow id **`Q1jkIpsljCX1Tiuv`**
+  ("Christian Sierra — Herramienta: enviar_medios"), 13 nodos, inactivo.
+  Exportado a `n8n/workflow-enviar-medios.json`, documentado como herramienta
+  **#8** en `n8n/herramientas.md`.
+- Conectado al agente como nodo `enviar_medios` (`toolWorkflow` 2.2),
+  **`disabled: true`**.
+- Los campos de media del nodo WhatsApp (Task 6 del plan) se verificaron
+  leyendo el paquete instalado en
+  `~/AppData/Roaming/npm/node_modules/n8n/node_modules/n8n-nodes-base/dist/nodes/WhatsApp/`,
+  no la UI. Quedaron registrados en `herramientas.md`.
+- **Corrección respecto al plan:** los nodos de WhatsApp van con
+  `onError: continueRegularOutput`, así que un envío fallido también sale por
+  la salida normal. Se agregó un IF `¿Envío exitoso?` antes de
+  `Registrar Envío`; sin él un archivo rechazado por Meta quedaría registrado
+  como enviado y el filtro anti-repetición lo suprimiría para siempre.
+- **Falta:** la credencial *WhatsApp Business Cloud* y, con ella, el campo
+  `phoneNumberId` de `Enviar Video` y `Enviar Foto` (es un desplegable que
+  solo carga con la credencial conectada). Por eso `n8n_validate_workflow`
+  reporta 2 errores en ese sub-workflow: son ese pendiente, no un defecto.
+
+### ✅ Nodo `Catálogo de Medios` — en producción y verificado
+- Insertado en la ruta viva, entre `¿Bot activo?` (rama verdadera) y
+  `Brian Otero`. `select fn_catalogo_digest() as digest`.
+- **Probado en ejecución real** (ejecución 1902): devuelve 14 líneas de
+  catálogo en 203 ms y el agente sigue respondiendo con normalidad.
+- Todavía no lo lee nadie: la sección `MATERIAL VISUAL DISPONIBLE` está en
+  `n8n/system-prompt-brian-otero.md` pero **no** en el nodo del agente.
+  Se copia cuando exista la credencial de WhatsApp — ver el aviso al inicio
+  de ese archivo.
+
+> ⚠️ **El prompt del repo y el del nodo son distintos a propósito.** El nodo
+> corre una variante reducida, sin mención a las herramientas que aún no están
+> conectadas. Un prompt que nombra herramientas inexistentes hace que el modelo
+> prometa cosas que no puede cumplir. El archivo del repo lo explica y dice qué
+> mover y cuándo.
+
 ### ❌ Lo que falta
 
 | # | Falta | Bloqueado por |
 |---|---|---|
 | A | ~~Sub-workflow `agendar_cita`~~ **construido**; falta credencial Calendar + Calendar ID de empresa, y probarlo | Usuario |
-| B | Sub-workflow `enviar_medios` (tool #8) | Credencial WhatsApp (para enviar) |
+| B | ~~Sub-workflow `enviar_medios`~~ **construido**; falta credencial WhatsApp + `phoneNumberId`, y probarlo | Usuario (Tarea G) |
 | C | `verificar_disponibilidad_calendario` (tool #4) | Credencial Calendar |
 | D | `bloquear_fecha_calendario` (tool #5) | Credencial Calendar + WhatsApp (aprobación) |
 | E | `enviar_cotizacion_email` (tool #6) | Credencial Gmail |
@@ -251,10 +290,12 @@ Esto costó tiempo. Están resueltos o entendidos; no repetir el diagnóstico.
 
 ---
 
-## 7. Cómo terminar la Tarea A (5 minutos, la hace el usuario)
+## 7. Cómo desbloquear A y B (lo hace el usuario)
 
-El sub-workflow ya está construido y exportado. Falta solo lo que depende de
-accesos que no se pueden crear por API:
+Las dos herramientas están construidas y exportadas. Lo único que falta son
+accesos que no se pueden crear por API.
+
+### A — `agendar_cita`: Google Calendar
 
 1. En la UI de n8n, crear la credencial *Google Calendar OAuth2 API* con el
    Client ID/Secret de la sección 2 y hacer **"Connect my account"**.
@@ -262,25 +303,40 @@ accesos que no se pueden crear por API:
 2. Decir cuál es el **Calendar ID** del calendario de empresa
    (Google Calendar → configuración del calendario → "Integrar calendario" →
    ID del calendario).
-3. Con esos dos datos: asignar la credencial a los nodos `Buscar Choques` y
-   `Crear Cita` del workflow `Fh441U9EMcNs98PR`, reemplazar en ambos el
-   `PENDIENTE__ID_CALENDARIO_EMPRESA`, habilitar el nodo `agendar_cita` del
-   workflow principal y probar por el chat de prueba los tres caminos:
-   entrada inválida, horario libre y horario ocupado.
+3. Con eso: asignar la credencial a `Buscar Choques` y `Crear Cita` del
+   workflow `Fh441U9EMcNs98PR`, reemplazar en ambos el
+   `PENDIENTE__ID_CALENDARIO_EMPRESA`, habilitar el nodo `agendar_cita` y
+   probar los tres caminos: entrada inválida, horario libre, horario ocupado.
+
+### B — `enviar_medios`: WhatsApp Business Cloud
+
+1. Crear la credencial *WhatsApp Business Cloud* (Tarea G).
+2. Elegir el **Sender Phone Number** (`phoneNumberId`) en `Enviar Video` y
+   `Enviar Foto` del workflow `Q1jkIpsljCX1Tiuv`, y también en
+   `Enviar WhatsApp` y `Aviso Fallo Agente` del principal.
+3. Reactivar los nodos de WhatsApp del workflow principal, hoy `disabled`.
+4. **Copiar la sección `MATERIAL VISUAL DISPONIBLE`** de
+   `n8n/system-prompt-brian-otero.md` al *System Message* del nodo
+   `Brian Otero`, junto con su restricción. Sin ese paso el agente nunca
+   llamará la herramienta, porque no sabe que existe el material.
+5. Habilitar el nodo `enviar_medios` y correr la **Task 9** del plan de medios
+   (pruebas end-to-end y de escalabilidad).
+
+> 📌 El catálogo cargado hoy son sedes e institucional. **No hay material de
+> `categoria = servicio`**, así que la prueba de Pirotecnia de la Task 9 no se
+> puede correr hasta que se cargue ese contenido.
 
 ---
 
-## 8. Siguiente tarea (B): sub-workflow `enviar_medios`
+## 8. Qué sigue
 
-El plan detallado está en
-`docs/superpowers/plans/2026-08-14-envio-medios-whatsapp.md`, **tareas 6 a 9**
-(1 a 5 ya están hechas). La base de datos ya tiene todo lo que necesita:
-`fn_medios_para_enviar`, `fn_registrar_envio`, `fn_catalogo_digest` y las 15
-piezas cargadas en el bucket.
+Con credenciales, el orden es: terminar **A** y **B** (arriba), luego **C/D**
+(calendario por sede, que además necesita la Tarea H: crear los 15 calendarios
+y registrar sus `google_calendar_id`), luego **E** (Gmail) y **F**.
 
-Ojo con el orden: la parte de *consultar* el catálogo se puede construir y
-probar ya; la de *enviar* necesita la credencial de WhatsApp (Tarea G), que
-el usuario decidió dejar para el final. Igual que con `agendar_cita`, conviene
-dejar el nodo `disabled` hasta que se pueda ejecutar.
+**Sin credenciales, lo único que avanza es la Tarea F**, y solo a medias: el
+`update leads set requiere_humano = true` es un nodo Postgres que se puede
+construir y probar ya con la credencial de Supabase que sí existe. El aviso al
+equipo necesita WhatsApp.
 
-Después de B, seguir el orden: **C/D** (calendario por sede), **E**, **F**.
+Después de todo eso queda la **Tarea I**: migrar n8n al VPS de Hostinger.

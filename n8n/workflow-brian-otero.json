@@ -449,6 +449,100 @@
       },
       "disabled": true,
       "notes": "Deshabilitada hasta que exista la credencial Google Calendar del proyecto y el Calendar ID de la empresa. El telefono NO va por $fromAI(): se toma de Upsert Lead, igual que el sessionKey de la memoria."
+    },
+    {
+      "id": "cc11dd22-ee33-4f44-a555-667788990011",
+      "name": "Catálogo de Medios",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        576,
+        288
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select fn_catalogo_digest() as digest",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
+      },
+      "notes": "Inyecta al system message que material existe y cuando conviene mandarlo. Es lo que mantiene el prompt estable: agregar un video es un insert en 'medios', no editar el prompt.",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bb88cc99-dd00-4e11-b222-334455667788",
+      "name": "enviar_medios",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        672
+      ],
+      "parameters": {
+        "description": "Envía fotos o videos al cliente por WhatsApp. El material disponible y el momento en que conviene usar cada pieza están en la sección MATERIAL VISUAL DISPONIBLE de tus instrucciones. Envía máximo un grupo de medios por turno.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Q1jkIpsljCX1Tiuv",
+          "cachedResultName": "Christian Sierra — Herramienta: enviar_medios"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "categoria": "={{ $fromAI('categoria', 'Exactamente uno de: sede, tipo_evento, servicio, institucional.', 'string') }}",
+            "referencia": "={{ $fromAI('referencia', 'El nombre concreto tal como aparece en MATERIAL VISUAL DISPONIBLE, por ejemplo \"Salón Cristal\", \"15 Años\", \"Pirotecnia Show\". Dejala vacia solo si categoria es institucional.', 'string') }}",
+            "tipo_medio": "={{ $fromAI('tipo_medio', 'Uno de: imagen, video, ambos. Usa video cuando quieras impacto antes de cerrar, imagen cuando el cliente esta comparando.', 'string') }}",
+            "telefono": "={{ $('Upsert Lead').item.json.telefono }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "referencia",
+              "displayName": "referencia",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipo_medio",
+              "displayName": "tipo_medio",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "disabled": true,
+      "notes": "Deshabilitada hasta que exista la credencial de WhatsApp Business Cloud. El telefono va desde Upsert Lead, NO por $fromAI(): si lo rellena el modelo, se lo inventa."
     }
   ],
   "connections": {
@@ -483,18 +577,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "¿Bot activo?": {
-      "main": [
-        [
-          {
-            "node": "Brian Otero",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
       ]
     },
     "Brian Otero": {
@@ -611,6 +693,39 @@
       ]
     },
     "agendar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Bot activo?": {
+      "main": [
+        [
+          {
+            "node": "Catálogo de Medios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catálogo de Medios": {
+      "main": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_medios": {
       "ai_tool": [
         [
           {

@@ -1,0 +1,522 @@
+{
+  "name": "Christian Sierra — Herramienta: enviar_medios",
+  "nodes": [
+    {
+      "id": "ed000000-0000-4000-8000-000000000001",
+      "name": "Entrada de la Herramienta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -420,
+        300
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "categoria",
+              "type": "string"
+            },
+            {
+              "name": "referencia",
+              "type": "string"
+            },
+            {
+              "name": "tipo_medio",
+              "type": "string"
+            },
+            {
+              "name": "telefono",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000002",
+      "name": "Seleccionar Medios",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -180,
+        300
+      ],
+      "alwaysOutputData": true,
+      "notes": "alwaysOutputData es obligatorio: sin filas el nodo no emite items, n8n salta todo lo que sigue y la rama de diagnostico nunca corre, dejando al agente sin respuesta.",
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from fn_medios_para_enviar($1, $2, $3, $4)",
+        "options": {
+          "queryReplacement": "={{ [$json.categoria, $json.referencia, $json.telefono, $json.tipo_medio || 'ambos'] }}"
+        }
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000003",
+      "name": "¿Hay medios?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        60,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-hay-medios",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000004",
+      "name": "Diagnóstico",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        480
+      ],
+      "notes": "Distingue 'ya se lo enviaste todo' de 'esa referencia no existe'. Sin esa distincion el agente le diria a un cliente que no hay fotos de una sede de la que acaba de mandarle fotos.",
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n    case\n        when d.total_existentes > 0\n            then 'Ya le enviaste todo el material disponible de esa referencia a este cliente. No lo repitas: refiérete a lo que ya vio contigo.'\n        else 'No hay medios para esa referencia. Con material disponible: ' || coalesce(d.referencias_disponibles, 'ninguna') || '. Vuelve a intentarlo con una de esas, o continúa la conversación sin enviar material.'\n    end as resultado\nfrom fn_medios_diagnostico($1, $2, $3) d",
+        "options": {
+          "queryReplacement": "={{ [$('Entrada de la Herramienta').first().json.categoria, $('Entrada de la Herramienta').first().json.referencia, $('Entrada de la Herramienta').first().json.tipo_medio || 'ambos'] }}"
+        }
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000005",
+      "name": "Recorrer Medios",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        300,
+        160
+      ],
+      "notes": "Salida 0 = done (resumen), salida 1 = loop (un medio por vuelta).",
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000006",
+      "name": "¿Es video?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        540,
+        280
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-es-video",
+              "leftValue": "={{ $json.tipo }}",
+              "rightValue": "video",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000007",
+      "name": "Enviar Video",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        180
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Falta 'Sender Phone Number' (phoneNumberId): se elige de una lista que solo carga con la credencial de Meta conectada. mediaPath useMediaLink manda la URL publica de Supabase Storage y Meta la descarga.",
+      "credentials": {},
+      "parameters": {
+        "operation": "send",
+        "messageType": "video",
+        "mediaPath": "useMediaLink",
+        "recipientPhoneNumber": "={{ $('Entrada de la Herramienta').first().json.telefono }}",
+        "mediaLink": "={{ $json.url }}",
+        "additionalFields": {
+          "mediaCaption": "={{ $json.caption }}"
+        }
+      },
+      "webhookId": "a3dad107-a154-4007-be0d-9fd77d0cadd2"
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000008",
+      "name": "Enviar Foto",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        380
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Falta 'Sender Phone Number' (phoneNumberId): se elige de una lista que solo carga con la credencial de Meta conectada.",
+      "credentials": {},
+      "parameters": {
+        "operation": "send",
+        "messageType": "image",
+        "mediaPath": "useMediaLink",
+        "recipientPhoneNumber": "={{ $('Entrada de la Herramienta').first().json.telefono }}",
+        "mediaLink": "={{ $json.url }}",
+        "additionalFields": {
+          "mediaCaption": "={{ $json.caption }}"
+        }
+      },
+      "webhookId": "cd93e88f-82ad-4604-b7f3-56087e6b6c34"
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000009",
+      "name": "¿Envío exitoso?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1020,
+        280
+      ],
+      "notes": "Los nodos de WhatsApp siguen en error, asi que un envio fallido tambien sale por la salida normal. Sin este IF quedaria registrado como enviado y el filtro anti-repeticion suprimiria para siempre un archivo que Meta rechazo.",
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-envio-ok",
+              "leftValue": "={{ $json.error === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000010",
+      "name": "Registrar Envío",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1260,
+        180
+      ],
+      "alwaysOutputData": true,
+      "notes": "fn_registrar_envio devuelve NULL sin error si el telefono no esta en leads: no tratar el resultado como un id garantizado.",
+      "credentials": {
+        "postgres": {
+          "id": "ErY9RiTjTsXVB0JC",
+          "name": "Supabase - Christian Sierra"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select fn_registrar_envio($1::uuid, $2::text)",
+        "options": {
+          "queryReplacement": "={{ [$('Recorrer Medios').first().json.id, $('Entrada de la Herramienta').first().json.telefono] }}"
+        }
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000011",
+      "name": "Marcar Enviado",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1480,
+        180
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ok-desc",
+              "name": "descripcion",
+              "value": "={{ $('Recorrer Medios').first().json.descripcion }}",
+              "type": "string"
+            },
+            {
+              "id": "ok-flag",
+              "name": "enviado",
+              "value": "={{ true }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000012",
+      "name": "Marcar Fallido",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1260,
+        400
+      ],
+      "notes": "Vuelve al loop igual que la rama exitosa: un archivo que Meta rechaza no debe cortar el envio de los demas.",
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bad-desc",
+              "name": "descripcion",
+              "value": "={{ $('Recorrer Medios').first().json.descripcion }}",
+              "type": "string"
+            },
+            {
+              "id": "bad-flag",
+              "name": "enviado",
+              "value": "={{ false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "bad-motivo",
+              "name": "motivo",
+              "value": "={{ typeof $json.error === 'string' ? $json.error : ($json.error && $json.error.message) || 'Meta rechazó el archivo' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ed000000-0000-4000-8000-000000000013",
+      "name": "Resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        40
+      ],
+      "notes": "El resumen solo cuenta lo que Meta acepto: si dijera 'enviaste X' de un archivo rechazado, el agente lo comentaria como si el cliente lo estuviera viendo.",
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La salida 'done' del loop trae un item por medio con la marca de si Meta lo\n// acepto. El resumen se redacta como instruccion para el agente, no como dato:\n// es lo unico que el modelo va a leer sobre lo que acaba de pasar.\nconst items = $input.all().map((i) => i.json);\nconst enviados = items.filter((i) => i.enviado).map((i) => i.descripcion);\nconst fallidos = items.filter((i) => !i.enviado).map((i) => i.descripcion);\n\nlet resultado;\n\nif (enviados.length === 0) {\n  // Nunca dar por enviado lo que Meta rechazo: el cliente no lo tiene.\n  resultado =\n    `No se pudo enviar el material (${fallidos.join('; ')}). No le digas al cliente que ya lo tiene. ` +\n    'Continúa la conversación sin material y, si insiste, ofrécele que un asesor se lo haga llegar.';\n} else {\n  resultado =\n    `Enviaste al cliente: ${enviados.join('; ')}. ` +\n    'Ya los está viendo en el chat: coméntalos con naturalidad en tu respuesta, no anuncies que vas a enviarlos.';\n\n  if (fallidos.length > 0) {\n    resultado += ` No se pudo enviar ${fallidos.join('; ')} — no lo menciones ni lo des por enviado.`;\n  }\n}\n\nreturn [{ json: { resultado } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Entrada de la Herramienta": {
+      "main": [
+        [
+          {
+            "node": "Seleccionar Medios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seleccionar Medios": {
+      "main": [
+        [
+          {
+            "node": "¿Hay medios?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay medios?": {
+      "main": [
+        [
+          {
+            "node": "Recorrer Medios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Diagnóstico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recorrer Medios": {
+      "main": [
+        [
+          {
+            "node": "Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Es video?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es video?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Foto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Video": {
+      "main": [
+        [
+          {
+            "node": "¿Envío exitoso?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Foto": {
+      "main": [
+        [
+          {
+            "node": "¿Envío exitoso?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Envío exitoso?": {
+      "main": [
+        [
+          {
+            "node": "Registrar Envío",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marcar Fallido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Envío": {
+      "main": [
+        [
+          {
+            "node": "Marcar Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Enviado": {
+      "main": [
+        [
+          {
+            "node": "Recorrer Medios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Fallido": {
+      "main": [
+        [
+          {
+            "node": "Recorrer Medios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
