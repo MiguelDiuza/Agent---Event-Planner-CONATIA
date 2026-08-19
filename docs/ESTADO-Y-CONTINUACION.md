@@ -1,7 +1,7 @@
 # Estado del proyecto y prompt de continuación
 
-Documento de traspaso entre sesiones. Actualizado: 2026-08-19.
-Rama de trabajo: **`gestorVideos`** (18 commits por delante de `main`, sin mergear).
+Documento de traspaso entre sesiones. Actualizado: 2026-08-18.
+Rama de trabajo: **`gestorVideos`** (19 commits por delante de `main`, sin mergear).
 
 ---
 
@@ -16,7 +16,9 @@ Rama de trabajo: **`gestorVideos`** (18 commits por delante de `main`, sin merge
 > verificado, las credenciales, los errores ya diagnosticados que NO hay que
 > volver a investigar, y la lista ordenada de lo que falta.
 >
-> Retomamos en la **Tarea A: construir el sub-workflow `agendar_cita`**.
+> Retomamos en la **Tarea B: construir el sub-workflow `enviar_medios`**
+> (el plan detallado está en
+> `docs/superpowers/plans/2026-08-14-envio-medios-whatsapp.md`, tareas 6-9).
 
 ---
 
@@ -117,11 +119,30 @@ Los institucionales se distinguen por la columna `etiqueta`
 - Las 3 herramientas de consulta, la memoria y el LLM están correctamente
   conectados al agente.
 
+### ✅ Sub-workflow `agendar_cita` — construido, sin probar
+- Workflow id **`Fh441U9EMcNs98PR`**
+  ("Christian Sierra — Herramienta: agendar_cita"), 9 nodos, inactivo.
+  Exportado a `n8n/workflow-agendar-cita.json`, documentado como herramienta
+  **#9** en `n8n/herramientas.md`.
+- Conectado al agente como nodo `agendar_cita` (`toolWorkflow` 2.2), pero
+  **`disabled: true`** para que el agente no la ofrezca mientras no se pueda
+  ejecutar.
+- Valida la entrada del LLM (tipo, nombre, formato de fecha/hora, horario ya
+  pasado) y devuelve el rechazo redactado como instrucción para que el agente
+  corrija y reintente.
+- **No se ha ejecutado ni una vez.** Le faltan dos cosas, ambas del usuario:
+  1. La credencial *Google Calendar OAuth2 API* en los nodos `Buscar Choques`
+     y `Crear Cita`.
+  2. Reemplazar `PENDIENTE__ID_CALENDARIO_EMPRESA` por el Calendar ID real
+     del calendario de empresa, en esos mismos dos nodos.
+  Hecho eso, hay que habilitar el nodo `agendar_cita` y probar los tres
+  caminos: entrada inválida, horario libre y horario ocupado.
+
 ### ❌ Lo que falta
 
 | # | Falta | Bloqueado por |
 |---|---|---|
-| A | Sub-workflow `agendar_cita` | Credencial Calendar |
+| A | ~~Sub-workflow `agendar_cita`~~ **construido**; falta credencial Calendar + Calendar ID de empresa, y probarlo | Usuario |
 | B | Sub-workflow `enviar_medios` (tool #8) | Credencial WhatsApp (para enviar) |
 | C | `verificar_disponibilidad_calendario` (tool #4) | Credencial Calendar |
 | D | `bloquear_fecha_calendario` (tool #5) | Credencial Calendar + WhatsApp (aprobación) |
@@ -172,7 +193,18 @@ Esto costó tiempo. Están resueltos o entendidos; no repetir el diagnóstico.
    `errors="surrogatepass"` y limpiar con
    `s.encode('utf-8','replace').decode('utf-8')`.
 
-8. **La credencial "Neon Postgres (Motion Dreams)" fue borrada** por accidente
+8. **El editor de n8n abierto pisa lo que se escribe por API.** Al agregar
+   `agendar_cita` al workflow principal, el `PUT` respondió `success` y con
+   `nodeCount: 17`, pero al releerlo el nodo no estaba y **varias posiciones
+   habían cambiado** — señal de que la pestaña del editor guardó su copia en
+   memoria encima. Dos consecuencias prácticas:
+   - **Cerrar o refrescar la pestaña del workflow antes de escribir por API.**
+   - **Nunca creer el `success` del `PUT`:** releer siempre con
+     `n8n_get_workflow` y confirmar que el nodo está y que sus `parameters`
+     sobrevivieron. Es el mismo reflejo que exige el bug de `typeVersion`
+     del punto 1, por dos causas distintas.
+
+9. **La credencial "Neon Postgres (Motion Dreams)" fue borrada** por accidente
    durante esta sesión. Dejó 19 nodos rotos en 3 workflows de Motion Dreams
    (2 activos). **El usuario dijo explícitamente que lo ignoremos** — no es
    parte de este proyecto.
@@ -219,41 +251,36 @@ Esto costó tiempo. Están resueltos o entendidos; no repetir el diagnóstico.
 
 ---
 
-## 7. Siguiente tarea (A): sub-workflow `agendar_cita`
+## 7. Cómo terminar la Tarea A (5 minutos, la hace el usuario)
 
-**Precondición:** el usuario debe crear en la UI de n8n la credencial
-*Google Calendar OAuth2 API* con el Client ID/Secret de la sección 2 y hacer
-"Connect my account". También hace falta que diga el **Calendar ID** del
-calendario de empresa (Google Calendar → configuración del calendario →
-"Integrar calendario" → ID del calendario).
+El sub-workflow ya está construido y exportado. Falta solo lo que depende de
+accesos que no se pueden crear por API:
 
-**Estructura a construir** (workflow nuevo, luego conectarlo como
-`toolWorkflow` al agente):
+1. En la UI de n8n, crear la credencial *Google Calendar OAuth2 API* con el
+   Client ID/Secret de la sección 2 y hacer **"Connect my account"**.
+   (No usar `Google Calendar account` / `account 2`: son de otros proyectos.)
+2. Decir cuál es el **Calendar ID** del calendario de empresa
+   (Google Calendar → configuración del calendario → "Integrar calendario" →
+   ID del calendario).
+3. Con esos dos datos: asignar la credencial a los nodos `Buscar Choques` y
+   `Crear Cita` del workflow `Fh441U9EMcNs98PR`, reemplazar en ambos el
+   `PENDIENTE__ID_CALENDARIO_EMPRESA`, habilitar el nodo `agendar_cita` del
+   workflow principal y probar por el chat de prueba los tres caminos:
+   entrada inválida, horario libre y horario ocupado.
 
-1. `Execute Workflow Trigger` (v1.1) con entradas: `tipo_cita`, `fecha`,
-   `hora`, `detalle`, `telefono`, `nombre`.
-2. Nodo `Code` que calcule la ventana de conflicto: la cita ocupa
-   `[hora, hora+30min]`, y con el colchón de 30 min hay choque si existe
-   cualquier evento entre `hora-30min` y `hora+60min`. Zona horaria
-   `America/Bogota`.
-3. `Google Calendar` → *Get Many Events* en esa ventana, con
-   `alwaysOutputData: true` (si no, con cero eventos n8n salta los nodos
-   siguientes y la rama de "libre" nunca corre — mismo patrón ya documentado
-   para `enviar_medios`).
-4. `IF` ¿hay choque? → rama ocupada devuelve al agente que proponga otro
-   horario; rama libre continúa.
-5. `Google Calendar` → *Create Event*, 30 min, con título
-   `[tipo_cita] Nombre` y descripción con teléfono + detalle.
-6. `Set` que devuelve al agente el resumen de lo agendado.
+---
 
-Descripción para el LLM (la que lee para decidir cuándo llamarla):
-> Agenda una cita con el asesor. Úsala cuando el cliente quiera visitar un
-> salón, tomarse medidas para un traje, recibir una llamada o una asesoría.
-> `tipo_cita` es exactamente uno de: visita_sede, prueba_traje, llamada,
-> asesoria. `fecha` en formato YYYY-MM-DD y `hora` en HH:MM (24h). En
-> `detalle` incluye lo que hace falta según el tipo: qué sede y para cuántos
-> invitados, qué traje, o el número a llamar.
+## 8. Siguiente tarea (B): sub-workflow `enviar_medios`
 
-Después de A, seguir el orden: **B** (`enviar_medios`, el plan detallado está
-en `docs/superpowers/plans/2026-08-14-envio-medios-whatsapp.md` tareas 6-9),
-luego **C/D** (calendario por sede), **E**, **F**.
+El plan detallado está en
+`docs/superpowers/plans/2026-08-14-envio-medios-whatsapp.md`, **tareas 6 a 9**
+(1 a 5 ya están hechas). La base de datos ya tiene todo lo que necesita:
+`fn_medios_para_enviar`, `fn_registrar_envio`, `fn_catalogo_digest` y las 15
+piezas cargadas en el bucket.
+
+Ojo con el orden: la parte de *consultar* el catálogo se puede construir y
+probar ya; la de *enviar* necesita la credencial de WhatsApp (Tarea G), que
+el usuario decidió dejar para el final. Igual que con `agendar_cita`, conviene
+dejar el nodo `disabled` hasta que se pueda ejecutar.
+
+Después de B, seguir el orden: **C/D** (calendario por sede), **E**, **F**.

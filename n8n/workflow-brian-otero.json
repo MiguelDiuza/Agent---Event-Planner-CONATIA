@@ -241,12 +241,12 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        1120,
-        176
+        1616,
+        304
       ],
       "webhookId": "cc70fe42-4260-4168-a5db-1c3c05140633",
-      "notes": "DESACTIVADO temporalmente para pruebas locales. Reactivar al conectar credenciales de WhatsApp.",
-      "disabled": true
+      "disabled": true,
+      "notes": "DESACTIVADO temporalmente para pruebas locales. Reactivar al conectar credenciales de WhatsApp."
     },
     {
       "parameters": {
@@ -260,12 +260,12 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        1120,
-        400
+        1264,
+        304
       ],
       "webhookId": "fffb1526-7689-4414-8713-9812217a2c1c",
-      "notes": "DESACTIVADO temporalmente para pruebas locales. Reactivar al conectar credenciales de WhatsApp.",
-      "disabled": true
+      "disabled": true,
+      "notes": "DESACTIVADO temporalmente para pruebas locales. Reactivar al conectar credenciales de WhatsApp."
     },
     {
       "parameters": {
@@ -279,8 +279,8 @@
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.4,
       "position": [
-        -224,
-        660
+        -48,
+        288
       ],
       "webhookId": "3f9c1d27-5b84-4e16-9a70-2d5c8e1b4f33",
       "notes": "Canal de prueba local. Mismo agente, memoria y herramientas que WhatsApp."
@@ -295,8 +295,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        660
+        128,
+        272
       ],
       "notes": "Traduce el chat de prueba a la misma forma que WhatsApp."
     },
@@ -330,8 +330,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1180,
-        420
+        1264,
+        144
       ],
       "notes": "Chat de prueba responde en pantalla; WhatsApp responde por WhatsApp."
     },
@@ -354,10 +354,101 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1400,
-        660
+        1616,
+        96
       ],
       "notes": "Salida del canal de prueba: el Chat Trigger devuelve lo del ultimo nodo."
+    },
+    {
+      "id": "aa99bb88-cc77-4d66-9e55-112233445566",
+      "name": "agendar_cita",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        672
+      ],
+      "parameters": {
+        "description": "Agenda una cita con el asesor. Úsala cuando el cliente quiera visitar un salón, tomarse medidas para un traje, recibir una llamada o una asesoría. tipo_cita es exactamente uno de: visita_sede, prueba_traje, llamada, asesoria. fecha en formato YYYY-MM-DD y hora en HH:MM (24 horas). En detalle incluye lo que hace falta según el tipo: qué sede y para cuántos invitados, qué traje, o el número al que hay que llamar. Cada cita dura 30 minutos. Si la herramienta responde que el horario está ocupado, propón otro y vuelve a llamarla.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Fh441U9EMcNs98PR",
+          "cachedResultName": "Christian Sierra — Herramienta: agendar_cita"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_cita": "={{ $fromAI('tipo_cita', 'Tipo de cita. Exactamente uno de: visita_sede, prueba_traje, llamada, asesoria.', 'string') }}",
+            "fecha": "={{ $fromAI('fecha', 'Fecha de la cita en formato YYYY-MM-DD.', 'string') }}",
+            "hora": "={{ $fromAI('hora', 'Hora de inicio de la cita en formato HH:MM de 24 horas, hora de Colombia.', 'string') }}",
+            "detalle": "={{ $fromAI('detalle', 'Detalle propio del tipo de cita: que sede y para cuantos invitados, que traje se va a probar, o el numero al que hay que llamar.', 'string') }}",
+            "nombre": "={{ $fromAI('nombre', 'Nombre completo del cliente tal como el lo dijo en la conversacion.', 'string') }}",
+            "telefono": "={{ $('Upsert Lead').item.json.telefono }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_cita",
+              "displayName": "tipo_cita",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hora",
+              "displayName": "hora",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "detalle",
+              "displayName": "detalle",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "disabled": true,
+      "notes": "Deshabilitada hasta que exista la credencial Google Calendar del proyecto y el Calendar ID de la empresa. El telefono NO va por $fromAI(): se toma de Upsert Lead, igual que el sessionKey de la memoria."
     }
   ],
   "connections": {
@@ -514,6 +605,17 @@
           {
             "node": "Enviar WhatsApp",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agendar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Brian Otero",
+            "type": "ai_tool",
             "index": 0
           }
         ]

@@ -1,6 +1,6 @@
 # Herramientas del AI Agent
 
-Las 6 herramientas que se conectarán al nodo AI Agent en n8n. Las columnas
+Las herramientas que se conectarán al nodo AI Agent en n8n. Las columnas
 citadas corresponden a `supabase/migrations/20260812000000_schema.sql`.
 
 La **descripción** de cada herramienta es lo que el LLM lee para decidir
@@ -170,6 +170,79 @@ al upsert del lead — a partir de ahí ese cliente lo atiende una persona.
 
 ---
 
+## 9. `agendar_cita`
+
+**Descripción para el LLM:**
+> Agenda una cita con el asesor. Úsala cuando el cliente quiera visitar un
+> salón, tomarse medidas para un traje, recibir una llamada o una asesoría.
+> `tipo_cita` es exactamente uno de: visita_sede, prueba_traje, llamada,
+> asesoria. `fecha` en formato YYYY-MM-DD y `hora` en HH:MM (24h). En
+> `detalle` incluye lo que hace falta según el tipo: qué sede y para cuántos
+> invitados, qué traje, o el número a llamar. Cada cita dura 30 minutos. Si la
+> herramienta responde que el horario está ocupado, propón otro y vuelve a
+> llamarla.
+
+**Parámetros:** `tipo_cita`, `fecha`, `hora`, `detalle`, `nombre` (todos
+string, todos por `$fromAI()`) y `telefono`, que **no** va por `$fromAI()`:
+se toma de `{{ $('Upsert Lead').item.json.telefono }}`, igual que el
+`sessionKey` de la memoria.
+
+**Sin aprobación humana** (decisión del negocio, 2026-08-13): agendar una cita
+es de bajo riesgo y revertirlo es barato, al contrario que separar una fecha
+(#5).
+
+**Implementación:** sub-workflow `n8n/workflow-agendar-cita.json`, 9 nodos.
+
+Un **solo calendario de empresa**, no uno por sede: atiende una sola persona,
+así que no puede haber dos citas en paralelo aunque sean de sedes distintas.
+
+La regla que hace todo lo demás: la cita ocupa `[hora, hora+30min]` y el
+negocio exige **30 min de colchón** entre citas. Por eso el choque no se mide
+contra la cita, sino contra la ventana `[hora-30min, hora+60min]` — si hay
+cualquier evento ahí dentro, el horario no sirve.
+
+1. `Entrada de la Herramienta` — recibe los 6 campos.
+2. `Calcular Ventana` (Code) — valida y calcula la ventana en
+   `America/Bogota`.
+3. `¿Entrada válida?` (IF) — la rama falsa devuelve el motivo del rechazo
+   redactado *como instrucción para el agente*, para que corrija y reintente
+   en vez de reventar con un error crudo de la API de Google.
+4. `Buscar Choques` — Google Calendar *Get Many Events* sobre la ventana.
+5. `¿Hay choque?` (IF) — ocupado → pedir otro horario; libre → seguir.
+6. `Crear Cita` — Google Calendar *Create Event*, 30 min, título
+   `[tipo_cita] Nombre` y descripción con tipo, nombre, teléfono y detalle,
+   para que el asesor abra el evento y no tenga que volver al chat.
+7. `Cita Confirmada` (Set) — devuelve al agente el resumen a confirmarle al
+   cliente.
+
+> ⚠️ Dos detalles que parecen menores y no lo son:
+>
+> - **`alwaysOutputData: true` en `Buscar Choques`.** Sin él, cero eventos
+>   hace que n8n salte los nodos siguientes y la rama de "horario libre"
+>   nunca corre — nunca se agendaría nada. Mismo patrón documentado para
+>   `enviar_medios`.
+> - **`limit: 1` en `Buscar Choques`.** Solo importa *si* hay choque, no
+>   cuántos. Con `returnAll` el IF se abriría en un item por evento y
+>   `Crear Cita` correría varias veces.
+
+> 🔑 **Pendiente para que funcione:** la credencial *Google Calendar OAuth2
+> API* del proyecto en los nodos `Buscar Choques` y `Crear Cita`, y
+> reemplazar el `PENDIENTE__ID_CALENDARIO_EMPRESA` de ambos por el Calendar
+> ID real. Mientras tanto el nodo `agendar_cita` del workflow principal está
+> `disabled` para que el agente no la ofrezca.
+
+**Validaciones del nodo `Calcular Ventana`** — la entrada la escribe un LLM, y
+un valor mal formado llegaría a la API de Google como error incomprensible:
+
+| Rechaza | Por qué |
+|---|---|
+| `tipo_cita` fuera de la lista | evita citas con tipos inventados |
+| `nombre` vacío | el asesor necesita saber a quién atiende |
+| `fecha`/`hora` que no parsean con formato estricto | el modelo tiende a mandar "mañana" o "3pm" |
+| horario ya pasado | el modelo se equivoca de año o de día con facilidad |
+
+---
+
 ## Nodos n8n a usar
 
 Verificado contra la instancia real vía `search_nodes` / `get_node`
@@ -181,7 +254,7 @@ Verificado contra la instancia real vía `search_nodes` / `get_node`
 | Salida WhatsApp | `n8n-nodes-base.whatsApp` | operación `send` |
 | **Aprobación humana** | `n8n-nodes-base.whatsApp` | operación **`sendAndWait`** — confirmado disponible |
 | Herramientas #1–#3 (consultas) | `n8n-nodes-base.postgresTool` | variante AI Tool; evita 3 sub-workflows |
-| Herramientas #4, #5, #7 | `@n8n/n8n-nodes-langchain.toolWorkflow` | multi-paso |
+| Herramientas #4, #5, #7, #9 | `@n8n/n8n-nodes-langchain.toolWorkflow` | multi-paso |
 | Agente | `@n8n/n8n-nodes-langchain.agent` | |
 | Modelo | `@n8n/n8n-nodes-langchain.lmChatGoogleGemini` | |
 | Memoria | `@n8n/n8n-nodes-langchain.memoryPostgresChat` | `sessionKey` = teléfono |
@@ -193,9 +266,18 @@ evento en Calendar.
 
 ## Nota sobre el conteo
 
-El documento del negocio definía 4 herramientas. Aquí hay 7 porque:
+El documento del negocio definía 4 herramientas. Aquí hay 9 porque:
 - `consultar_servicios_upselling` (#3) se separó para que el agente no
   invente precios de fotografía ni pirotecnia — la restricción "NUNCA
   inventes precios" del prompt necesita una fuente consultable.
 - `enviar_cotizacion_email` (#6) y `escalar_a_humano` (#7) fueron aprobadas
   explícitamente como parte del alcance v1.
+- `enviar_medios` (#8) y `agendar_cita` (#9) se agregaron después, en
+  2026-08-14 y 2026-08-18: mandar fotos y videos del salón, y agendar la
+  visita, son los dos pasos que de verdad cierran la venta y hasta entonces
+  quedaban en manos de una persona.
+
+`agendar_cita` (#9) y `bloquear_fecha_calendario` (#5) se parecen pero no son
+lo mismo, y conviene no confundirlas: la #9 aparta **30 minutos del asesor**
+en el calendario de la empresa; la #5 aparta **un día entero de una sede**
+para un evento. Por eso la #5 pide aprobación humana y la #9 no.
