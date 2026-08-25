@@ -173,13 +173,21 @@ al upsert del lead — a partir de ahí ese cliente lo atiende una persona.
 ## 8. `enviar_medios`
 
 **Descripción para el LLM:**
-> Envía fotos o videos al cliente por WhatsApp. El material disponible y el
-> momento en que conviene usar cada pieza están en la sección MATERIAL VISUAL
-> DISPONIBLE de tus instrucciones. Envía máximo un grupo de medios por turno.
+> Envía fotos o videos al cliente por WhatsApp. En la cotización: categoria
+> 'sede', referencia 'todas' e invitados — salen juntos los videos de todos los
+> salones, ya etiquetados con nombre, tipo de espacio y precio. Para un salón
+> concreto: categoria 'sede' y referencia con su nombre exacto. El material
+> disponible y el momento de cada pieza están en la sección MATERIAL VISUAL
+> DISPONIBLE de tus instrucciones.
 
-**Parámetros:** `categoria`, `referencia`, `tipo_medio` (por `$fromAI()`) y
-`telefono`, que **no** va por `$fromAI()`: sale de
+**Parámetros:** `categoria`, `referencia`, `tipo_medio` e `invitados` (por
+`$fromAI()`) y `telefono`, que **no** va por `$fromAI()`: sale de
 `{{ $('Upsert Lead').item.json.telefono }}`.
+
+> `invitados` se sanea en el nodo antes de llegar al SQL:
+> `Number.isFinite(n) && n > 0 ? Math.round(n) : null`. El modelo puede mandar
+> "unos 80" o nada; un `null` degrada a caption sin precio, que es preferible a
+> reventar la llamada.
 
 > El plan original decía tomarlo de `Extraer Mensaje`. No sirve: ese nodo solo
 > corre en la ruta de WhatsApp, no en la del chat de prueba. `Upsert Lead` corre
@@ -190,18 +198,61 @@ al upsert del lead — a partir de ahí ese cliente lo atiende una persona.
 (`select fn_catalogo_digest() as digest`) lo inyecta al system message en cada
 turno. Agregar un video es un `insert`, nunca editar el prompt.
 
-**Implementación:** sub-workflow `n8n/workflow-enviar-medios.json`, 13 nodos.
-Usa `fn_medios_para_enviar`, `fn_medios_diagnostico` y `fn_registrar_envio`.
+**Implementación:** sub-workflow `n8n/workflow-enviar-medios.json`, 17 nodos
+—cuatro son los envíos archivados de Meta y de Evolution, `disabled` y
+desconectados. Usa `fn_medios_para_enviar`, `fn_medios_diagnostico` y
+`fn_registrar_envio`.
 
-1. `Seleccionar Medios` — `fn_medios_para_enviar(categoria, referencia, telefono, tipo_medio)`.
-   El filtro anti-repetición vive ahí: nunca devuelve algo que ese teléfono ya recibió.
+1. `Seleccionar Medios` — **dos modos**:
+   - `categoria` = `sede` con `referencia` vacía o `todas` → la tanda de la
+     cotización, `fn_medios_sedes_cotizacion(telefono, invitados)`.
+   - cualquier otra referencia → `fn_medios_para_enviar(categoria, referencia, telefono, tipo_medio)`.
+
+   El filtro anti-repetición vive en las dos funciones: nunca devuelven algo que
+   ese teléfono ya recibió.
 2. `¿Hay medios?` → si no hay, `Diagnóstico` distingue **"ya se lo enviaste
    todo"** de **"esa referencia no existe"** y devuelve la lista de referencias
    válidas. Sin esa distinción el agente le diría a un cliente que no hay fotos
    de una sede de la que acaba de mandarle fotos.
 3. `Recorrer Medios` (batch 1) → `¿Es video?` → `Enviar Video` / `Enviar Foto`.
 4. `¿Envío exitoso?` → solo la rama buena llega a `Registrar Envío`.
-5. `Resumen` — cuenta únicamente lo que Meta aceptó.
+5. `Resumen` — cuenta únicamente lo que el proveedor aceptó.
+
+> 📌 **La tanda de la cotización** (2026-08-25). `fn_medios_sedes_cotizacion`
+> devuelve el video de **todas** las sedes con material cargado y le arma el
+> caption: `Así se ve <sede> (salón cubierta cerrada|salón campestre) - $<precio> ✨`.
+> Estar en la tanda depende de tener un video activo, nada más;
+> `sedes.tipo_espacio` solo decide el paréntesis del tipo, y una sede sin
+> clasificar manda su video sin él. El
+> precio es el del escalón del cliente —redondeado con la misma regla del
+> cotizador, 55 → 60— o el del escalón más cercano con la aclaración "hasta N
+> invitados". **No filtra por capacidad**: el negocio prefiere mostrar el
+> inventario completo. Sin `invitados`, el caption va sin precio.
+>
+> El caption lo escribe la base y no el agente porque es lo que el cliente
+> relee: un precio tecleado por el modelo puede discrepar del que cotizó.
+
+> 📌 **Los videos de sede no viajan solos** (2026-08-25). La query de
+> `Seleccionar Medios` les suma el video de promoción la **primera** vez que ese
+> cliente ve salones. Está en SQL y no en el prompt a propósito: el agente pide
+> los salones y el acompañamiento es automático, así que no depende de que el
+> modelo se acuerde. Tres detalles que lo sostienen:
+>
+> - Solo aplica a `categoria = 'sede'` **y** solo si el pedido devolvió algo. Si
+>   no hay material, la salida queda vacía y el flujo cae en `Diagnóstico` igual
+>   que antes: la promoción nunca llega suelta.
+> - "Primera vez" se decide mirando `envios_medios`, no lo que
+>   `fn_medios_para_enviar` deja disponible. Son cosas distintas en cuanto haya
+>   más de una pieza institucional en el catálogo.
+> - El orden importa y lo fija un `order by`: primero los salones, después la
+>   promoción.
+
+> 📌 **Los testimonios salen de circulación** (2026-08-25, migración
+> `20260825000002`). Al cliente se le manda la promoción y los salones, nada
+> más. Los dos testimonios quedan con `activo = false`, que los saca de las tres
+> funciones de una sola vez —incluida `fn_catalogo_digest`—, así que el agente
+> ya no los ve en MATERIAL VISUAL DISPONIBLE y no puede ofrecerlos. Reactivarlos
+> es un `update`.
 
 > ⚠️ **Por qué hace falta el IF `¿Envío exitoso?`.** Los dos nodos de WhatsApp
 > van con `onError: continueRegularOutput`, para que un archivo que Meta
@@ -218,27 +269,25 @@ Usa `fn_medios_para_enviar`, `fn_medios_diagnostico` y `fn_registrar_envio`.
 > ⚠️ **`fn_registrar_envio` devuelve NULL sin error** si el teléfono no está en
 > `leads`. No tratar su resultado como un id garantizado.
 
-**Campos del nodo WhatsApp**, leídos del paquete instalado (no de la UI):
+**Cómo salen los archivos** (2026-08-23): ya no por el nodo `WhatsApp` de
+Meta, sino por dos `httpRequest` contra YCloud —`Enviar Video` y `Enviar Foto`—
+con la credencial `FuwQeM17hSh07Wal`:
 
-| Campo | Valor |
-|---|---|
-| `operation` | `send` |
-| `messageType` | `image` / `video` |
-| `mediaPath` | `useMediaLink` — manda la URL pública y Meta la descarga |
-| `mediaLink` | `={{ $json.url }}` |
-| `additionalFields.mediaCaption` | `={{ $json.caption }}` |
-| `recipientPhoneNumber` | el teléfono del lead |
-| `phoneNumberId` | **pendiente** |
+```
+POST https://api.ycloud.com/v2/whatsapp/messages/sendDirectly
+{ from: '+573150290928', to|recipient: <teléfono>, type: 'video'|'image',
+  video|image: { link: $json.url, caption: $json.caption } }
+```
 
-> 🔑 **Pendiente para que funcione:** la credencial *WhatsApp Business Cloud* y,
-> con ella, el campo `phoneNumberId` ("Sender Phone Number") de `Enviar Video` y
-> `Enviar Foto` — es una lista desplegable que solo carga con la credencial
-> conectada. Mientras tanto el nodo `enviar_medios` del workflow principal está
-> `disabled` y la sección `MATERIAL VISUAL DISPONIBLE` **no** está en el nodo
-> del agente, solo en `n8n/system-prompt-brian-otero.md`.
+Se manda la **URL pública** del bucket, no el binario: WhatsApp la descarga.
+Por eso el bucket `medios` es público. `to` o `recipient` según el teléfono
+empiece o no por `+` — el mismo criterio que en el workflow principal.
+
+Los nodos viejos siguen en el archivo con sufijo `(Meta)` y `(Evolution)`,
+`disabled` y desconectados. No hay nada que reconstruir para volver a ellos.
 
 > 📌 El catálogo cargado hoy son **sedes** e **institucional** (promoción y
-> testimonios). No hay material de `categoria = servicio`, así que la prueba de
+> testimonios, hoy inactivos). No hay material de `categoria = servicio`, así que la prueba de
 > Pirotecnia del plan (Task 9) no se puede correr hasta que se cargue.
 
 ## 9. `agendar_cita`
@@ -249,9 +298,9 @@ Usa `fn_medios_para_enviar`, `fn_medios_diagnostico` y `fn_registrar_envio`.
 > `tipo_cita` es exactamente uno de: visita_sede, prueba_traje, llamada,
 > asesoria. `fecha` en formato YYYY-MM-DD y `hora` en HH:MM (24h). En
 > `detalle` incluye lo que hace falta según el tipo: qué sede y para cuántos
-> invitados, qué traje, o el número a llamar. Cada cita dura 30 minutos. Si la
-> herramienta responde que el horario está ocupado, propón otro y vuelve a
-> llamarla.
+> invitados, qué traje, o el número a llamar. Las citas duran 30 minutos y las
+> llamadas 20. Si la herramienta responde que el horario está ocupado, propón
+> otro y vuelve a llamarla.
 
 **Parámetros:** `tipo_cita`, `fecha`, `hora`, `detalle`, `nombre` (todos
 string, todos por `$fromAI()`) y `telefono`, que **no** va por `$fromAI()`:
@@ -267,10 +316,22 @@ es de bajo riesgo y revertirlo es barato, al contrario que separar una fecha
 Un **solo calendario de empresa**, no uno por sede: atiende una sola persona,
 así que no puede haber dos citas en paralelo aunque sean de sedes distintas.
 
-La regla que hace todo lo demás: la cita ocupa `[hora, hora+30min]` y el
-negocio exige **30 min de colchón** entre citas. Por eso el choque no se mide
-contra la cita, sino contra la ventana `[hora-30min, hora+60min]` — si hay
+La regla que hace todo lo demás: la cita ocupa `[hora, hora+duración]` y el
+negocio exige un colchón a cada lado. Por eso el choque no se mide contra la
+cita, sino contra la ventana `[hora-colchón, hora+duración+colchón]` — si hay
 cualquier evento ahí dentro, el horario no sirve.
+
+**Duración y colchón por tipo** (2026-08-25) — el mapa `MINUTOS` en
+`Calcular Ventana`:
+
+| Tipo | Duración | Colchón | Ventana de choque |
+|---|---|---|---|
+| `visita_sede`, `prueba_traje`, `asesoria` | 30 min | 30 min | 90 min |
+| `llamada` | 20 min | 20 min | 60 min |
+
+Una llamada es más corta y necesita menos aire que recibir a alguien en la sede.
+El nodo devuelve `duracion_min` en su salida, así que el agente puede decírselo
+al cliente sin suponerlo.
 
 1. `Entrada de la Herramienta` — recibe los 6 campos.
 2. `Calcular Ventana` (Code) — valida y calcula la ventana en
@@ -280,7 +341,8 @@ cualquier evento ahí dentro, el horario no sirve.
    en vez de reventar con un error crudo de la API de Google.
 4. `Buscar Choques` — Google Calendar *Get Many Events* sobre la ventana.
 5. `¿Hay choque?` (IF) — ocupado → pedir otro horario; libre → seguir.
-6. `Crear Cita` — Google Calendar *Create Event*, 30 min, título
+6. `Crear Cita` — Google Calendar *Create Event*, con el `fin` que calculó
+   `Calcular Ventana` (30 min, o 20 si es llamada), título
    `[tipo_cita] Nombre` y descripción con tipo, nombre, teléfono y detalle,
    para que el asesor abra el evento y no tenga que volver al chat.
 7. `Cita Confirmada` (Set) — devuelve al agente el resumen a confirmarle al
@@ -351,5 +413,5 @@ El documento del negocio definía 4 herramientas. Aquí hay 9 porque:
 
 `agendar_cita` (#9) y `bloquear_fecha_calendario` (#5) se parecen pero no son
 lo mismo, y conviene no confundirlas: la #9 aparta **30 minutos del asesor**
-en el calendario de la empresa; la #5 aparta **un día entero de una sede**
-para un evento. Por eso la #5 pide aprobación humana y la #9 no.
+(20 si es una llamada) en el calendario de la empresa; la #5 aparta **un día
+entero de una sede** para un evento. Por eso la #5 pide aprobación humana y la #9 no.

@@ -1,6 +1,6 @@
 # Agente de Ventas AI — Christian Sierra Event Planner
 
-Agente conversacional de WhatsApp ("Brian Otero") que perfila clientes,
+Agente conversacional de WhatsApp ("Angie Otero") que perfila clientes,
 cotiza eventos, hace upselling y reserva fechas en Google Calendar.
 Orquestado con n8n, razonamiento con Gemini, datos en Supabase.
 

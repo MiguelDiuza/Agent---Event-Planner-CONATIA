@@ -3,3 +3,8 @@
 node_modules/
 *.log
 .superpowers/
+.gcp-sa-*.json
+
+# Evolution API: secretos del VPS y QR de vinculación
+infra/evolution-api/.env
+infra/evolution-api/qr.png

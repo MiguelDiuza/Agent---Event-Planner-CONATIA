@@ -1,73 +1,72 @@
 {
+  "id": "Tkh6deuiy663KNkl",
   "name": "Christian Sierra — Herramienta: enviar_medios",
+  "description": null,
+  "active": true,
+  "activeVersionId": "7f338b2c-afe5-444f-bb14-d176a0c75d58",
+  "versionCounter": 35,
+  "sourceWorkflowId": null,
   "nodes": [
     {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "categoria"
+            },
+            {
+              "name": "referencia"
+            },
+            {
+              "name": "tipo_medio"
+            },
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "invitados"
+            }
+          ]
+        }
+      },
       "id": "ed000000-0000-4000-8000-000000000001",
       "name": "Entrada de la Herramienta",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -420,
-        300
-      ],
-      "parameters": {
-        "inputSource": "workflowInputs",
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "categoria",
-              "type": "string"
-            },
-            {
-              "name": "referencia",
-              "type": "string"
-            },
-            {
-              "name": "tipo_medio",
-              "type": "string"
-            },
-            {
-              "name": "telefono",
-              "type": "string"
-            }
-          ]
-        }
-      }
+        -416,
+        304
+      ]
     },
     {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Dos modos en un solo nodo (2026-08-25):\n--\n-- 1. TANDA DE COTIZACION -- categoria 'sede' con referencia vacia o 'todas'.\n--    Manda juntos los videos de todos los salones de la oferta, cada uno con\n--    su nombre, si es cerrado o campestre, y el precio del escalon de ese\n--    cliente. El caption lo arma la base (fn_medios_sedes_cotizacion): asi el\n--    precio del video nunca puede discrepar del que dijo el agente.\n-- 2. UN SALON CONCRETO -- lo de siempre: fn_medios_para_enviar resuelve la\n--    referencia con su limite de 3 piezas.\n--\n-- Los dos modos se excluyen. Se filtran con un where sobre `modo` en vez de\n-- ramificar el workflow en dos nodos que habria que mantener en paralelo.\n--\n-- En cualquiera de los dos, la primera vez que el cliente ve un salon se le\n-- suma el video de promocion. \"Primera vez\" es literal: si ya recibio cualquier\n-- pieza institucional -- con otro salon, o porque pregunto por promociones -- no\n-- se repite. La condicion mira envios_medios y no lo que queda disponible: son\n-- cosas distintas en cuanto haya mas de una pieza institucional.\n--\n-- Los testimonios ya no se envian (2026-08-25): estan en el catalogo con\n-- activo = false, asi que ninguna de las dos funciones los devuelve.\n--\n-- El acompanante cuelga de que el pedido haya devuelto algo: si no hay material\n-- la salida queda vacia, el flujo cae en Diagnostico y la promocion nunca llega\n-- suelta.\nwith modo as (\n    select lower(btrim(coalesce($1, ''))) = 'sede'\n       and lower(btrim(coalesce($2, ''))) in ('', 'todas', 'todos', 'todas las sedes')\n           as tanda\n),\npedido as (\n    select row_number() over () as pos, p.*\n    from (\n        select * from fn_medios_sedes_cotizacion($3, $5::int)\n        where (select tanda from modo)\n        union all\n        select * from fn_medios_para_enviar($1, $2, $3, $4)\n        where not (select tanda from modo)\n    ) p\n),\nacompanar as (\n    select lower(btrim(coalesce($1, ''))) = 'sede'\n       and exists (select 1 from pedido)\n       and not exists (\n             select 1\n             from envios_medios e\n             join leads l  on l.id = e.lead_id\n             join medios m on m.id = e.medio_id\n             where l.telefono = $3\n               and m.sede_id is null\n               and m.tipo_evento_id is null\n               and m.servicio_id is null\n       ) as va\n),\npromocion as (\n    select * from fn_medios_para_enviar('institucional', 'promocion', $3, 'video') limit 1\n),\ntodo as (\n    select 0 as orden_envio, p.pos, p.id, p.tipo, p.url, p.caption, p.descripcion\n    from pedido p\n    union all\n    select 1, 1, r.* from promocion r where (select va from acompanar)\n)\nselect id, tipo, url, caption, descripcion\nfrom todo\norder by orden_envio, pos",
+        "options": {
+          "queryReplacement": "={{ [$json.categoria, $json.referencia, $json.telefono, $json.tipo_medio || 'ambos', (() => { const n = Number($json.invitados); return Number.isFinite(n) && n > 0 ? Math.round(n) : null; })()] }}"
+        }
+      },
       "id": "ed000000-0000-4000-8000-000000000002",
       "name": "Seleccionar Medios",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -180,
-        300
+        -176,
+        304
       ],
       "alwaysOutputData": true,
       "notes": "alwaysOutputData es obligatorio: sin filas el nodo no emite items, n8n salta todo lo que sigue y la rama de diagnostico nunca corre, dejando al agente sin respuesta.",
       "credentials": {
         "postgres": {
-          "id": "ErY9RiTjTsXVB0JC",
-          "name": "Supabase - Christian Sierra"
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
         }
       },
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "select * from fn_medios_para_enviar($1, $2, $3, $4)",
-        "options": {
-          "queryReplacement": "={{ [$json.categoria, $json.referencia, $json.telefono, $json.tipo_medio || 'ambos'] }}"
-        }
-      }
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
-      "id": "ed000000-0000-4000-8000-000000000003",
-      "name": "¿Hay medios?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        60,
-        300
-      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -92,56 +91,55 @@
         },
         "looseTypeValidation": true,
         "options": {}
-      }
+      },
+      "id": "ed000000-0000-4000-8000-000000000003",
+      "name": "¿Hay medios?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        64,
+        304
+      ]
     },
     {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Diagnostico del envio vacio. Tres situaciones que para el agente son muy\n-- distintas y que hasta hoy compartian un solo texto (2026-08-25):\n--\n--  a) Ya recibio la TANDA de cotizacion completa. El texto viejo era el de \"no\n--     hay medios para esa referencia ... vuelve a intentarlo con una de esas\" y\n--     el agente lo leia al pie de la letra: se ponia a pedir los salones uno por\n--     uno. Verificado en produccion. Ahora se le dice que ya la tiene y que NO\n--     la pida salon por salon. Y el texto le prohibe ademas anunciar un envio:\n--     sin esa linea contestaba \"con gusto te los envio nuevamente / aqui tienes\"\n--     sin que saliera nada (verificado en produccion, 2026-08-25).\n--  b) Pidio la tanda pero no hay nada que enviarle y tampoco ha recibido nada\n--     (sin telefono utilizable, catalogo vacio). Ahi no se puede afirmar que ya\n--     la vio: se sigue la conversacion sin nombrar el asunto.\n--  c) Lo de siempre para una referencia concreta.\n--\n-- La tanda se reconoce igual que en Seleccionar Medios: categoria 'sede' con la\n-- referencia vacia o 'todas'. fn_medios_diagnostico no sirve para el caso (a):\n-- con referencia vacia devuelve 0 existentes, que es justo lo que disparaba la\n-- rama equivocada.\nwith modo as (\n    select lower(btrim(coalesce($1, ''))) = 'sede'\n       and lower(btrim(coalesce($2, ''))) in ('', 'todas', 'todos', 'todas las sedes')\n           as tanda\n),\nya_vio as (\n    select exists (\n        select 1\n        from envios_medios e\n        join leads  l on l.id = e.lead_id\n        join medios m on m.id = e.medio_id\n        where l.telefono = $4\n          and m.sede_id is not null\n    ) as si\n)\nselect\n    case\n        when (select tanda from modo) and (select si from ya_vio)\n            then 'Este cliente YA tiene en el chat los videos de los salones con su nombre y su precio: se los enviaste antes. NO los vuelvas a enviar y NO los pidas salón por salón. Tampoco le digas \"te los envío\" ni \"aquí tienes los videos\": no va a llegar nada nuevo y sería mentirle. Si te los vuelve a pedir, dile que los busque un poco más arriba en la conversación, que ahí siguen. Después coméntale las opciones y pregúntale cuál le gustó más.'\n        when (select tanda from modo)\n            then 'No hay videos de salones para enviar ahora. NO menciones el asunto ni te disculpes: sigue la conversación con normalidad y llévala a agendar una cita.'\n        when d.total_existentes > 0\n            then 'Ya le enviaste todo el material disponible de esa referencia a este cliente. No lo repitas: refiérete a lo que ya vio contigo.'\n        else 'No hay medios para esa referencia. Con material disponible: ' || coalesce(d.referencias_disponibles, 'ninguna') || '. Vuelve a intentarlo con una de esas, o continúa la conversación sin enviar material.'\n    end as resultado\nfrom fn_medios_diagnostico($1, $2, $3) d",
+        "options": {
+          "queryReplacement": "={{ [$('Entrada de la Herramienta').first().json.categoria, $('Entrada de la Herramienta').first().json.referencia, $('Entrada de la Herramienta').first().json.tipo_medio || 'ambos', $('Entrada de la Herramienta').first().json.telefono] }}"
+        }
+      },
       "id": "ed000000-0000-4000-8000-000000000004",
       "name": "Diagnóstico",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        300,
-        480
+        80,
+        592
       ],
       "notes": "Distingue 'ya se lo enviaste todo' de 'esa referencia no existe'. Sin esa distincion el agente le diria a un cliente que no hay fotos de una sede de la que acaba de mandarle fotos.",
       "credentials": {
         "postgres": {
-          "id": "ErY9RiTjTsXVB0JC",
-          "name": "Supabase - Christian Sierra"
-        }
-      },
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "select\n    case\n        when d.total_existentes > 0\n            then 'Ya le enviaste todo el material disponible de esa referencia a este cliente. No lo repitas: refiérete a lo que ya vio contigo.'\n        else 'No hay medios para esa referencia. Con material disponible: ' || coalesce(d.referencias_disponibles, 'ninguna') || '. Vuelve a intentarlo con una de esas, o continúa la conversación sin enviar material.'\n    end as resultado\nfrom fn_medios_diagnostico($1, $2, $3) d",
-        "options": {
-          "queryReplacement": "={{ [$('Entrada de la Herramienta').first().json.categoria, $('Entrada de la Herramienta').first().json.referencia, $('Entrada de la Herramienta').first().json.tipo_medio || 'ambos'] }}"
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
         }
       }
     },
     {
+      "parameters": {
+        "options": {}
+      },
       "id": "ed000000-0000-4000-8000-000000000005",
       "name": "Recorrer Medios",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        300,
-        160
+        368,
+        32
       ],
-      "notes": "Salida 0 = done (resumen), salida 1 = loop (un medio por vuelta).",
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      }
+      "notes": "Salida 0 = done (resumen), salida 1 = loop (un medio por vuelta)."
     },
     {
-      "id": "ed000000-0000-4000-8000-000000000006",
-      "name": "¿Es video?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        540,
-        280
-      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -165,22 +163,20 @@
         },
         "looseTypeValidation": true,
         "options": {}
-      }
+      },
+      "id": "ed000000-0000-4000-8000-000000000006",
+      "name": "¿Es video?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        576,
+        112
+      ]
     },
     {
-      "id": "ed000000-0000-4000-8000-000000000007",
-      "name": "Enviar Video",
-      "type": "n8n-nodes-base.whatsApp",
-      "typeVersion": 1.1,
-      "position": [
-        780,
-        180
-      ],
-      "onError": "continueRegularOutput",
-      "notes": "Falta 'Sender Phone Number' (phoneNumberId): se elige de una lista que solo carga con la credencial de Meta conectada. mediaPath useMediaLink manda la URL publica de Supabase Storage y Meta la descarga.",
-      "credentials": {},
       "parameters": {
         "operation": "send",
+        "phoneNumberId": "1265360156662321",
         "messageType": "video",
         "mediaPath": "useMediaLink",
         "recipientPhoneNumber": "={{ $('Entrada de la Herramienta').first().json.telefono }}",
@@ -189,22 +185,29 @@
           "mediaCaption": "={{ $json.caption }}"
         }
       },
-      "webhookId": "a3dad107-a154-4007-be0d-9fd77d0cadd2"
-    },
-    {
-      "id": "ed000000-0000-4000-8000-000000000008",
-      "name": "Enviar Foto",
+      "id": "ed000000-0000-4000-8000-000000000007",
+      "name": "Enviar Video (Meta)",
       "type": "n8n-nodes-base.whatsApp",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
-        780,
-        380
+        784,
+        308
       ],
       "onError": "continueRegularOutput",
-      "notes": "Falta 'Sender Phone Number' (phoneNumberId): se elige de una lista que solo carga con la credencial de Meta conectada.",
-      "credentials": {},
+      "notes": "phoneNumberId es obligatorio en este nodo y faltaba en la version original del workflow: un bug latente que nunca se disparo porque estos nodos jamas llegaron a ejecutarse.",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "maeUaDbbZ6NNICeJ",
+          "name": "Meta WhatsApp - Christian Sierra"
+        }
+      },
+      "webhookId": "5133c54e-e723-43ab-9ade-28825f893b8e",
+      "disabled": true
+    },
+    {
       "parameters": {
         "operation": "send",
+        "phoneNumberId": "1265360156662321",
         "messageType": "image",
         "mediaPath": "useMediaLink",
         "recipientPhoneNumber": "={{ $('Entrada de la Herramienta').first().json.telefono }}",
@@ -213,18 +216,26 @@
           "mediaCaption": "={{ $json.caption }}"
         }
       },
-      "webhookId": "cd93e88f-82ad-4604-b7f3-56087e6b6c34"
+      "id": "ed000000-0000-4000-8000-000000000008",
+      "name": "Enviar Foto (Meta)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        800,
+        484
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "phoneNumberId es obligatorio en este nodo y faltaba en la version original del workflow: un bug latente que nunca se disparo porque estos nodos jamas llegaron a ejecutarse.",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "maeUaDbbZ6NNICeJ",
+          "name": "Meta WhatsApp - Christian Sierra"
+        }
+      },
+      "webhookId": "1b0f511b-1769-4b57-850f-07f48e278a74",
+      "disabled": true
     },
     {
-      "id": "ed000000-0000-4000-8000-000000000009",
-      "name": "¿Envío exitoso?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        1020,
-        280
-      ],
-      "notes": "Los nodos de WhatsApp siguen en error, asi que un envio fallido tambien sale por la salida normal. Sin este IF quedaria registrado como enviado y el filtro anti-repeticion suprimiria para siempre un archivo que Meta rechazo.",
       "parameters": {
         "conditions": {
           "options": {
@@ -249,45 +260,47 @@
         },
         "looseTypeValidation": true,
         "options": {}
-      }
+      },
+      "id": "ed000000-0000-4000-8000-000000000009",
+      "name": "¿Envío exitoso?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1024,
+        128
+      ],
+      "notes": "Los nodos de WhatsApp siguen en error, asi que un envio fallido tambien sale por la salida normal. Sin este IF quedaria registrado como enviado y el filtro anti-repeticion suprimiria para siempre un archivo que Meta rechazo."
     },
     {
-      "id": "ed000000-0000-4000-8000-000000000010",
-      "name": "Registrar Envío",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        1260,
-        180
-      ],
-      "alwaysOutputData": true,
-      "notes": "fn_registrar_envio devuelve NULL sin error si el telefono no esta en leads: no tratar el resultado como un id garantizado.",
-      "credentials": {
-        "postgres": {
-          "id": "ErY9RiTjTsXVB0JC",
-          "name": "Supabase - Christian Sierra"
-        }
-      },
       "parameters": {
         "operation": "executeQuery",
         "query": "select fn_registrar_envio($1::uuid, $2::text)",
         "options": {
           "queryReplacement": "={{ [$('Recorrer Medios').first().json.id, $('Entrada de la Herramienta').first().json.telefono] }}"
         }
-      }
+      },
+      "id": "ed000000-0000-4000-8000-000000000010",
+      "name": "Registrar Envío",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1312,
+        96
+      ],
+      "alwaysOutputData": true,
+      "notes": "fn_registrar_envio devuelve NULL sin error si el telefono no esta en leads: no tratar el resultado como un id garantizado.",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
-      "id": "ed000000-0000-4000-8000-000000000011",
-      "name": "Marcar Enviado",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1480,
-        180
-      ],
       "parameters": {
-        "mode": "manual",
-        "includeOtherFields": false,
         "assignments": {
           "assignments": [
             {
@@ -305,21 +318,18 @@
           ]
         },
         "options": {}
-      }
-    },
-    {
-      "id": "ed000000-0000-4000-8000-000000000012",
-      "name": "Marcar Fallido",
+      },
+      "id": "ed000000-0000-4000-8000-000000000011",
+      "name": "Marcar Enviado",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1260,
-        400
-      ],
-      "notes": "Vuelve al loop igual que la rama exitosa: un archivo que Meta rechaza no debe cortar el envio de los demas.",
+        1648,
+        368
+      ]
+    },
+    {
       "parameters": {
-        "mode": "manual",
-        "includeOtherFields": false,
         "assignments": {
           "assignments": [
             {
@@ -337,28 +347,152 @@
             {
               "id": "bad-motivo",
               "name": "motivo",
-              "value": "={{ typeof $json.error === 'string' ? $json.error : ($json.error && $json.error.message) || 'Meta rechazó el archivo' }}",
+              "value": "={{ typeof $json.error === 'string' ? $json.error : ($json.error && $json.error.message) || 'el proveedor rechazó el archivo' }}",
               "type": "string"
             }
           ]
         },
         "options": {}
-      }
+      },
+      "id": "ed000000-0000-4000-8000-000000000012",
+      "name": "Marcar Fallido",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1376,
+        256
+      ],
+      "notes": "Vuelve al loop igual que la rama exitosa: un archivo que Meta rechaza no debe cortar el envio de los demas."
     },
     {
+      "parameters": {
+        "jsCode": "// La salida 'done' del loop trae un item por medio con la marca de si el proveedor lo\n// acepto. El resumen se redacta como instruccion para el agente, no como dato:\n// es lo unico que el modelo va a leer sobre lo que acaba de pasar.\nconst items = $input.all().map((i) => i.json);\nconst enviados = items.filter((i) => i.enviado).map((i) => i.descripcion);\nconst fallidos = items.filter((i) => !i.enviado).map((i) => i.descripcion);\n\nlet resultado;\n\n// Verificado en produccion (2026-08-25): sin la prohibicion explicita el agente\n// le contaba el fallo al cliente (\"tuvimos un inconveniente tecnico con la carga\n// de los videos\"), y ademas reintentaba la herramienta en el mismo turno, con lo\n// que el turno se iba a dos minutos. Lo de \"un asesor se lo haga llegar\" tambien\n// se cayo: contradecia la regla de no dejar nada sin fecha y hora.\nif (enviados.length === 0) {\n  // Nunca dar por enviado lo que el proveedor rechazo: el cliente no lo tiene.\n  resultado =\n    `No se pudo enviar el material (${fallidos.join('; ')}). No le digas al cliente que ya lo tiene, ni que lo busque mas arriba en el chat: no hay nada que buscar y quedarias en evidencia. ` +\n    'NO menciones el fallo, ni hables de problemas tecnicos, ni te disculpes por el material: '  +\n    'es un asunto interno y nombrarlo solo resta confianza. Tampoco vuelvas a llamar esta '  +\n    'herramienta en este turno. Sigue la conversacion con normalidad y llevala a agendar '  +\n    'una cita, que es donde el cliente lo ve todo en persona.';\n} else {\n  resultado =\n    `Enviaste al cliente: ${enviados.join('; ')}. ` +\n    'Ya los está viendo en el chat: coméntalos con naturalidad en tu respuesta, no anuncies que vas a enviarlos.';\n\n  if (fallidos.length > 0) {\n    resultado += ` No se pudo enviar ${fallidos.join('; ')} — no lo menciones ni lo des por enviado.`;\n  }\n}\n\nreturn [{ json: { resultado } }];"
+      },
       "id": "ed000000-0000-4000-8000-000000000013",
       "name": "Resumen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        540,
-        40
+        608,
+        -160
       ],
-      "notes": "El resumen solo cuenta lo que Meta acepto: si dijera 'enviaste X' de un archivo rechazado, el agente lo comentaria como si el cliente lo estuviera viendo.",
+      "notes": "El resumen solo cuenta lo que Meta acepto: si dijera 'enviaste X' de un archivo rechazado, el agente lo comentaria como si el cliente lo estuviera viendo."
+    },
+    {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// La salida 'done' del loop trae un item por medio con la marca de si Meta lo\n// acepto. El resumen se redacta como instruccion para el agente, no como dato:\n// es lo unico que el modelo va a leer sobre lo que acaba de pasar.\nconst items = $input.all().map((i) => i.json);\nconst enviados = items.filter((i) => i.enviado).map((i) => i.descripcion);\nconst fallidos = items.filter((i) => !i.enviado).map((i) => i.descripcion);\n\nlet resultado;\n\nif (enviados.length === 0) {\n  // Nunca dar por enviado lo que Meta rechazo: el cliente no lo tiene.\n  resultado =\n    `No se pudo enviar el material (${fallidos.join('; ')}). No le digas al cliente que ya lo tiene. ` +\n    'Continúa la conversación sin material y, si insiste, ofrécele que un asesor se lo haga llegar.';\n} else {\n  resultado =\n    `Enviaste al cliente: ${enviados.join('; ')}. ` +\n    'Ya los está viendo en el chat: coméntalos con naturalidad en tu respuesta, no anuncies que vas a enviarlos.';\n\n  if (fallidos.length > 0) {\n    resultado += ` No se pudo enviar ${fallidos.join('; ')} — no lo menciones ni lo des por enviado.`;\n  }\n}\n\nreturn [{ json: { resultado } }];"
-      }
+        "method": "POST",
+        "url": "https://evolution.conatia-bot.duckdns.org/message/sendMedia/brian-otero",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: String($('Entrada de la Herramienta').first().json.telefono).includes('@') ? String($('Entrada de la Herramienta').first().json.telefono) : String($('Entrada de la Herramienta').first().json.telefono).replace(/\\D/g, ''), mediatype: 'video', media: $json.url, caption: $json.caption }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        784,
+        48
+      ],
+      "id": "d27837bb-e4eb-411f-a753-32524d3f4694",
+      "name": "Enviar Video (Evolution)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CLXfTgs2zcfOhckz",
+          "name": "Evolution API - Christian Sierra"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evolution.conatia-bot.duckdns.org/message/sendMedia/brian-otero",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: String($('Entrada de la Herramienta').first().json.telefono).includes('@') ? String($('Entrada de la Herramienta').first().json.telefono) : String($('Entrada de la Herramienta').first().json.telefono).replace(/\\D/g, ''), mediatype: 'image', media: $json.url, caption: $json.caption }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        224
+      ],
+      "id": "b28f9b26-79e5-42c2-b327-23e2f51ee9e6",
+      "name": "Enviar Foto (Evolution)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CLXfTgs2zcfOhckz",
+          "name": "Evolution API - Christian Sierra"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: '+573150290928', ...(String($('Entrada de la Herramienta').first().json.telefono).startsWith('+') ? { to: $('Entrada de la Herramienta').first().json.telefono } : { recipient: $('Entrada de la Herramienta').first().json.telefono }), type: 'video', video: { link: $json.url, caption: $json.caption } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        784,
+        48
+      ],
+      "id": "6b775875-5bd3-446b-9a7e-935178fd686f",
+      "name": "Enviar Video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "FuwQeM17hSh07Wal",
+          "name": "YCloud - Sierra Planner"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: '+573150290928', ...(String($('Entrada de la Herramienta').first().json.telefono).startsWith('+') ? { to: $('Entrada de la Herramienta').first().json.telefono } : { recipient: $('Entrada de la Herramienta').first().json.telefono }), type: 'image', image: { link: $json.url, caption: $json.caption } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        224
+      ],
+      "id": "c43ba799-3755-4e64-bdf4-c1cd0ef97800",
+      "name": "Enviar Foto",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "FuwQeM17hSh07Wal",
+          "name": "YCloud - Sierra Planner"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     }
   ],
   "connections": {
@@ -438,28 +572,6 @@
         ]
       ]
     },
-    "Enviar Video": {
-      "main": [
-        [
-          {
-            "node": "¿Envío exitoso?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar Foto": {
-      "main": [
-        [
-          {
-            "node": "¿Envío exitoso?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "¿Envío exitoso?": {
       "main": [
         [
@@ -510,13 +622,699 @@
           }
         ]
       ]
+    },
+    "Enviar Video": {
+      "main": [
+        [
+          {
+            "node": "¿Envío exitoso?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Foto": {
+      "main": [
+        [
+          {
+            "node": "¿Envío exitoso?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "timezone": "America/Bogota",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "activeVersion": {
+    "versionId": "7f338b2c-afe5-444f-bb14-d176a0c75d58",
+    "workflowId": "Tkh6deuiy663KNkl",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "categoria"
+              },
+              {
+                "name": "referencia"
+              },
+              {
+                "name": "tipo_medio"
+              },
+              {
+                "name": "telefono"
+              },
+              {
+                "name": "invitados"
+              }
+            ]
+          }
+        },
+        "id": "ed000000-0000-4000-8000-000000000001",
+        "name": "Entrada de la Herramienta",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          -416,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "-- Dos modos en un solo nodo (2026-08-25):\n--\n-- 1. TANDA DE COTIZACION -- categoria 'sede' con referencia vacia o 'todas'.\n--    Manda juntos los videos de todos los salones de la oferta, cada uno con\n--    su nombre, si es cerrado o campestre, y el precio del escalon de ese\n--    cliente. El caption lo arma la base (fn_medios_sedes_cotizacion): asi el\n--    precio del video nunca puede discrepar del que dijo el agente.\n-- 2. UN SALON CONCRETO -- lo de siempre: fn_medios_para_enviar resuelve la\n--    referencia con su limite de 3 piezas.\n--\n-- Los dos modos se excluyen. Se filtran con un where sobre `modo` en vez de\n-- ramificar el workflow en dos nodos que habria que mantener en paralelo.\n--\n-- En cualquiera de los dos, la primera vez que el cliente ve un salon se le\n-- suma el video de promocion. \"Primera vez\" es literal: si ya recibio cualquier\n-- pieza institucional -- con otro salon, o porque pregunto por promociones -- no\n-- se repite. La condicion mira envios_medios y no lo que queda disponible: son\n-- cosas distintas en cuanto haya mas de una pieza institucional.\n--\n-- Los testimonios ya no se envian (2026-08-25): estan en el catalogo con\n-- activo = false, asi que ninguna de las dos funciones los devuelve.\n--\n-- El acompanante cuelga de que el pedido haya devuelto algo: si no hay material\n-- la salida queda vacia, el flujo cae en Diagnostico y la promocion nunca llega\n-- suelta.\nwith modo as (\n    select lower(btrim(coalesce($1, ''))) = 'sede'\n       and lower(btrim(coalesce($2, ''))) in ('', 'todas', 'todos', 'todas las sedes')\n           as tanda\n),\npedido as (\n    select row_number() over () as pos, p.*\n    from (\n        select * from fn_medios_sedes_cotizacion($3, $5::int)\n        where (select tanda from modo)\n        union all\n        select * from fn_medios_para_enviar($1, $2, $3, $4)\n        where not (select tanda from modo)\n    ) p\n),\nacompanar as (\n    select lower(btrim(coalesce($1, ''))) = 'sede'\n       and exists (select 1 from pedido)\n       and not exists (\n             select 1\n             from envios_medios e\n             join leads l  on l.id = e.lead_id\n             join medios m on m.id = e.medio_id\n             where l.telefono = $3\n               and m.sede_id is null\n               and m.tipo_evento_id is null\n               and m.servicio_id is null\n       ) as va\n),\npromocion as (\n    select * from fn_medios_para_enviar('institucional', 'promocion', $3, 'video') limit 1\n),\ntodo as (\n    select 0 as orden_envio, p.pos, p.id, p.tipo, p.url, p.caption, p.descripcion\n    from pedido p\n    union all\n    select 1, 1, r.* from promocion r where (select va from acompanar)\n)\nselect id, tipo, url, caption, descripcion\nfrom todo\norder by orden_envio, pos",
+          "options": {
+            "queryReplacement": "={{ [$json.categoria, $json.referencia, $json.telefono, $json.tipo_medio || 'ambos', (() => { const n = Number($json.invitados); return Number.isFinite(n) && n > 0 ? Math.round(n) : null; })()] }}"
+          }
+        },
+        "id": "ed000000-0000-4000-8000-000000000002",
+        "name": "Seleccionar Medios",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -176,
+          304
+        ],
+        "alwaysOutputData": true,
+        "notes": "alwaysOutputData es obligatorio: sin filas el nodo no emite items, n8n salta todo lo que sigue y la rama de diagnostico nunca corre, dejando al agente sin respuesta.",
+        "credentials": {
+          "postgres": {
+            "id": "Ou3OkUR92F7f6ofK",
+            "name": "Supabase - Christian Sierra (nuevo)"
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1000
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "cond-hay-medios",
+                "leftValue": "={{ $json.id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "exists",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "looseTypeValidation": true,
+          "options": {}
+        },
+        "id": "ed000000-0000-4000-8000-000000000003",
+        "name": "¿Hay medios?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          64,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "-- Diagnostico del envio vacio. Tres situaciones que para el agente son muy\n-- distintas y que hasta hoy compartian un solo texto (2026-08-25):\n--\n--  a) Ya recibio la TANDA de cotizacion completa. El texto viejo era el de \"no\n--     hay medios para esa referencia ... vuelve a intentarlo con una de esas\" y\n--     el agente lo leia al pie de la letra: se ponia a pedir los salones uno por\n--     uno. Verificado en produccion. Ahora se le dice que ya la tiene y que NO\n--     la pida salon por salon. Y el texto le prohibe ademas anunciar un envio:\n--     sin esa linea contestaba \"con gusto te los envio nuevamente / aqui tienes\"\n--     sin que saliera nada (verificado en produccion, 2026-08-25).\n--  b) Pidio la tanda pero no hay nada que enviarle y tampoco ha recibido nada\n--     (sin telefono utilizable, catalogo vacio). Ahi no se puede afirmar que ya\n--     la vio: se sigue la conversacion sin nombrar el asunto.\n--  c) Lo de siempre para una referencia concreta.\n--\n-- La tanda se reconoce igual que en Seleccionar Medios: categoria 'sede' con la\n-- referencia vacia o 'todas'. fn_medios_diagnostico no sirve para el caso (a):\n-- con referencia vacia devuelve 0 existentes, que es justo lo que disparaba la\n-- rama equivocada.\nwith modo as (\n    select lower(btrim(coalesce($1, ''))) = 'sede'\n       and lower(btrim(coalesce($2, ''))) in ('', 'todas', 'todos', 'todas las sedes')\n           as tanda\n),\nya_vio as (\n    select exists (\n        select 1\n        from envios_medios e\n        join leads  l on l.id = e.lead_id\n        join medios m on m.id = e.medio_id\n        where l.telefono = $4\n          and m.sede_id is not null\n    ) as si\n)\nselect\n    case\n        when (select tanda from modo) and (select si from ya_vio)\n            then 'Este cliente YA tiene en el chat los videos de los salones con su nombre y su precio: se los enviaste antes. NO los vuelvas a enviar y NO los pidas salón por salón. Tampoco le digas \"te los envío\" ni \"aquí tienes los videos\": no va a llegar nada nuevo y sería mentirle. Si te los vuelve a pedir, dile que los busque un poco más arriba en la conversación, que ahí siguen. Después coméntale las opciones y pregúntale cuál le gustó más.'\n        when (select tanda from modo)\n            then 'No hay videos de salones para enviar ahora. NO menciones el asunto ni te disculpes: sigue la conversación con normalidad y llévala a agendar una cita.'\n        when d.total_existentes > 0\n            then 'Ya le enviaste todo el material disponible de esa referencia a este cliente. No lo repitas: refiérete a lo que ya vio contigo.'\n        else 'No hay medios para esa referencia. Con material disponible: ' || coalesce(d.referencias_disponibles, 'ninguna') || '. Vuelve a intentarlo con una de esas, o continúa la conversación sin enviar material.'\n    end as resultado\nfrom fn_medios_diagnostico($1, $2, $3) d",
+          "options": {
+            "queryReplacement": "={{ [$('Entrada de la Herramienta').first().json.categoria, $('Entrada de la Herramienta').first().json.referencia, $('Entrada de la Herramienta').first().json.tipo_medio || 'ambos', $('Entrada de la Herramienta').first().json.telefono] }}"
+          }
+        },
+        "id": "ed000000-0000-4000-8000-000000000004",
+        "name": "Diagnóstico",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          80,
+          592
+        ],
+        "notes": "Distingue 'ya se lo enviaste todo' de 'esa referencia no existe'. Sin esa distincion el agente le diria a un cliente que no hay fotos de una sede de la que acaba de mandarle fotos.",
+        "credentials": {
+          "postgres": {
+            "id": "Ou3OkUR92F7f6ofK",
+            "name": "Supabase - Christian Sierra (nuevo)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "id": "ed000000-0000-4000-8000-000000000005",
+        "name": "Recorrer Medios",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          368,
+          32
+        ],
+        "notes": "Salida 0 = done (resumen), salida 1 = loop (un medio por vuelta)."
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "cond-es-video",
+                "leftValue": "={{ $json.tipo }}",
+                "rightValue": "video",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "looseTypeValidation": true,
+          "options": {}
+        },
+        "id": "ed000000-0000-4000-8000-000000000006",
+        "name": "¿Es video?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          576,
+          112
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "send",
+          "phoneNumberId": "1265360156662321",
+          "messageType": "video",
+          "mediaPath": "useMediaLink",
+          "recipientPhoneNumber": "={{ $('Entrada de la Herramienta').first().json.telefono }}",
+          "mediaLink": "={{ $json.url }}",
+          "additionalFields": {
+            "mediaCaption": "={{ $json.caption }}"
+          }
+        },
+        "id": "ed000000-0000-4000-8000-000000000007",
+        "name": "Enviar Video (Meta)",
+        "type": "n8n-nodes-base.whatsApp",
+        "typeVersion": 1,
+        "position": [
+          784,
+          308
+        ],
+        "onError": "continueRegularOutput",
+        "notes": "phoneNumberId es obligatorio en este nodo y faltaba en la version original del workflow: un bug latente que nunca se disparo porque estos nodos jamas llegaron a ejecutarse.",
+        "credentials": {
+          "whatsAppApi": {
+            "id": "maeUaDbbZ6NNICeJ",
+            "name": "Meta WhatsApp - Christian Sierra"
+          }
+        },
+        "webhookId": "5133c54e-e723-43ab-9ade-28825f893b8e",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "operation": "send",
+          "phoneNumberId": "1265360156662321",
+          "messageType": "image",
+          "mediaPath": "useMediaLink",
+          "recipientPhoneNumber": "={{ $('Entrada de la Herramienta').first().json.telefono }}",
+          "mediaLink": "={{ $json.url }}",
+          "additionalFields": {
+            "mediaCaption": "={{ $json.caption }}"
+          }
+        },
+        "id": "ed000000-0000-4000-8000-000000000008",
+        "name": "Enviar Foto (Meta)",
+        "type": "n8n-nodes-base.whatsApp",
+        "typeVersion": 1,
+        "position": [
+          800,
+          484
+        ],
+        "onError": "continueRegularOutput",
+        "notes": "phoneNumberId es obligatorio en este nodo y faltaba en la version original del workflow: un bug latente que nunca se disparo porque estos nodos jamas llegaron a ejecutarse.",
+        "credentials": {
+          "whatsAppApi": {
+            "id": "maeUaDbbZ6NNICeJ",
+            "name": "Meta WhatsApp - Christian Sierra"
+          }
+        },
+        "webhookId": "1b0f511b-1769-4b57-850f-07f48e278a74",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "cond-envio-ok",
+                "leftValue": "={{ $json.error === undefined }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "looseTypeValidation": true,
+          "options": {}
+        },
+        "id": "ed000000-0000-4000-8000-000000000009",
+        "name": "¿Envío exitoso?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          1024,
+          128
+        ],
+        "notes": "Los nodos de WhatsApp siguen en error, asi que un envio fallido tambien sale por la salida normal. Sin este IF quedaria registrado como enviado y el filtro anti-repeticion suprimiria para siempre un archivo que Meta rechazo."
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "select fn_registrar_envio($1::uuid, $2::text)",
+          "options": {
+            "queryReplacement": "={{ [$('Recorrer Medios').first().json.id, $('Entrada de la Herramienta').first().json.telefono] }}"
+          }
+        },
+        "id": "ed000000-0000-4000-8000-000000000010",
+        "name": "Registrar Envío",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          1312,
+          96
+        ],
+        "alwaysOutputData": true,
+        "notes": "fn_registrar_envio devuelve NULL sin error si el telefono no esta en leads: no tratar el resultado como un id garantizado.",
+        "credentials": {
+          "postgres": {
+            "id": "Ou3OkUR92F7f6ofK",
+            "name": "Supabase - Christian Sierra (nuevo)"
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1000
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "ok-desc",
+                "name": "descripcion",
+                "value": "={{ $('Recorrer Medios').first().json.descripcion }}",
+                "type": "string"
+              },
+              {
+                "id": "ok-flag",
+                "name": "enviado",
+                "value": "={{ true }}",
+                "type": "boolean"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ed000000-0000-4000-8000-000000000011",
+        "name": "Marcar Enviado",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          1648,
+          368
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "bad-desc",
+                "name": "descripcion",
+                "value": "={{ $('Recorrer Medios').first().json.descripcion }}",
+                "type": "string"
+              },
+              {
+                "id": "bad-flag",
+                "name": "enviado",
+                "value": "={{ false }}",
+                "type": "boolean"
+              },
+              {
+                "id": "bad-motivo",
+                "name": "motivo",
+                "value": "={{ typeof $json.error === 'string' ? $json.error : ($json.error && $json.error.message) || 'el proveedor rechazó el archivo' }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ed000000-0000-4000-8000-000000000012",
+        "name": "Marcar Fallido",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          1376,
+          256
+        ],
+        "notes": "Vuelve al loop igual que la rama exitosa: un archivo que Meta rechaza no debe cortar el envio de los demas."
+      },
+      {
+        "parameters": {
+          "jsCode": "// La salida 'done' del loop trae un item por medio con la marca de si el proveedor lo\n// acepto. El resumen se redacta como instruccion para el agente, no como dato:\n// es lo unico que el modelo va a leer sobre lo que acaba de pasar.\nconst items = $input.all().map((i) => i.json);\nconst enviados = items.filter((i) => i.enviado).map((i) => i.descripcion);\nconst fallidos = items.filter((i) => !i.enviado).map((i) => i.descripcion);\n\nlet resultado;\n\n// Verificado en produccion (2026-08-25): sin la prohibicion explicita el agente\n// le contaba el fallo al cliente (\"tuvimos un inconveniente tecnico con la carga\n// de los videos\"), y ademas reintentaba la herramienta en el mismo turno, con lo\n// que el turno se iba a dos minutos. Lo de \"un asesor se lo haga llegar\" tambien\n// se cayo: contradecia la regla de no dejar nada sin fecha y hora.\nif (enviados.length === 0) {\n  // Nunca dar por enviado lo que el proveedor rechazo: el cliente no lo tiene.\n  resultado =\n    `No se pudo enviar el material (${fallidos.join('; ')}). No le digas al cliente que ya lo tiene, ni que lo busque mas arriba en el chat: no hay nada que buscar y quedarias en evidencia. ` +\n    'NO menciones el fallo, ni hables de problemas tecnicos, ni te disculpes por el material: '  +\n    'es un asunto interno y nombrarlo solo resta confianza. Tampoco vuelvas a llamar esta '  +\n    'herramienta en este turno. Sigue la conversacion con normalidad y llevala a agendar '  +\n    'una cita, que es donde el cliente lo ve todo en persona.';\n} else {\n  resultado =\n    `Enviaste al cliente: ${enviados.join('; ')}. ` +\n    'Ya los está viendo en el chat: coméntalos con naturalidad en tu respuesta, no anuncies que vas a enviarlos.';\n\n  if (fallidos.length > 0) {\n    resultado += ` No se pudo enviar ${fallidos.join('; ')} — no lo menciones ni lo des por enviado.`;\n  }\n}\n\nreturn [{ json: { resultado } }];"
+        },
+        "id": "ed000000-0000-4000-8000-000000000013",
+        "name": "Resumen",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          608,
+          -160
+        ],
+        "notes": "El resumen solo cuenta lo que Meta acepto: si dijera 'enviaste X' de un archivo rechazado, el agente lo comentaria como si el cliente lo estuviera viendo."
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://evolution.conatia-bot.duckdns.org/message/sendMedia/brian-otero",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ number: String($('Entrada de la Herramienta').first().json.telefono).includes('@') ? String($('Entrada de la Herramienta').first().json.telefono) : String($('Entrada de la Herramienta').first().json.telefono).replace(/\\D/g, ''), mediatype: 'video', media: $json.url, caption: $json.caption }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          784,
+          48
+        ],
+        "id": "d27837bb-e4eb-411f-a753-32524d3f4694",
+        "name": "Enviar Video (Evolution)",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "CLXfTgs2zcfOhckz",
+            "name": "Evolution API - Christian Sierra"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://evolution.conatia-bot.duckdns.org/message/sendMedia/brian-otero",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ number: String($('Entrada de la Herramienta').first().json.telefono).includes('@') ? String($('Entrada de la Herramienta').first().json.telefono) : String($('Entrada de la Herramienta').first().json.telefono).replace(/\\D/g, ''), mediatype: 'image', media: $json.url, caption: $json.caption }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          800,
+          224
+        ],
+        "id": "b28f9b26-79e5-42c2-b327-23e2f51ee9e6",
+        "name": "Enviar Foto (Evolution)",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "CLXfTgs2zcfOhckz",
+            "name": "Evolution API - Christian Sierra"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ from: '+573150290928', ...(String($('Entrada de la Herramienta').first().json.telefono).startsWith('+') ? { to: $('Entrada de la Herramienta').first().json.telefono } : { recipient: $('Entrada de la Herramienta').first().json.telefono }), type: 'video', video: { link: $json.url, caption: $json.caption } }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          784,
+          48
+        ],
+        "id": "6b775875-5bd3-446b-9a7e-935178fd686f",
+        "name": "Enviar Video",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "FuwQeM17hSh07Wal",
+            "name": "YCloud - Sierra Planner"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ from: '+573150290928', ...(String($('Entrada de la Herramienta').first().json.telefono).startsWith('+') ? { to: $('Entrada de la Herramienta').first().json.telefono } : { recipient: $('Entrada de la Herramienta').first().json.telefono }), type: 'image', image: { link: $json.url, caption: $json.caption } }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          800,
+          224
+        ],
+        "id": "c43ba799-3755-4e64-bdf4-c1cd0ef97800",
+        "name": "Enviar Foto",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "FuwQeM17hSh07Wal",
+            "name": "YCloud - Sierra Planner"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000
+      }
+    ],
+    "connections": {
+      "Entrada de la Herramienta": {
+        "main": [
+          [
+            {
+              "node": "Seleccionar Medios",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Seleccionar Medios": {
+        "main": [
+          [
+            {
+              "node": "¿Hay medios?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Hay medios?": {
+        "main": [
+          [
+            {
+              "node": "Recorrer Medios",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Diagnóstico",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Recorrer Medios": {
+        "main": [
+          [
+            {
+              "node": "Resumen",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "¿Es video?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Es video?": {
+        "main": [
+          [
+            {
+              "node": "Enviar Video",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Enviar Foto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Envío exitoso?": {
+        "main": [
+          [
+            {
+              "node": "Registrar Envío",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Marcar Fallido",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Registrar Envío": {
+        "main": [
+          [
+            {
+              "node": "Marcar Enviado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Marcar Enviado": {
+        "main": [
+          [
+            {
+              "node": "Recorrer Medios",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Marcar Fallido": {
+        "main": [
+          [
+            {
+              "node": "Recorrer Medios",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar Video": {
+        "main": [
+          [
+            {
+              "node": "¿Envío exitoso?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar Foto": {
+        "main": [
+          [
+            {
+              "node": "¿Envío exitoso?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Conatia Tech",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-08-25T16:56:17.063Z",
+    "updatedAt": "2026-08-25T16:56:17.063Z",
+    "workflowPublishHistory": [
+      {
+        "id": 326,
+        "workflowId": "Tkh6deuiy663KNkl",
+        "versionId": "7f338b2c-afe5-444f-bb14-d176a0c75d58",
+        "event": "activated",
+        "userId": "5067b018-d46f-4371-b748-8590972229f7",
+        "createdAt": "2026-08-25T16:56:17.589Z"
+      }
+    ]
   }
 }

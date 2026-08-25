@@ -1,0 +1,590 @@
+{
+  "id": "Mxz7P208vVXhyNg9",
+  "name": "Christian Sierra — Herramienta: separar_fecha_evento",
+  "description": null,
+  "active": true,
+  "activeVersionId": "db9d09b4-c3d8-4753-b10b-d94a9690a87d",
+  "versionCounter": 5,
+  "sourceWorkflowId": null,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "nombre_sede",
+              "type": "string"
+            },
+            {
+              "name": "fecha",
+              "type": "string"
+            },
+            {
+              "name": "nombre_cliente",
+              "type": "string"
+            },
+            {
+              "name": "telefono",
+              "type": "string"
+            },
+            {
+              "name": "telefono_contacto",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "f2000000-0000-4000-8000-000000000001",
+      "name": "Entrada de la Herramienta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -272,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with e as (\n    select $1::text as nombre, $2::date as fecha, $3::text as cliente, $4::text as telefono, $5::text as contacto\n),\ns as (\n    select sd.id_sede, sd.nombre_sede\n    from sedes sd, e\n    where sd.nombre_sede ilike '%' || e.nombre || '%'\n),\nins as (\n    insert into agenda_reservas (sede_id, fecha_solicitada, lead_id, nombre_cliente, estado, telefono_contacto)\n    select s.id_sede, e.fecha,\n           (select id from leads where telefono = e.telefono limit 1),\n           e.cliente, 'bloqueado_temporal', e.contacto\n    from s, e\n    where (select count(*) from s) = 1\n    on conflict (sede_id, fecha_solicitada) do nothing\n    returning id_reserva\n)\nselect\n    (select count(*) from s)              as sedes_encontradas,\n    (select nombre_sede from s limit 1)   as sede,\n    (select id_reserva::text from ins)    as id_reserva,\n    to_char(e.fecha, 'YYYY-MM-DD')        as fecha,\n    e.cliente                             as cliente,\n    case\n        when (select count(*) from s) = 0 then 'sede_no_encontrada'\n        when (select count(*) from s) > 1 then 'sede_ambigua'\n        when (select count(*) from ins) = 1 then 'separada'\n        else 'ocupada'\n    end as estado_resultado\nfrom e",
+        "options": {
+          "queryReplacement": "={{ [$json.nombre_sede, $json.fecha, $json.nombre_cliente, $json.telefono, $json.telefono_contacto] }}"
+        }
+      },
+      "id": "f2000000-0000-4000-8000-000000000002",
+      "name": "Separar Fecha",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -48,
+        304
+      ],
+      "notes": "La unicidad (sede_id, fecha_solicitada) es el candado: si dos clientes piden la misma fecha a la vez, el segundo insert no entra y devuelve 'ocupada'. Por eso la BD va PRIMERO y el calendario despues.",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-sep",
+              "leftValue": "={{ $json.estado_resultado }}",
+              "rightValue": "separada",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "f2000000-0000-4000-8000-000000000003",
+      "name": "¿Se separó?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('christianeventos.bot@gmail.com') }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ summary: `RESERVA - ${$json.sede} - ${$json.cliente}`, description: `Fecha de evento apartada (bloqueo temporal) por Angie Otero.\nSede: ${$json.sede}\nCliente: ${$json.cliente}\nEstado: bloqueado_temporal`, start: { date: $json.fecha }, end: { date: DateTime.fromISO($json.fecha).plus({ days: 1 }).toFormat('yyyy-MM-dd') }, transparency: 'transparent' }) }}",
+        "options": {}
+      },
+      "id": "f2000000-0000-4000-8000-000000000004",
+      "name": "Bloquear en Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        192
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Evento de DIA COMPLETO y transparency=transparent. 'Buscar Choques' de agendar_cita filtra los de dia completo, asi que esta reserva no bloquea las citas de 30 min de ese dia. end.date es exclusivo en Google: por eso fecha+1. onError continua: si Google falla, la reserva YA esta en la BD y es lo que manda.",
+      "credentials": {
+        "googleApi": {
+          "id": "tTdVjIuSUurkaeZN",
+          "name": "Google Service Account - Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update agenda_reservas set google_event_id = $2 where id_reserva = $1::uuid returning id_reserva",
+        "options": {
+          "queryReplacement": "={{ [$('Separar Fecha').item.json.id_reserva, $json.id] }}"
+        }
+      },
+      "id": "f2000000-0000-4000-8000-000000000005",
+      "name": "Guardar Event ID",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        192
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Cierra el vinculo entre la fila y el evento, para poder borrar el bloqueo del calendario si la reserva se libera.",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ok-1",
+              "name": "separada",
+              "value": "={{ true }}",
+              "type": "boolean"
+            },
+            {
+              "id": "ok-2",
+              "name": "mensaje",
+              "value": "=FECHA APARTADA a nombre de {{ $('Separar Fecha').item.json.cliente }} en {{ $('Separar Fecha').item.json.sede }} para el {{ $('Separar Fecha').item.json.fecha }}. Confirmaselo al cliente y explicale el sistema de separado para que empiece a abonar.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2000000-0000-4000-8000-000000000006",
+      "name": "Reserva Confirmada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "no-1",
+              "name": "separada",
+              "value": "={{ false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "no-2",
+              "name": "mensaje",
+              "value": "={{ ({ ocupada: 'NO SE PUDO APARTAR: esa fecha ya esta tomada en esa sede. Ofrecele otra fecha o la misma fecha en otra sede.', sede_no_encontrada: 'No existe una sede con ese nombre. Reintenta con el nombre_sede exacto que devolvio consultar_precios_sedes.', sede_ambigua: 'Ese nombre coincide con varias sedes. Preguntale al cliente cual y vuelve a intentarlo con el nombre exacto.' })[$json.estado_resultado] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2000000-0000-4000-8000-000000000007",
+      "name": "No Se Aparto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        432
+      ]
+    }
+  ],
+  "connections": {
+    "Entrada de la Herramienta": {
+      "main": [
+        [
+          {
+            "node": "Separar Fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar Fecha": {
+      "main": [
+        [
+          {
+            "node": "¿Se separó?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Se separó?": {
+      "main": [
+        [
+          {
+            "node": "Bloquear en Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Se Aparto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bloquear en Calendar": {
+      "main": [
+        [
+          {
+            "node": "Guardar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Event ID": {
+      "main": [
+        [
+          {
+            "node": "Reserva Confirmada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "staticData": null,
+  "activeVersion": {
+    "versionId": "db9d09b4-c3d8-4753-b10b-d94a9690a87d",
+    "workflowId": "Mxz7P208vVXhyNg9",
+    "nodes": [
+      {
+        "parameters": {
+          "inputSource": "workflowInputs",
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "nombre_sede",
+                "type": "string"
+              },
+              {
+                "name": "fecha",
+                "type": "string"
+              },
+              {
+                "name": "nombre_cliente",
+                "type": "string"
+              },
+              {
+                "name": "telefono",
+                "type": "string"
+              },
+              {
+                "name": "telefono_contacto",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "id": "f2000000-0000-4000-8000-000000000001",
+        "name": "Entrada de la Herramienta",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          -272,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "with e as (\n    select $1::text as nombre, $2::date as fecha, $3::text as cliente, $4::text as telefono, $5::text as contacto\n),\ns as (\n    select sd.id_sede, sd.nombre_sede\n    from sedes sd, e\n    where sd.nombre_sede ilike '%' || e.nombre || '%'\n),\nins as (\n    insert into agenda_reservas (sede_id, fecha_solicitada, lead_id, nombre_cliente, estado, telefono_contacto)\n    select s.id_sede, e.fecha,\n           (select id from leads where telefono = e.telefono limit 1),\n           e.cliente, 'bloqueado_temporal', e.contacto\n    from s, e\n    where (select count(*) from s) = 1\n    on conflict (sede_id, fecha_solicitada) do nothing\n    returning id_reserva\n)\nselect\n    (select count(*) from s)              as sedes_encontradas,\n    (select nombre_sede from s limit 1)   as sede,\n    (select id_reserva::text from ins)    as id_reserva,\n    to_char(e.fecha, 'YYYY-MM-DD')        as fecha,\n    e.cliente                             as cliente,\n    case\n        when (select count(*) from s) = 0 then 'sede_no_encontrada'\n        when (select count(*) from s) > 1 then 'sede_ambigua'\n        when (select count(*) from ins) = 1 then 'separada'\n        else 'ocupada'\n    end as estado_resultado\nfrom e",
+          "options": {
+            "queryReplacement": "={{ [$json.nombre_sede, $json.fecha, $json.nombre_cliente, $json.telefono, $json.telefono_contacto] }}"
+          }
+        },
+        "id": "f2000000-0000-4000-8000-000000000002",
+        "name": "Separar Fecha",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -48,
+          304
+        ],
+        "notes": "La unicidad (sede_id, fecha_solicitada) es el candado: si dos clientes piden la misma fecha a la vez, el segundo insert no entra y devuelve 'ocupada'. Por eso la BD va PRIMERO y el calendario despues.",
+        "credentials": {
+          "postgres": {
+            "id": "Ou3OkUR92F7f6ofK",
+            "name": "Supabase - Christian Sierra (nuevo)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "cond-sep",
+                "leftValue": "={{ $json.estado_resultado }}",
+                "rightValue": "separada",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "looseTypeValidation": true,
+          "options": {}
+        },
+        "id": "f2000000-0000-4000-8000-000000000003",
+        "name": "¿Se separó?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          192,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('christianeventos.bot@gmail.com') }}/events",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ summary: `RESERVA - ${$json.sede} - ${$json.cliente}`, description: `Fecha de evento apartada (bloqueo temporal) por Angie Otero.\nSede: ${$json.sede}\nCliente: ${$json.cliente}\nEstado: bloqueado_temporal`, start: { date: $json.fecha }, end: { date: DateTime.fromISO($json.fecha).plus({ days: 1 }).toFormat('yyyy-MM-dd') }, transparency: 'transparent' }) }}",
+          "options": {}
+        },
+        "id": "f2000000-0000-4000-8000-000000000004",
+        "name": "Bloquear en Calendar",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          432,
+          192
+        ],
+        "onError": "continueRegularOutput",
+        "notes": "Evento de DIA COMPLETO y transparency=transparent. 'Buscar Choques' de agendar_cita filtra los de dia completo, asi que esta reserva no bloquea las citas de 30 min de ese dia. end.date es exclusivo en Google: por eso fecha+1. onError continua: si Google falla, la reserva YA esta en la BD y es lo que manda.",
+        "credentials": {
+          "googleApi": {
+            "id": "tTdVjIuSUurkaeZN",
+            "name": "Google Service Account - Calendar"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "update agenda_reservas set google_event_id = $2 where id_reserva = $1::uuid returning id_reserva",
+          "options": {
+            "queryReplacement": "={{ [$('Separar Fecha').item.json.id_reserva, $json.id] }}"
+          }
+        },
+        "id": "f2000000-0000-4000-8000-000000000005",
+        "name": "Guardar Event ID",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          672,
+          192
+        ],
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Cierra el vinculo entre la fila y el evento, para poder borrar el bloqueo del calendario si la reserva se libera.",
+        "credentials": {
+          "postgres": {
+            "id": "Ou3OkUR92F7f6ofK",
+            "name": "Supabase - Christian Sierra (nuevo)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "manual",
+          "includeOtherFields": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "ok-1",
+                "name": "separada",
+                "value": "={{ true }}",
+                "type": "boolean"
+              },
+              {
+                "id": "ok-2",
+                "name": "mensaje",
+                "value": "=FECHA APARTADA a nombre de {{ $('Separar Fecha').item.json.cliente }} en {{ $('Separar Fecha').item.json.sede }} para el {{ $('Separar Fecha').item.json.fecha }}. Confirmaselo al cliente y explicale el sistema de separado para que empiece a abonar.",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "f2000000-0000-4000-8000-000000000006",
+        "name": "Reserva Confirmada",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          912,
+          192
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "manual",
+          "includeOtherFields": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "no-1",
+                "name": "separada",
+                "value": "={{ false }}",
+                "type": "boolean"
+              },
+              {
+                "id": "no-2",
+                "name": "mensaje",
+                "value": "={{ ({ ocupada: 'NO SE PUDO APARTAR: esa fecha ya esta tomada en esa sede. Ofrecele otra fecha o la misma fecha en otra sede.', sede_no_encontrada: 'No existe una sede con ese nombre. Reintenta con el nombre_sede exacto que devolvio consultar_precios_sedes.', sede_ambigua: 'Ese nombre coincide con varias sedes. Preguntale al cliente cual y vuelve a intentarlo con el nombre exacto.' })[$json.estado_resultado] }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "f2000000-0000-4000-8000-000000000007",
+        "name": "No Se Aparto",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          432,
+          432
+        ]
+      }
+    ],
+    "connections": {
+      "Entrada de la Herramienta": {
+        "main": [
+          [
+            {
+              "node": "Separar Fecha",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Separar Fecha": {
+        "main": [
+          [
+            {
+              "node": "¿Se separó?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Se separó?": {
+        "main": [
+          [
+            {
+              "node": "Bloquear en Calendar",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "No Se Aparto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Bloquear en Calendar": {
+        "main": [
+          [
+            {
+              "node": "Guardar Event ID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Guardar Event ID": {
+        "main": [
+          [
+            {
+              "node": "Reserva Confirmada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Conatia Tech",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-08-25T15:53:42.747Z",
+    "updatedAt": "2026-08-25T15:53:42.747Z",
+    "workflowPublishHistory": [
+      {
+        "id": 310,
+        "workflowId": "Mxz7P208vVXhyNg9",
+        "versionId": "db9d09b4-c3d8-4753-b10b-d94a9690a87d",
+        "event": "activated",
+        "userId": "5067b018-d46f-4371-b748-8590972229f7",
+        "createdAt": "2026-08-25T15:53:43.254Z"
+      }
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+# =============================================================================
+# Evolution API v2 — pasarela de WhatsApp para el agente "Brian Otero"
+# =============================================================================
+# Reemplaza a WhatsApp Business Cloud (Meta). Evolution levanta una sesion de
+# WhatsApp Web (Baileys) y la expone como API REST, asi que no hace falta
+# aprobacion de Meta ni plantillas: se vincula escaneando un QR.
+#
+# Va aparte del stack de n8n a proposito: si Evolution se cae o se reinicia
+# para re-vincular el telefono, n8n sigue corriendo.
+#
+# Arranque:   docker compose up -d
+# Logs:       docker compose logs -f evolution-api
+# =============================================================================
+
+services:
+  evolution-api:
+    container_name: evolution_api
+    image: evoapicloud/evolution-api:v2.3.7   # v2.3.7: la v2.1.1 que recomienda la doc entra en bucle de reconexion
+    # infinito (401) y nunca emite el QR. No bajar de esta version.
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      # Las credenciales de la sesion de WhatsApp viven aqui. Si se borra este
+      # volumen hay que volver a escanear el QR.
+      - evolution_instances:/evolution/instances
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # Evolution v2 requiere Postgres: ahi guarda instancias, contactos y chats.
+  # Es una base propia, NO la de Supabase del proyecto — no mezclar.
+  postgres:
+    container_name: evolution_postgres
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Sin esto Evolution arranca antes que Postgres y muere en el primer query.
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Cache de la sesion de Baileys. Sin Redis, Evolution funciona pero se vuelve
+  # notablemente mas lento al reconectar.
+  redis:
+    container_name: evolution_redis
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - evolution_redis:/data
+
+volumes:
+  evolution_instances:
+  evolution_pgdata:
+  evolution_redis:

@@ -1,0 +1,312 @@
+{
+  "id": "fWtN6n18kbcYyAga",
+  "name": "Christian Sierra — Seguimiento automático",
+  "description": null,
+  "active": false,
+  "activeVersionId": null,
+  "versionCounter": 11,
+  "sourceWorkflowId": null,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "a3000000-0000-4000-8000-000000000001",
+      "name": "Cada 30 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        304
+      ],
+      "notes": "Cada media hora basta: el umbral mas corto es de horas, no de minutos. Mas frecuente solo agrega carga."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- A quien reenganchar. La regla de oro: solo conversaciones que quedaron A\n-- MEDIAS. Se persigue a quien recibio precios y se callo; a nadie mas.\nselect\n    l.id::text             as lead_id,\n    l.telefono             as telefono,\n    coalesce(l.nombre, '') as nombre,\n    l.seguimiento_etapa    as etapa,\n    case when l.seguimiento_etapa = 0 then 'recordatorio' else 'video' end as accion\nfrom leads l\nwhere\n    -- (1) La conversacion llego a precios. Antes de eso no hay nada que\n    --     reenganchar: un \"hola\" sin respuesta no es una venta perdida.\n    l.estado = 'cotizado'\n\n    -- (2) Nadie la dio por cerrada a mano.\n    and l.no_insistir = false\n    and l.requiere_humano = false\n\n    -- (3) Guardas derivadas de los hechos, no de lo que diga el modelo.\n    --     Si ya tiene cita futura o ya aparto fecha, la conversacion cumplio\n    --     su proposito y escribirle seria acoso.\n    and not exists (\n        select 1 from citas c\n        where c.telefono = l.telefono and c.inicio > now()\n    )\n    and not exists (\n        select 1 from agenda_reservas r\n        where r.lead_id = l.id and r.estado in ('bloqueado_temporal', 'separado')\n    )\n\n    -- (4) Etapa del ciclo de insistencia.\n    and (\n          -- etapa 0: se calló hace N horas y nunca se le insistio\n          (l.seguimiento_etapa = 0 and l.updated_at < now() - ($1 || ' hours')::interval)\n          -- etapa 1: ya recibio el recordatorio y siguio callado 24h mas\n       or (l.seguimiento_etapa = 1\n           and l.seguimiento_ultimo_envio < now() - interval '24 hours'\n           and l.updated_at < l.seguimiento_ultimo_envio)\n        )\n\n    -- (5) Solo dentro del horario de atencion. Un mensaje automatico a\n    --     medianoche quema la marca, por mucho que lleve 5 horas callado.\n    and case extract(isodow from (now() at time zone 'America/Bogota'))\n          when 6 then (now() at time zone 'America/Bogota')::time between time '10:00' and time '18:30'\n          when 7 then (now() at time zone 'America/Bogota')::time between time '10:30' and time '13:00'\n          else        (now() at time zone 'America/Bogota')::time between time '10:00' and time '19:00'\n        end\norder by l.updated_at\nlimit 20",
+        "options": {
+          "queryReplacement": "=4"
+        }
+      },
+      "id": "a3000000-0000-4000-8000-000000000002",
+      "name": "Buscar Pendientes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -48,
+        304
+      ],
+      "alwaysOutputData": false,
+      "notes": "El 4 de queryReplacement son las horas de silencio antes del recordatorio. Cambiarlo aqui cambia el umbral. La consulta ya excluye a quien respondio, a quien pidio humano, a los perdidos y a los que agotaron el ciclo, y solo devuelve gente dentro del horario de atencion.",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-accion",
+              "leftValue": "={{ $json.accion }}",
+              "rightValue": "recordatorio",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a3000000-0000-4000-8000-000000000003",
+      "name": "¿Recordatorio o video?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1265360156662321",
+        "recipientPhoneNumber": "={{ $json.telefono }}",
+        "textBody": "=Hola{{ $json.nombre ? ' ' + $json.nombre.split(' ')[0] : '' }} ☺️ Te escribo para saber si quedaste con alguna duda sobre tu evento. Aquí sigo para ayudarte con lo que necesites 🤗",
+        "additionalFields": {}
+      },
+      "id": "a3000000-0000-4000-8000-000000000004",
+      "name": "Enviar Recordatorio (Meta)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        432,
+        452
+      ],
+      "notes": "phoneNumberId es obligatorio en este nodo y faltaba en la version original del workflow: un bug latente que nunca se disparo porque estos nodos jamas llegaron a ejecutarse.",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "maeUaDbbZ6NNICeJ",
+          "name": "Meta WhatsApp - Christian Sierra"
+        }
+      },
+      "webhookId": "b026137a-ee75-4b8f-8d8e-fa72d9b6ed0b",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Tkh6deuiy663KNkl"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "categoria": "institucional",
+            "referencia": "promocion",
+            "tipo_medio": "video",
+            "telefono": "={{ $json.telefono }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "a3000000-0000-4000-8000-000000000005",
+      "name": "Enviar Video Promo",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        432,
+        432
+      ],
+      "notes": "OJO: este envio ocurre ~28h despues del ultimo mensaje del cliente, FUERA de la ventana de 24h de Meta. Sin una plantilla de video aprobada, YCloud lo rechazara. Hoy no hay ninguna plantilla creada."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update leads\n   set seguimiento_etapa = seguimiento_etapa + 1,\n       seguimiento_ultimo_envio = now()\n where id = $1::uuid\nreturning seguimiento_etapa",
+        "options": {
+          "queryReplacement": "={{ $('Buscar Pendientes').item.json.lead_id }}"
+        }
+      },
+      "id": "a3000000-0000-4000-8000-000000000006",
+      "name": "Marcar Enviado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        304
+      ],
+      "notes": "Sube la etapa y sella la hora. NO toca updated_at a proposito: esa columna significa 'ultima vez que el cliente escribio', y es lo que distingue 'no contesta' de 'ya contesto'.",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evolution.conatia-bot.duckdns.org/message/sendText/brian-otero",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: String($json.telefono).includes('@') ? String($json.telefono) : String($json.telefono).replace(/\\D/g, ''), text: 'Hola' + ($json.nombre ? ' ' + $json.nombre.split(' ')[0] : '') + ' ☺️ Te escribo para saber si quedaste con alguna duda sobre tu evento. Aquí sigo para ayudarte con lo que necesites 🤗' }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        192
+      ],
+      "id": "ad77876d-f789-4cfb-b0e1-d9b1da791de4",
+      "name": "Enviar Recordatorio (Evolution)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CLXfTgs2zcfOhckz",
+          "name": "Evolution API - Christian Sierra"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: '+573150290928', ...(String($json.telefono).startsWith('+') ? { to: $json.telefono } : { recipient: $json.telefono }), type: 'text', text: { body: 'Hola' + ($json.nombre ? ' ' + $json.nombre.split(' ')[0] : '') + ' ☺️ Te escribo para saber si quedaste con alguna duda sobre tu evento. Aquí sigo para ayudarte con lo que necesites 🤗' } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        192
+      ],
+      "id": "c7f8ba32-c3e2-49a4-b476-e5f067109e7e",
+      "name": "Enviar Recordatorio",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "FuwQeM17hSh07Wal",
+          "name": "YCloud - Sierra Planner"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Cada 30 minutos": {
+      "main": [
+        [
+          {
+            "node": "Buscar Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Pendientes": {
+      "main": [
+        [
+          {
+            "node": "¿Recordatorio o video?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Recordatorio o video?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Video Promo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Video Promo": {
+      "main": [
+        [
+          {
+            "node": "Marcar Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Recordatorio": {
+      "main": [
+        [
+          {
+            "node": "Marcar Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Cada 30 minutos": {
+      "recurrenceRules": [
+        null
+      ],
+      "recurrenceRuleSignatures": [
+        null
+      ]
+    }
+  },
+  "activeVersion": null
+}
