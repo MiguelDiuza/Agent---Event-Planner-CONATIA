@@ -8,3 +8,6 @@ node_modules/
 # Evolution API: secretos del VPS y QR de vinculación
 infra/evolution-api/.env
 infra/evolution-api/qr.png
+
+# Respaldos de datos antes de un reset. Llevan conversaciones de clientes: no van a git.
+.respaldo-*/

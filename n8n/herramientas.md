@@ -53,24 +53,34 @@ order by p.precio_total
 ## 2. `consultar_inclusiones_evento`
 
 **Descripción para el LLM:**
-> Devuelve qué incluye el paquete de un tipo de evento y qué obsequios trae.
-> Úsala cuando el cliente pregunte qué incluye, o cuando presentes un paquete
-> y necesites detallar inclusiones y obsequios. Tipos válidos: 15 Años,
-> Matrimonio, Grado, Cumpleaños, Empresa, Primera Comunión, Baby Shower.
+> Devuelve el guion literal de la cotización de un tipo de evento, ya partido en
+> globos de WhatsApp y listo para enviar tal cual. El campo `guion_cotizacion`
+> se copia palabra por palabra, con sus `|||`: incluye las tres partes de la
+> cotización y el globo de obsequios. También sirve para responder qué incluye
+> el paquete.
 
 **Parámetro:** `tipo_evento` (string)
 
 `query`:
 ```sql
-select nombre_paquete, inclusiones_base, obsequios, excepciones
+select nombre_paquete,
+       array_to_string(mensajes_cotizacion || mensaje_obsequio, E'\n|||\n') as guion_cotizacion
 from tipos_evento
-where nombre_paquete ilike '%' || $1 || '%'
+where nombre_paquete = fn_resolver_tipo_evento($1)
 ```
 
 `options.queryReplacement`:
 ```
-={{ $fromAI('tipo_evento', 'Tipo de evento. Uno de: 15 Años, Matrimonio, Grado, Cumpleaños, Empresa, Primera Comunión, Baby Shower.', 'string') }}
+={{ $fromAI('tipo_evento', 'Tipo de evento del cliente: 15 Años, Matrimonio, Grado, Cumpleaños, Empresa, Primera Comunión o Baby Shower. Puedes escribirlo tal como lo dijo el cliente (boda, graduacion, quinceañera): la herramienta lo traduce.', 'string') }}
 ```
+
+> **Por qué `fn_resolver_tipo_evento` y no un `ilike`** (2026-08-26). El `ilike`
+> anterior fallaba en 12 de 30 variantes reales, y las peores eran `15 Anos`,
+> `Cumpleanos` y `Primera Comunion` **sin tilde** — que era justo lo que la
+> descripción vieja le pedía escribir al modelo. Para `ILIKE` la `ñ` no es una
+> `n`. La función normaliza sin tildes ni signos y consulta
+> `tipos_evento.alias`, donde viven los sinónimos del cliente. Ver la migración
+> `20260826000006`, que lleva las 30 variantes como autoprueba.
 
 ---
 
@@ -220,7 +230,7 @@ desconectados. Usa `fn_medios_para_enviar`, `fn_medios_diagnostico` y
 
 > 📌 **La tanda de la cotización** (2026-08-25). `fn_medios_sedes_cotizacion`
 > devuelve el video de **todas** las sedes con material cargado y le arma el
-> caption: `Así se ve <sede> (salón cubierta cerrada|salón campestre) - $<precio> ✨`.
+> caption: `<Salón> <sede> - valor PROMOCIONAL: $<precio> - <N> personas`.
 > Estar en la tanda depende de tener un video activo, nada más;
 > `sedes.tipo_espacio` solo decide el paréntesis del tipo, y una sede sin
 > clasificar manda su video sin él. El

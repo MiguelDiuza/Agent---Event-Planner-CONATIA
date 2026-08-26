@@ -1,26 +1,263 @@
 # Estado del proyecto y prompt de continuación
 
-Documento de traspaso entre sesiones. Actualizado: 2026-08-25.
-Rama de trabajo: **`gestorVideos`** (20 commits por delante de `main`, sin mergear).
+Documento de traspaso entre sesiones. Actualizado: 2026-08-26.
+Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 
 ---
 
 ## PROMPT PARA PEGAR EN LA NUEVA SESIÓN
 
-> Continúo el desarrollo del agente de ventas de WhatsApp "Brian Otero"
-> (Christian Sierra Event Planner) en
-> `c:\Users\mandi\Documents\GitHub\Agent---Event-Planner-CONATIA`,
+> Continúo el agente de ventas de WhatsApp **Angie Otero** (Christian Sierra
+> Event Planner) en `c:\Users\mandi\Documents\GitHub\Agent---Event-Planner-CONATIA`,
 > rama `gestorVideos`.
 >
-> Lee primero `docs/ESTADO-Y-CONTINUACION.md` completo: tiene el estado real
-> verificado, las credenciales, los errores ya diagnosticados que NO hay que
-> volver a investigar, y la lista ordenada de lo que falta.
+> El 2026-08-26 se refactorizó el embudo completo. **La base y los archivos ya
+> están listos y probados; lo único que falta es subirlo a n8n y salir a
+> producción.**
 >
-> Las tareas A y B ya están construidas y **bloqueadas solo por credenciales
-> que debe crear el usuario** (Google Calendar y WhatsApp Business Cloud).
-> Ver la sección 7 para desbloquearlas. Si no hay credenciales todavía,
-> lo único que avanza sin ellas es la **Tarea F** (parte Postgres de
-> `escalar_a_humano`).
+> Lee `docs/ESTADO-Y-CONTINUACION.md`, empezando por la **sección 0**, que es la
+> que describe el embudo nuevo.
+>
+> **La tarea de esta sesión, en orden:**
+>
+> 1. **Importar los dos workflows al VPS** (`N8N_VPS_URL` + `N8N_VPS_API_KEY` en
+>    `.env`, ya verificado que responde 200):
+>    - `n8n/workflow-enviar-medios.json` → id `Tkh6deuiy663KNkl`
+>    - `n8n/workflow-angie-otero.json` → id `NsJQxBhrNyrKFVJu`
+>
+>    Sube **primero** `enviar_medios`: el agente lo llama con dos entradas
+>    nuevas (`tipo_evento` y `nombre_cliente`) que solo existen ahí. Al revés,
+>    quedan unos minutos en que el agente manda parámetros que el sub-workflow
+>    ignora y la cotización no sale.
+>
+> 2. **Publicar la versión.** n8n 2.x versiona: `versionId` es el borrador y
+>    `activeVersionId` lo que corre. Un `PUT /api/v1/workflows/<id>` deja
+>    borrador; hay que publicar para que tome efecto. Verifica después que
+>    `activeVersionId` cambió y que `enviar_medios` tiene **20 nodos** (antes 17)
+>    con `Guion Cotización`, `¿Hay guion?` y `Enviar Texto`.
+>
+> 3. **Revisar las credenciales de los nodos nuevos.** `Guion Cotización` usa la
+>    credencial Postgres `Ou3OkUR92F7f6ofK` y `Enviar Texto` la de YCloud
+>    `FuwQeM17hSh07Wal`. Los ids van en el JSON, pero conviene abrirlos en el
+>    editor y confirmar que quedaron enlazados.
+>
+> 4. **Probar de punta a punta por WhatsApp.** Los chats están en cero (memoria,
+>    envíos y estado de leads), así que cualquier número arranca limpio. Lo que
+>    hay que ver, en este orden exacto:
+>    antesala → cotización parte 1 → parte 2 → parte 3 → obsequios → 14 videos →
+>    "¿cuál te llamó más la atención?".
+>    Si los videos llegan **antes** del texto, `Enviar Texto` no quedó publicado.
+>
+> 5. **Salir a producción** cuando el punto 4 pase.
+>
+> **Lo que ya está hecho y NO hay que rehacer:**
+> - Nueve migraciones aplicadas en Supabase (`20260826000000` a `20260826000008`).
+> - Sawa recomprimido a 14,75 MB y catalogado; Orquideorama y Gran Salón (foto)
+>   cargados. La tanda son **14 salones** más el promocional.
+> - `scripts/banco-pruebas.js` corre 5 conversaciones completas contra la base
+>   real: 0 errores, 0 avisos. Correlo si tocas algo (`node scripts/banco-pruebas.js`,
+>   con el `.env` cargado).
+>
+> **Tres trampas que ya costaron una vez:**
+> - **Los .json traen los nodos DOS veces**: `nodes` y `activeVersion.nodes`. Si
+>   editas uno a mano hay que tocar los dos, o el `grep` te miente.
+> - **`GOOGLE_GEMINI_API_KEY` está vacía en `.env`**, así que no se puede correr
+>   el modelo desde la máquina. Si la consigues, lo primero es verificar que
+>   Gemini de verdad manda un solo globo en el turno 3.
+> - **La CDN de Supabase Storage sirve el archivo viejo hasta ~1 hora** después
+>   de sobrescribir una clave. Si subes un video que Meta tiene que descargar ya,
+>   usa un nombre nuevo.
+>
+> **Lo que sigue abierto y depende del negocio:**
+> - **Casa 5** no tiene video ni foto: es el único salón fuera de la tanda.
+> - **Gran Salón** entra solo con foto; falta su video.
+> - **Cuatro sedes sin clasificar** como cerradas o campestres (Sede Granada
+>   Gold, Valdemoro, Gran Salón, Orquideorama). De esas el agente no dice el
+>   valor de separación. Se arregla con un `update sedes set tipo_espacio`.
+> - **Dos archivos huérfanos en el bucket**: `sedes/sawa.mp4` y
+>   `sedes/pilasPremium.mp4`. No los usa nadie.
+> - **15 eventos huérfanos en Google Calendar** de las pruebas ya borradas de la
+>   base. Los ids están en `.respaldo-2026-08-26/google-event-ids.tsv` (fuera de
+>   git, lleva conversaciones de clientes); las
+>   credenciales de Google están vacías en `.env`, así que hay que limpiarlos a
+>   mano o con una corrida de n8n. Los dos que importan son las reservas del
+>   4 de octubre (Casa Christian's) y el 15 de diciembre (Sede Granada Gold):
+>   bloquean fechas reales y la base ya no sabe que existen.
+
+---
+
+## 0. REFACTORIZACIÓN DEL EMBUDO (2026-08-26) — LEER ANTES QUE NADA
+
+El negocio reescribió el cierre de venta. Lo que sigue reemplaza lo que este
+documento dice más abajo sobre la cotización, el rótulo de los videos y el
+turno post-videos; el resto del documento sigue vigente.
+
+**El embudo quedó en siete turnos:** saludo con nombre y motivo → promo y
+perfilamiento (personas + fecha) → **cotización completa + obsequios + los
+videos de todos los salones** → eligió salón (disponibilidad y separación) →
+separado → la cita → confirmación y redes.
+
+**El cambio de fondo: la cotización ya no la escribe el agente.** `enviar_medios`
+con `referencia` = `todas`, `invitados` y `tipo_evento` manda por su cuenta, en
+este orden y sin que el modelo toque el texto:
+
+1. la antesala ("Vale [Nombre], a continuación te voy a enviar nuestra
+   cotización con los videos de cada salón disponible y valores PROMOCIONALES"),
+2. los globos de la cotización del paquete,
+3. el globo de obsequios,
+4. los videos de todos los salones.
+
+El agente solo escribe el último mensaje del turno: *"Cuéntame cuál de estos
+salones te llamó más la atención"*.
+
+Son dos razones y las dos importan. **Orden:** en n8n el material sale mientras
+corre la herramienta y el texto del agente sale después, así que un agente que
+escribiera la cotización se la mandaría al cliente *detrás* de los catorce
+videos que venía a explicar. **Fidelidad:** el texto de los paquetes es el
+libreto del negocio, y un modelo que lo redacta lo parafrasea.
+
+### Qué se tocó
+
+| Pieza | Cambio |
+|---|---|
+| `tipos_evento` | Dos columnas nuevas: `mensajes_cotizacion` (text[]) y `mensaje_obsequio`. Migraciones `20260826000000`, `20260826000003`, `20260826000004` y `20260826000005`. |
+| `scripts/guion-cotizacion.js` | Genera esos textos desde `docs/paquetes.txt`. **Para cambiar un paquete se edita ese .txt y se regenera**, no se escribe SQL a mano. |
+| `fn_medios_sedes_cotizacion` | Rótulo nuevo, foto cuando no hay video, orden solo por precio. Migración `20260826000001`. |
+| `workflow-enviar-medios` | Tres nodos nuevos: `Guion Cotización` (Postgres), `¿Hay guion?` (IF) y `Enviar Texto` (YCloud, batch 1 / 900 ms). `Seleccionar Medios` pasó a `executeOnce` y dejó de leer `$json`. |
+| `enviar_medios` (herramienta) | Dos entradas nuevas: `tipo_evento` y `nombre_cliente`. |
+| `consultar_inclusiones_evento` | Devuelve `guion_cotizacion` en vez de la prosa. Es para responder dudas puntuales, no para cotizar. |
+| `system-prompt-angie-otero.md` | Reescrito por turnos. |
+
+### El rótulo del video
+
+Pasó de `Así se ve X (salón campestre) - $15.000.000 ✨` a
+`Salón Sawa - valor PROMOCIONAL: $15.000.000 - 100 personas` (migración
+`20260826000008`). La palabra "Salón" la antepone `fn_nombre_salon` **solo
+cuando el nombre no dice ya de qué espacio se trata**: nueve de los catorce ya
+lo dicen —Sede Norte, Casa 4, Mansión Vallano, Hacienda El Talismán, Gran
+Salón— y prefijarlos producía "Salón Gran Salón" y "Salón Sede Norte".
+
+Esa misma migración cierra una discrepancia que llevaba días: el MISMO video
+tenía dos nombres según por dónde saliera. En la tanda salía con el rótulo de
+precio; si el cliente después pedía ese salón suelto, `fn_medios_para_enviar`
+devolvía `medios.caption`, que seguía diciendo "Así se ve Sawa ✨". Ahora las
+dos rutas nombran el salón igual. Cuando la sede no cotiza a
+esa capacidad, la línea lo dice sola: `hasta 150 personas`, `desde 100 personas`.
+El tipo de espacio salió del rótulo por decisión del negocio, pero sigue vivo en
+`sedes.tipo_espacio` porque decide el valor de separación.
+
+### Por qué el guion va partido en globos
+
+WhatsApp le pone "Leer más" a un mensaje largo y esconde justo lo que vende.
+La cotización se manda en **tres partes**, y eso es una regla del negocio, no
+un cálculo de caracteres. Aparte va el techo de los globos que escribe el
+agente: **280 caracteres**, que es el tamaño de un mensaje de WhatsApp que se
+lee cómodo. Son dos cosas distintas y conviene no volver a mezclarlas: el
+guion del paquete llega hasta ~480 por parte y está bien, porque es una lista
+y se lee de un vistazo.
+
+Del techo de 280 se sigue lo otro que importa: **no partir en dos globos lo
+que es una sola idea y cabe en uno**. El saludo y el turno de la promo son un
+solo mensaje cada uno —155 y 249 caracteres—, como están en el libreto del
+negocio. Partidos en dos y tres globos, como estuvieron un rato, la
+conversación se leía como una máquina disparando.
+
+El **globo de obsequios va literal** de `docs/paquetes.txt`: encabezado
+`Adicional: *OBSEQUIOS*✨`, las viñetas, y la línea `Con nosotros lo vas a tener
+*TODO INCLUIDO*, excepto el licor!` cerrándolo. Esa última línea **no** va al
+final de la tercera parte: en el documento original los obsequios y el cierre
+son un bloque contiguo, y tenerla en los dos lados la mandaba repetida
+(migración `20260826000005`).
+
+El corte de las tres partes cae entre viñetas, nunca dentro de una ni
+separando "Pasabocas dulces o salados" de sus sub-viñetas. Las migraciones
+`20260826000003` y `20260826000004` son el ida y vuelta de esto: la primera
+probó con dos partes y la segunda dejó las tres definitivas.
+
+### Estado del catálogo después de esto
+
+La tanda manda **14 salones** más el promocional. Entraron **Sawa** (video
+recomprimido de 29,2 MB a 14,75 MB: WhatsApp no acepta más de 16),
+**Orquideorama** y **Gran Salón** —este con foto, que es lo único que hay de esa
+sede—.
+
+Lo que falta:
+
+- **Casa 5** no tiene ningún archivo. Es el único salón fuera de la tanda.
+- **Sede Granada Gold, Valdemoro, Gran Salón y Orquideorama** siguen sin
+  clasificar como cerradas o campestres. Ya no afecta el rótulo, pero sí el
+  valor de separación, así que de esas cuatro el agente no dice ni el tipo ni la
+  cifra. Se arregla con un `update sedes set tipo_espacio`.
+- En el bucket quedaron dos archivos sueltos que ya no usa nadie:
+  `sedes/sawa.mp4` (reemplazado por `sedes/sawa-whatsapp.mp4`) y
+  `sedes/pilasPremium.mp4` (duplicado de `sedes/pilas premium.mp4`).
+
+### El tipo de evento se resuelve por función, no por ILIKE (2026-08-26)
+
+Los dos nodos que buscan el paquete —`consultar_inclusiones_evento` y
+`Guion Cotización`— lo hacían con `nombre_paquete ilike '%' || $n || '%'`.
+Medido contra 30 variantes reales, **fallaban 12**. Las tres peores eran
+`15 Anos`, `Cumpleanos` y `Primera Comunion` **sin tilde**, que es exactamente
+lo que la descripción de la herramienta le pedía al modelo que escribiera. Para
+ILIKE la `ñ` no es una `n`.
+
+Lo que costaba fallar: si el tipo no casa, `Guion Cotización` devuelve cero
+filas y **los catorce videos salen sin la cotización delante**, en silencio, sin
+error y sin nada en el log. Era la falla más cara del embudo nuevo.
+
+Ahora resuelve `fn_resolver_tipo_evento(text)` (migración `20260826000006`):
+normaliza sin tildes ni signos, consulta la columna `tipos_evento.alias` con los
+sinónimos del cliente (`boda`, `graduacion`, `quinceañera`, `empresarial`…) y
+busca en los dos sentidos, para que caigan tanto `Cumpleaños 40` como `15`.
+Devuelve NULL si no puede decidir, que es preferible a mandar el paquete
+equivocado.
+
+La migración lleva las 30 variantes como **autoprueba**: si alguna deja de
+resolver, la migración no aplica. Y `Resumen` ahora le avisa al agente cuando la
+cotización no salió, para que el fallo deje de ser mudo.
+
+Para agregar un sinónimo: `update tipos_evento set alias = alias || '{...}'`.
+No hace falta cargarlo con y sin tilde, se comparan normalizados.
+
+### Nombres de archivo que NO coinciden con la sede (confirmados, no tocar)
+
+Tres piezas del bucket tienen un nombre que no se parece al `nombre_sede` bajo el
+que están catalogadas. **El negocio confirmó el 2026-08-26 que el mapeo es
+correcto.** Queda escrito porque parecen un error de catalogación y ya se
+verificaron una vez: no volver a investigarlas ni "corregirlas".
+
+| Archivo en el bucket | Sede | Por qué confunde |
+|---|---|---|
+| `sedes/orquideorama norte.mp4` | **Orquideorama** | El archivo dice "norte" y existe una `Sede Norte` aparte, que tiene su propio `sedes/sede norte.mp4`. Son dos salones distintos. |
+| `sedes/casa vallado.mp4` | **Mansión Vallano** | "vallado" en el archivo, "Vallano" en la base. |
+| `sedes/salos de las pilas.jpeg` | **Pilas Premium** | "salos de las pilas" ≈ salones de Las Pilas. Es la foto de Pilas Premium, que además tiene video propio (`sedes/pilas premium.mp4`); en la tanda gana el video. |
+
+Auditoría completa del 2026-08-26 (bucket contra `medios`): ninguna URL rota,
+ningún `peso_bytes` desalineado del tamaño real, ninguna fila apuntando a un
+archivo inexistente. Lo único suelto son dos huérfanos, abajo.
+
+Los precios están completos: 16 escalones de 50 a 200 de a 10. La cobertura por
+sede no es pareja **y es correcto que no lo sea**: seis sedes cotizan de 50 a
+200, siete llegan hasta 150 y dos (Gran Salón y Valdemoro) arrancan en 100.
+
+### Cómo se probó
+
+`node scripts/banco-pruebas.js` corre cinco conversaciones completas contra la
+base real, ejecutando **las queries que están en los .json de los workflows**
+—se leen de ahí, no se copian— e imprimiendo el chat que le habría llegado al
+cliente, mensaje por mensaje. Antes de las conversaciones corre un chequeo de **los siete paquetes** —cada uno
+con su nombre canónico y con una variante sin tilde— exigiendo el guion completo:
+antesala + 3 partes + obsequios. Después revisa, por turno: largo de cada globo
+(280 para lo que escribe el agente), Markdown que se escapa, links con texto
+pegado, número de preguntas, y que la tanda mande las piezas esperadas.
+
+Lo simulado es el transporte (en vez de POST a YCloud, imprime) y `agendar_cita`
+(va con doble, porque toca Google Calendar).
+
+**Lo que NO prueba: si Gemini obedece el prompt.** `GOOGLE_GEMINI_API_KEY` está
+vacía en `.env`, así que los turnos del agente en `scripts/casos-prueba.js` están
+redactados a mano siguiendo el prompt. Cuando haya key, eso es lo primero que
+hay que cerrar.
 
 ---
 
