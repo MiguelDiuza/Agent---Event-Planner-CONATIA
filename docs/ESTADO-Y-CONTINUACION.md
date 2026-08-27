@@ -1,7 +1,7 @@
 # Estado del proyecto y prompt de continuación
 
 Documento de traspaso entre sesiones. Actualizado: 2026-08-27.
-Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
+Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026-08-27.
 
 ---
 
@@ -9,12 +9,15 @@ Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 
 > Continúo el agente de ventas de WhatsApp **Angie Otero** (Christian Sierra
 > Event Planner) en `c:\Users\mandi\Documents\GitHub\Agent---Event-Planner-CONATIA`,
-> rama `gestorVideos`.
+> rama `main`.
 >
-> **Todo está en producción desde el 2026-08-27.** El embudo del 2026-08-26 y la
-> recotización del 2026-08-27 están publicados en el VPS y verificados contra la
-> base real. Lee `docs/ESTADO-Y-CONTINUACION.md`: la **sección 0 BIS** es lo
-> último que se hizo y la **sección 0** describe el embudo.
+> **Todo está en producción desde el 2026-08-27.** Lee
+> `docs/ESTADO-Y-CONTINUACION.md`: la **sección 0 QUATER** es lo último que se
+> hizo —los mensajes que llegan por partes, el número de contacto y las fechas
+> que ya pasaron— y la **sección 0** describe el embudo.
+>
+> **La base y el calendario están EN CERO** desde la noche del 2026-08-27, a
+> propósito, para que la próxima tanda de pruebas arranque limpia.
 >
 > **Lo único que falta es la prueba por WhatsApp con un número real**, que no se
 > puede hacer desde la máquina. Escríbele al **+573150290928** y comprueba, en
@@ -31,13 +34,31 @@ Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 >    Matrimonio…"), no prometer videos.
 > 3. **El reenvío.** Pídele que te reenvíe el video de un salón. Primero debe
 >    mandarte a mirar más arriba en el chat; si insistes, llega el video.
+> 4. **Los mensajes por partes.** Mándale cuatro seguidos, rápido: `quiero`,
+>    `que sea`, `para 150`, `personas`. Tiene que llegar **una sola respuesta**,
+>    unos ocho segundos después del último, y tiene que hablar de 150 personas.
+>    Si contesta cuatro veces, el buffer no está publicado.
+> 5. **Que lo normal siga siendo rápido.** En el mismo chat, contéstale `sí` a
+>    cualquier pregunta. Tiene que responder de una, sin los ocho segundos. Esa
+>    es la mitad del cambio que más fácil se rompe.
+> 6. **Un número a medias.** Cuando te pida el número de contacto, dale
+>    `31502909`. Debe pedírtelo otra vez, con calidez, sin decirte que lo
+>    escribiste mal, y **sin agendar nada**.
+> 7. **Una fecha que ya pasó.** Pídele cotizar para "el 15 de marzo". Debe
+>    preguntarte si te refieres al **lunes 15 de marzo de 2027**, con el día de
+>    la semana, y esperar a que confirmes antes de mirar disponibilidad.
 >
 > **Estado del despliegue (2026-08-27):**
 >
 > | Workflow | id | versión activa | para volver atrás |
 > |---|---|---|---|
-> | `enviar_medios` | `Tkh6deuiy663KNkl` | v37 · `8094c587-42aa-4cee-a332-3d252eee082f` | v36 · `c345e1a6-f72b-41f7-8f5a-3b24d2c5f622` |
-> | Angie Otero (agente) | `NsJQxBhrNyrKFVJu` | v172 · `e17d1b6d-36e2-459b-a6a7-8faa81331a36` | v171 · `118a773a-b197-44ac-818c-d64c38804b55` |
+> | `enviar_medios` | `Tkh6deuiy663KNkl` | `8094c587-42aa-4cee-a332-3d252eee082f` (no se tocó) | `c345e1a6-f72b-41f7-8f5a-3b24d2c5f622` |
+> | Angie Otero (agente) | `NsJQxBhrNyrKFVJu` | `c0b1faaa-6b6d-4da6-a519-3709eebb12bd` | `257af8d2-0628-4cdf-9568-f35a942446d4` |
+> | `agendar_cita` | `w3p5TRsicq13Jmig` | `9f2279e2-2ff2-44c1-99ca-adccf90a69b9` | `335bfd36-35ad-4a4c-90fe-c1d0589222ca` |
+> | `separar_fecha_evento` | `Mxz7P208vVXhyNg9` | `8a109ad9-bc1a-4367-aa5d-59afa5c9cf75` | `db9d09b4-c3d8-4753-b10b-d94a9690a87d` |
+>
+> Los `.json` de las versiones anteriores están en `.respaldo-vps-2026-08-27/`
+> (fuera de git), tal como los devolvió la API antes de publicar.
 >
 > Las versiones viejas siguen en el historial de n8n: se vuelve desde el
 > selector de versiones del editor. Un `PUT /api/v1/workflows/<id>` por la API
@@ -46,27 +67,23 @@ Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 > `activeVersion.nodes`**, no `nodes`.
 >
 > **Lo que ya está hecho y NO hay que rehacer:**
-> - Migraciones aplicadas en Supabase hasta `20260826000010` inclusive.
-> - Los dos workflows publicados en el VPS, con las credenciales enlazadas y
->   `active: true`. Los otros tres (`agendar_cita`, `separar_fecha_evento`,
->   Seguimiento) no se tocaron.
+> - Migraciones aplicadas en Supabase hasta `20260827000001` inclusive.
+> - Cuatro workflows publicados en el VPS, con las credenciales enlazadas y
+>   `active: true`: `enviar_medios`, el agente, `agendar_cita` y
+>   `separar_fecha_evento`. El de Seguimiento sigue inactivo y sin tocar.
 > - Sawa recomprimido a 14,75 MB y catalogado; Orquideorama y Gran Salón (foto)
 >   cargados. La tanda son **14 salones** más el promocional.
-> - Tres pruebas, y hay que correr las tres si se toca algo:
->   `scripts/banco-pruebas.js` (8 conversaciones completas, 0 errores),
->   `scripts/probar-ramas.js` (las diez ramas del turno 3 que las
->   conversaciones no tocan) y `scripts/probar-agenda.js` (el horario de
->   atención y las horas libres, sin base ni red). Las dos primeras necesitan
->   el `.env` cargado.
-> - **Todo en cero el 2026-08-27, después de las pruebas del usuario:**
->   `n8n_chat_histories`, `envios_medios`, `citas` y `agenda_reservas` vacías,
->   con la secuencia del serial reajustada; **Google Calendar vacío** (se
->   borraron los 22 eventos, citas y reservas incluidas, por decisión del
->   usuario); y las cuatro filas de `leads` de vuelta en `estado = 'nuevo'`,
->   sin seguimiento ni banderas. Las filas de `leads` se conservaron a
->   propósito: no son chats, y son el único registro de quién escribió.
+> - Siete pruebas, y hay que correr las siete si se toca algo. Están listadas
+>   en el README con lo que hace cada una; las de base necesitan el `.env`
+>   cargado, y `probar-en-vivo.js` habla con el VPS y gasta cuota de Gemini.
+> - **Todo en cero la noche del 2026-08-27:** `leads`, `n8n_chat_histories`,
+>   `envios_medios`, `citas`, `agenda_reservas` y `mensajes_fragmentos`
+>   vacías, con las secuencias reajustadas, y **Google Calendar vacío**. Esta
+>   vez `leads` **sí se borró** —el 26 se había conservado por ser el único
+>   registro de quién escribió—, por decisión del usuario. El respaldo está en
+>   `.respaldo-2026-08-27-limpieza/`, fuera de git. El catálogo no se tocó.
 >
-> **Tres trampas que ya costaron una vez:**
+> **Cuatro trampas que ya costaron una vez:**
 > - **Los .json traen los nodos DOS veces**: `nodes` y `activeVersion.nodes`. Si
 >   editas uno a mano hay que tocar los dos, o el `grep` te miente.
 > - **`GOOGLE_GEMINI_API_KEY` está vacía en `.env`**, así que no se puede correr
@@ -75,6 +92,11 @@ Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 > - **La CDN de Supabase Storage sirve el archivo viejo hasta ~1 hora** después
 >   de sobrescribir una clave. Si subes un video que Meta tiene que descargar ya,
 >   usa un nombre nuevo.
+> - **El prompt vive DOS veces**: en `system-prompt-angie-otero.md` y en el
+>   `systemMessage` del nodo. Se edita el `.md` y se vuelca con
+>   `node scripts/sincronizar-prompt.js --escribir`; sin argumentos, dice si se
+>   separaron. Y ojo con el `=` delante del `systemMessage`: sin él, la fecha y
+>   el catálogo le llegan al modelo sin evaluar.
 >
 > **Lo que sigue abierto y depende del negocio:**
 > - **Casa 5** no tiene video ni foto: es el único salón fuera de la tanda.
@@ -91,6 +113,186 @@ Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 >   mano o con una corrida de n8n. Los dos que importan son las reservas del
 >   4 de octubre (Casa Christian's) y el 15 de diciembre (Sede Granada Gold):
 >   bloquean fechas reales y la base ya no sabe que existen.
+
+---
+
+## 0 QUATER. TRES DETALLES QUE SE VEÍAN EN EL CHAT (2026-08-27, noche)
+
+Lo último que se hizo. **Publicado en el VPS y verificado en vivo.** Los tres
+salieron de mirar conversaciones reales, y los tres se notaban sobre todo por lo
+poco humano que hacían ver al agente.
+
+### 1. Los mensajes que llegan por partes
+
+**El problema.** Mucha gente en WhatsApp no escribe un mensaje: escribe cuatro.
+
+```
+quiero
+que sea
+para 150
+personas
+```
+
+El agente contestaba los cuatro, uno por uno, y ninguna de las cuatro respuestas
+podía tener sentido, porque ninguno de los cuatro mensajes lo tenía. Al cliente
+le queda clarísimo que está hablando con una máquina.
+
+**La restricción que mandó sobre el diseño**, dicha por el negocio con estas
+palabras: *"no quiero que con esto entorpezcamos y ralenticemos los tramos de la
+conversación que sí funcionan bien"*. Un cliente que escribe completo no puede
+pagar ni un segundo por el que escribe por pedazos. Eso descarta de entrada la
+solución obvia — "espera unos segundos por si acaso" —, porque en este embudo la
+mayoría de los turnos son cortos y completos: `sí`, `Miguel`, `150`, `Casa 4`.
+
+**Cómo quedó.** Cada mensaje entrante se guarda en `mensajes_fragmentos` antes de
+llegar al agente. Después:
+
+- Si el mensaje **se lee completo**, se reclama en el acto y sigue. Cero espera.
+  Es el camino del 90% de los turnos, y el costo total son dos consultas.
+- Si **parece un pedazo**, la ejecución espera 8 segundos. Si en ese rato entra
+  otro mensaje del mismo cliente, **la ejecución vieja se calla** y la nueva se
+  queda con todos los pedazos juntos. El agente ve un solo mensaje.
+
+La forma exacta de la regla es lo único que hay que entender del detector:
+
+> El **primer** mensaje solo espera si es gramaticalmente **imposible** que ahí
+> termine la frase — `quiero`, `que sea`, `para`, o si acaba en coma o
+> suspensivos. Nada más.
+>
+> Una vez la ráfaga ya arrancó, la vara baja: cualquier mensaje corto se le
+> suma, porque el cliente ya demostró que está escribiendo por pedazos.
+
+Esa asimetría es la que resuelve el cuarto pedazo del ejemplo. `personas`, suelto,
+es indistinguible de una respuesta completa; lo único que lo delata es que hay
+tres pedazos esperando. Y es también lo que garantiza que un `sí` nunca espere.
+
+**Una trampa que ya costó un rato:** `sí` y `si` se escriben igual una vez que se
+les quita el acento para comparar, y `si` es una conjunción que no puede cerrar
+frase. Sin una lista aparte de respuestas de una palabra, **cada "sí" del cliente
+esperaba ocho segundos**. Está atrapado en `probar-fragmentos.js`, bloque 1.
+
+**Quién decide qué.** `fn_reclamar_fragmentos` es la que impide las dos cosas que
+no pueden pasar — que dos ejecuciones contesten el mismo pedazo, o que un pedazo
+se quede sin contestar. Solo la ejecución del mensaje **más nuevo** se lleva el
+lote, y se lo lleva entero; a las demás les devuelve cero filas, que es la señal
+de callarse. En una ráfaga de cuatro eso pasa tres veces y es lo normal.
+
+La ventana de 5 minutos de esa función es una red de seguridad, no parte del
+diseño: si n8n se reinicia mientras una ejecución espera, su fragmento queda
+pendiente para siempre, y sin la ventana se le pegaría al mensaje que ese cliente
+escriba tres días después.
+
+### 2. El número de contacto tenía que quedar marcable
+
+**El problema.** La validación era `digitos.length < 7`. Entraban números a
+medias — el cliente escribe `31502909` y se le va el "enviar", o dicta el número
+por audio y la transcripción se come una cifra — y la cita quedaba agendada con
+un número al que nadie puede llamar. El asesor se entera cuando marca.
+
+No era hipotético: **la única cita que había en la base al hacer esta limpieza
+tenía `telefono_contacto = '31575643'`**, ocho dígitos.
+
+**Cómo quedó.** Colombia entera está en 10 dígitos desde la renumeración de 2022:
+celular `3XX XXX XXXX`, fijo `60X XXX XXXX` con indicativo de 601 a 608. Se
+aceptan las dos, con o sin `+57`, `0057` o el `0` de larga distancia, y con los
+espacios, puntos, guiones y paréntesis que a cada quien le dé por poner. Sale
+normalizado a E.164, así que en Google Calendar y en `citas` queda siempre
+escrito igual.
+
+Lo que se rechaza dice **cuántos dígitos tenía**, para que el agente pueda
+pedirlo otra vez sin sonar a reproche: *"creo que se me cortó el número, ¿me lo
+confirmas completo?"*, nunca *"lo escribiste mal"*. El cliente no se equivocó.
+
+**El validador está DUPLICADO** en `Calcular Ventana` (agendar_cita) y en
+`Validar Datos` (separar_fecha_evento), porque n8n no deja compartir código entre
+workflows. Eso no se puede arreglar, pero sí vigilar:
+`scripts/probar-telefono.js` corre **las dos copias** contra la misma tabla de
+casos y falla si dejan de coincidir, incluidos los textos.
+
+### 3. Una fecha que ya pasó se pregunta, no se corrige
+
+**El problema.** El cliente dice "el 15 de marzo" estando en agosto. No se
+equivocó: está pensando en el año que viene y da por hecho que se entiende. El
+agente hacía una de dos cosas, y las dos mal: la tomaba tal cual —consultar la
+disponibilidad de una fecha que ya pasó no significa nada— o le cambiaba el año
+por su cuenta y lo dejaba con una fecha apartada que nunca pidió.
+
+**Cómo quedó.** La herramienta le devuelve al agente el guion ya armado, con las
+dos fechas escritas y **con su día de la semana**:
+
+> Ay, cuéntame una cosita para no equivocarme: el domingo 15 de marzo de 2026 ya
+> pasó ☺️ ¿Me estás hablando del lunes 15 de marzo de 2027? Confírmame y te valido
+> de una la disponibilidad para esa fecha 🤗
+
+El día de la semana no es adorno: el mismo día y mes cae en otro día el año
+siguiente, y eso es justamente lo que le permite al cliente darse cuenta de un
+vistazo. Lo nombra `fn_fecha_en_letras`, que existe porque `to_char(..., 'TMDay')`
+depende del `lc_time` del servidor, que en Supabase es inglés.
+
+Se comprueba en tres sitios, porque son tres puertas distintas a la misma
+fecha: `verificar_disponibilidad_evento` (y ahí la comprobación se movió
+**arriba** de las de sede: una fecha del año pasado hay que atajarla aunque
+además el nombre de la sede venga mal escrito), `separar_fecha_evento`, y el
+prompt, en la sección `FECHAS QUE NO CUADRAN`. Una fecha a más de tres años
+recibe el mismo trato: es casi seguro un año tecleado mal.
+
+### Qué se tocó
+
+| Pieza | Cambio |
+|---|---|
+| `mensajes_fragmentos` + `fn_reclamar_fragmentos` | **Nuevos.** Migración `20260827000001`. |
+| `fn_fecha_en_letras` | **Nueva.** Migración `20260827000000`. |
+| Agente: `Registrar Fragmento`, `Detectar Fragmento`, `¿Esperar al resto?`, `Esperar Continuación`, `Reclamar Fragmentos`, `¿Me toca contestar?` | **Seis nodos nuevos** entre `¿Bot activo?` y `Catálogo de Medios`. |
+| Agente: nodo `Angie Otero` | El `text` pasa a leer `Reclamar Fragmentos`; la expresión que saca el texto de los tres canales se mudó a `Registrar Fragmento`. Sigue habiendo una sola copia. |
+| Agente: `verificar_disponibilidad_evento` | La fecha se revisa antes que la sede; el rechazo lleva el guion armado. |
+| `Calcular Ventana` (agendar_cita) | Validador de teléfono; sale normalizado a E.164. |
+| `separar_fecha_evento`: `Validar Datos`, `¿Datos válidos?`, `Datos Inválidos` | **Tres nodos nuevos.** Este workflow no validaba absolutamente nada. |
+| `system-prompt-angie-otero.md` | `FECHAS QUE NO CUADRAN`, la regla del número completo, y la nota de que los mensajes por partes llegan ya unidos. |
+| `scripts/probar-telefono.js`, `probar-fragmentos.js`, `revisar-workflows.js`, `probar-en-vivo.js`, `simular-fragmentos.js`, `sincronizar-prompt.js`, `vaciar-calendario.js` | **Nuevos.** |
+| `scripts/banco-pruebas.js` | `separar_fecha_evento` y `agendar_cita` ya no entran por detrás al SQL: pasan por sus nodos de validación. Y un turno puede traer `fragmentos`. |
+| `scripts/casos-prueba.js` | Casos **9** (escribe por partes, número a medias) y **10** (fecha que ya pasó). |
+
+### Cómo se probó
+
+Seis pruebas, y hay que correr las seis si se toca algo:
+
+```
+node scripts/revisar-workflows.js   sin errores   los 5 workflows, 100 nodos
+node scripts/probar-agenda.js       sin fallos    horario y horas libres
+node scripts/probar-telefono.js     sin fallos    teléfono (dos copias) y fecha
+node scripts/probar-fragmentos.js   sin fallos    el reparto de la ráfaga
+node scripts/probar-ramas.js        sin fallos    las ramas del turno 3
+node scripts/banco-pruebas.js       0 errores     10 conversaciones completas
+```
+
+**Y una séptima, que es la que de verdad cerró el asunto:**
+`node scripts/probar-en-vivo.js` manda la ráfaga contra el n8n del VPS, con
+Gemini de por medio. Es la única forma de comprobar el nodo `Esperar
+Continuación` —que exista en esa versión de n8n, que acepte los segundos como
+expresión, y que al despertar la ejecución conserve lo que dejó el detector—,
+porque nada de eso se ve en un `.json`. Resultado:
+
+```
+"quiero"   → (callado)   9417 ms
+"que sea"  → (callado)   9432 ms
+"para 150" → (callado)   9440 ms
+"personas" → ¡Súper! En estos momentos tenemos una súper promo…  16407 ms
+```
+
+Uno de cuatro, y el agente habló de 150 personas: recibió el texto unido.
+
+### Todo en cero (2026-08-27, noche)
+
+Después de publicar: `leads`, `n8n_chat_histories`, `envios_medios`, `citas`,
+`agenda_reservas` y `mensajes_fragmentos` **vacías**, con las secuencias
+reajustadas, y **Google Calendar vacío** (un evento, la llamada de prueba).
+
+Esta vez `leads` **sí se borró**, por decisión del usuario: el 26 de agosto se
+habían conservado porque eran el único registro de quién había escrito, y ahora
+se quiso arrancar literalmente desde cero. El respaldo de las filas está en
+`.respaldo-2026-08-27-limpieza/` (fuera de git: lleva conversaciones de
+clientes). El catálogo —`sedes`, `precios_sedes`, `tipos_evento`, `medios`,
+`servicios_adicionales_upselling`— no se tocó.
 
 ---
 

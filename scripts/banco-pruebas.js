@@ -90,11 +90,40 @@ function ligar(sqlTexto, params) {
 const principal = JSON.parse(fs.readFileSync('n8n/workflow-angie-otero.json', 'utf8'));
 const subMedios = JSON.parse(fs.readFileSync('n8n/workflow-enviar-medios.json', 'utf8'));
 const subSeparar = JSON.parse(fs.readFileSync('n8n/workflow-separar-fecha.json', 'utf8'));
+const subCita = JSON.parse(fs.readFileSync('n8n/workflow-agendar-cita.json', 'utf8'));
 const nodo = (wf, nombre) => {
   const n = wf.nodes.find(x => x.name === nombre);
   if (!n) throw new Error('no existe el nodo ' + nombre);
   return n.parameters.query;
 };
+
+// --------------------------------------------------------------------------
+// Correr un nodo Code de verdad
+// --------------------------------------------------------------------------
+// Las dos herramientas que escriben en el calendario -- separar_fecha_evento y
+// agendar_cita -- tienen delante un nodo que valida lo que manda el modelo. El
+// banco entraba por detras, directo al SQL, asi que ninguna conversacion
+// pasaba por esa validacion y una fecha del ano pasado o un telefono a medias
+// se colaban sin que nadie se enterara. Ahora entra por la puerta.
+//
+// Luxon sale del n8n global, que es la version con la que corren los nodos.
+function cargarLuxon() {
+  try { return require('luxon'); } catch { /* sigue */ }
+  const raiz = require('child_process').execSync('npm root -g', { encoding: 'utf8' }).trim();
+  return require(require('path').join(raiz, 'n8n', 'node_modules', 'luxon'));
+}
+const { DateTime } = cargarLuxon();
+
+// El reparto de los mensajes que llegan por partes. Es el mismo módulo que usa
+// `probar-fragmentos.js`, para que las dos pruebas no puedan discrepar.
+const fragmentos = require('./simular-fragmentos.js');
+
+function correrCodigo(wf, nombre, entrada) {
+  const n = wf.nodes.find(x => x.name === nombre);
+  if (!n) throw new Error('no existe el nodo ' + nombre);
+  const $input = { first: () => ({ json: entrada }), all: () => [{ json: entrada }] };
+  return new Function('DateTime', '$input', n.parameters.jsCode)(DateTime, $input)[0].json;
+}
 
 // --------------------------------------------------------------------------
 // Transcripcion
@@ -206,20 +235,45 @@ const herramientas = {
   verificar_disponibilidad_evento: (ctx, a) =>
     consulta(ligar(nodo(principal, 'verificar_disponibilidad_evento'), [a.nombre_sede, a.fecha])),
 
-  separar_fecha_evento: (ctx, a) =>
-    consulta(ligar(nodo(subSeparar, 'Separar Fecha'),
-      [a.nombre_sede, a.fecha, a.nombre_cliente, ctx.telefono, a.telefono_contacto])),
+  // Pasa por `Validar Datos`, igual que en el workflow: si la fecha ya paso o
+  // el telefono viene a medias, no llega al insert y no se bloquea nada en
+  // Google Calendar.
+  separar_fecha_evento: async (ctx, a) => {
+    const v = correrCodigo(subSeparar, 'Validar Datos', {
+      nombre_sede: a.nombre_sede, fecha: a.fecha, nombre_cliente: a.nombre_cliente,
+      telefono: ctx.telefono, telefono_contacto: a.telefono_contacto,
+    });
+    if (!v.valido) return [{ separada: false, estado_resultado: 'datos_invalidos', mensaje: v.mensaje }];
+    return consulta(ligar(nodo(subSeparar, 'Separar Fecha'),
+      [v.nombre_sede, v.fecha, v.nombre_cliente, v.telefono, v.telefono_contacto]));
+  },
 
   cerrar_seguimiento: (ctx) =>
     consulta(ligar(nodo(principal, 'cerrar_seguimiento'), [ctx.telefono])),
 
-  // Doble: la cita real pasa por Google Calendar, que no se toca desde aqui.
+  // La validacion de entrada es la del nodo real: tipo de cita, nombre y sobre
+  // todo el numero de contacto, que es lo que se colaba a medias.
+  //
+  // Lo que NO se corre aqui es el horario ni el choque con la agenda: eso
+  // depende de Google Calendar y del reloj, y ya tiene su propia prueba con el
+  // reloj congelado (`probar-agenda.js`). Por eso `fuera_horario` se ignora a
+  // proposito: dejarlo cortar volveria este banco dependiente del dia en que se
+  // corra, que es justo lo que no queremos de una prueba de conversaciones.
   agendar_cita: (ctx, a) => {
+    const v = correrCodigo(subCita, 'Calcular Ventana', {
+      tipo_cita: a.tipo_cita, fecha: a.fecha, hora: a.hora, detalle: a.detalle || '',
+      telefono: ctx.telefono, nombre: a.nombre || ctx.perfil || '',
+      telefono_contacto: a.telefono_contacto,
+    });
+    if (!v.valido) return Promise.resolve([{ agendada: false, mensaje: v.mensaje }]);
+
     const dur = a.tipo_cita === 'llamada' ? 20 : 30;
     const d = new Date(a.fecha + 'T12:00:00');
     const dia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][d.getUTCDay()];
-    return Promise.resolve([{ resultado: `Cita agendada: ${dia} ${a.fecha} a las ${a.hora}, ${dur} minutos.`,
-                              dia_semana: dia, duracion_min: dur, simulada: true }]);
+    return Promise.resolve([{ agendada: true,
+                              resultado: `Cita agendada: ${dia} ${a.fecha} a las ${a.hora}, ${dur} minutos.`,
+                              dia_semana: dia, duracion_min: dur,
+                              telefono_contacto: v.telefono_contacto, simulada: true }]);
   },
 };
 
@@ -276,7 +330,28 @@ async function correr(caso) {
   for (const t of caso.turnos) {
     turno++;
     console.log(c.gris(`\n  ── turno ${turno} ──`));
-    mensaje('cliente', t.cliente);
+
+    // Un turno puede llegar en pedazos. Cuando el caso trae `fragmentos`, los
+    // mensajes se meten por el buffer REAL -- los nodos `Registrar Fragmento`,
+    // `Detectar Fragmento` y `Reclamar Fragmentos` -- y lo que se apunta en la
+    // transcripción es lo que de verdad le habría llegado al agente. Si el
+    // reparto se rompe, aquí salen dos turnos donde debía haber uno.
+    if (t.fragmentos) {
+      const respuestas = await fragmentos.repartir(consulta, caso.telefono, t.fragmentos);
+      if (respuestas.length !== 1) {
+        anota('error', `turno ${turno}: los ${t.fragmentos.length} pedazos produjeron ` +
+          `${respuestas.length} mensajes al agente y debía ser 1: ` +
+          JSON.stringify(respuestas.map(r => r.texto)));
+      }
+      const unido = respuestas.map(r => r.texto).join(' § ');
+      if (unido !== t.cliente) {
+        anota('error', `turno ${turno}: el agente recibió ${JSON.stringify(unido)} ` +
+          `y se esperaba ${JSON.stringify(t.cliente)}`);
+      }
+      mensaje('cliente', unido, `← ${t.fragmentos.length} mensajes sueltos, unidos por el buffer`);
+    } else {
+      mensaje('cliente', t.cliente);
+    }
     const antes = chat.length;
 
     for (const llamada of t.tools || []) {
@@ -300,6 +375,7 @@ async function correr(caso) {
 async function limpiar(casos) {
   for (const caso of casos) {
     for (const extra of caso.limpiarExtra || []) await consulta(extra);
+    await fragmentos.limpiar(consulta, caso.telefono);
     await consulta(ligar(
       `delete from agenda_reservas where lead_id in (select id from leads where telefono = $1);
        delete from citas where telefono = $1;

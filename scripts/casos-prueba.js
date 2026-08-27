@@ -1,11 +1,15 @@
-// Ocho conversaciones completas, con ocho clientes distintos.
+// Diez conversaciones completas, con diez clientes distintos.
 //
 // Los turnos del AGENTE son los que el prompt manda escribir, redactados a mano
 // (la GOOGLE_GEMINI_API_KEY esta vacia en .env, asi que no se puede correr el
 // modelo de verdad). Los turnos del CLIENTE son lo que se quiere probar: cada
 // caso mete al menos un borde que en produccion se rompe solo.
 //
-// Hoy es miercoles 26 de agosto de 2026. Las fechas estan calculadas contra eso.
+// Un turno del cliente puede traer `fragmentos` en vez de un solo texto: son
+// varios mensajes sueltos, y el banco los mete por el buffer REAL de la base
+// para comprobar que al agente le llega UNO. Ver el caso 9.
+//
+// Hoy es jueves 27 de agosto de 2026. Las fechas estan calculadas contra eso.
 
 const TIKTOK = 'https://www.tiktok.com/@christian.sierra.e?_r=1&_t=ZS-999l6N2zPM4';
 const INSTAGRAM = 'https://www.instagram.com/christiansierra_planner?igsi=MWcyMmE1Z3lraHA2ZQ%3D%3D&utm_source=qr';
@@ -505,6 +509,181 @@ module.exports = [
           nombre: 'Diana', telefono_contacto: '3186667788', detalle: 'Llamada matrimonio Mansión Vallano, 150 invitados, 7 de noviembre' } }],
         globos: [
           'Quedó agendada tu llamada para el viernes 28 de agosto a las 3:30 p.m., al 3186667788 ☎️',
+          ...REDES,
+        ] },
+    ],
+  },
+
+  // ------------------------------------------------------------------------
+  // 9. El que escribe por partes y da el número a medias (2026-08-27).
+  //
+  //    Los dos defectos que se reportaron desde producción, en la misma
+  //    conversación:
+  //
+  //    - `fragmentos` mete los mensajes por el buffer REAL. El turno 3 son
+  //      cuatro mensajes sueltos y tiene que salir UNO. Antes el agente
+  //      contestaba los cuatro, uno por uno, y ninguna respuesta tenía
+  //      sentido porque ninguno de los cuatro mensajes lo tenía.
+  //
+  //    - El número llega con ocho dígitos, que es exactamente lo que pasa
+  //      cuando se le va el "enviar" antes de tiempo. Antes se aceptaba -- la
+  //      regla eran siete dígitos -- y la cita quedaba agendada con un número
+  //      al que nadie puede llamar. Ahora la herramienta lo devuelve y el
+  //      agente lo pide otra vez.
+  // ------------------------------------------------------------------------
+  {
+    nombre: '9. Camilo — escribe por partes y da el número a medias.',
+    telefono: 'test-ref-9', perfil: 'Camilo',
+    turnos: [
+      { cliente: 'Hola buenas', globos: SALUDO },
+
+      { cliente: 'Camilo, es para un matrimonio',
+        globos: promo('Camilo', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
+
+      // Los cuatro pedazos del reporte, tal cual. Tienen que llegar como uno.
+      { fragmentos: ['quiero', 'que sea', 'para 150', 'personas'],
+        cliente: 'quiero que sea para 150 personas',
+        globos: ['¿Y para qué fecha lo tienes pensado, Camilo? 🤗'] },
+
+      { cliente: 'el 5 de diciembre',
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 150,
+                  tipo_evento: 'Matrimonio', nombre_cliente: 'Camilo', tipo_medio: 'ambos' } }],
+        globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
+
+      { cliente: 'me gusto la Sede Norte',
+        tools: [{ t: 'verificar_disponibilidad_evento',
+          args: { nombre_sede: 'Sede Norte', fecha: '2026-12-05' },
+          revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llegó: ' + r[0].resultado.slice(0, 60)); } }],
+        globos: [
+          '¡Excelente elección, Camilo! La Sede Norte es espectacular ✨ Te confirmo que el 5 de diciembre está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¿Te la separamos para que quede asegurada? 🤗',
+        ] },
+
+      // El número a medias. La herramienta lo rechaza y el agente lo vuelve a
+      // pedir sin decirle al cliente que se equivocó.
+      { cliente: 'si listo, Camilo Restrepo, 31502909',
+        tools: [{ t: 'separar_fecha_evento',
+          args: { nombre_sede: 'Sede Norte', fecha: '2026-12-05',
+                  nombre_cliente: 'Camilo Restrepo', telefono_contacto: '31502909' },
+          revisar: (r, anota) => {
+            const m = r[0] || {};
+            if (m.separada !== false) anota('error', 'apartó la fecha con un número de 8 dígitos: ' + JSON.stringify(m).slice(0, 160));
+            if (!/8 digitos/.test(m.mensaje || '')) anota('error', 'no dijo cuántos dígitos tenía: ' + String(m.mensaje).slice(0, 140));
+            if (/se equivoc|invalido|incorrecto/i.test(m.mensaje || '')) anota('error', 'el texto para el agente lo trata como un error del cliente');
+          } }],
+        globos: ['Creo que se me cortó el número, Camilo 🙈 ¿Me lo confirmas completo por fa?'] },
+
+      { cliente: 'ah si perdon, 3150290928',
+        tools: [{ t: 'separar_fecha_evento',
+          args: { nombre_sede: 'Sede Norte', fecha: '2026-12-05',
+                  nombre_cliente: 'Camilo Restrepo', telefono_contacto: '3150290928' },
+          revisar: (r, anota) => {
+            if ((r[0] || {}).estado_resultado !== 'separada')
+              anota('error', 'con el número completo tampoco apartó: ' + JSON.stringify(r[0]).slice(0, 160));
+          } }],
+        globos: [
+          '¡Listo, Camilo! El 5 de diciembre queda apartado a tu nombre en la Sede Norte ✨',
+          'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗',
+        ] },
+
+      { cliente: 'en la tarde me queda bien',
+        tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:00',
+          nombre: 'Camilo Restrepo', telefono_contacto: '3150290928', detalle: 'Llamada matrimonio Sede Norte, 150 invitados, 5 de diciembre' },
+          revisar: (r, anota) => {
+            if ((r[0] || {}).telefono_contacto !== '+573150290928')
+              anota('error', 'el número no llegó normalizado a la cita: ' + JSON.stringify(r[0]).slice(0, 120));
+          } }],
+        globos: [
+          'Quedó agendada tu llamada para el viernes 28 de agosto a las 3:00 p.m., al 3150290928 ☎️',
+          ...REDES,
+        ] },
+    ],
+  },
+
+  // ------------------------------------------------------------------------
+  // 10. La que da una fecha que ya pasó (2026-08-27).
+  //
+  //     Hoy es 27 de agosto de 2026 y la clienta dice "el 15 de marzo". No se
+  //     equivocó: está pensando en el año que viene y no lo dijo. Antes el
+  //     agente la tomaba tal cual -- consultaba disponibilidad de una fecha
+  //     que ya pasó, que no significa nada -- o le cambiaba el año por su
+  //     cuenta y la dejaba con una fecha apartada que nunca pidió.
+  //
+  //     Lo que se comprueba es que la herramienta devuelva las dos fechas
+  //     escritas y con su día de la semana, y que no deje apartar la vieja.
+  // ------------------------------------------------------------------------
+  {
+    nombre: '10. Ana — da una fecha que ya pasó y hay que preguntarle.',
+    telefono: 'test-ref-10', perfil: 'Ana',
+    turnos: [
+      { cliente: 'Buenas tardes', globos: SALUDO },
+
+      { cliente: 'Ana, quiero cotizar los 15 de mi hija',
+        globos: promo('Ana', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
+
+      { cliente: 'para 100 personas, el 15 de marzo',
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 100,
+                  tipo_evento: '15 Años', nombre_cliente: 'Ana', tipo_medio: 'ambos' } }],
+        globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
+
+      // Aquí es donde antes se rompía: consulta con 2026-03-15, que ya pasó.
+      { cliente: 'Casa 74',
+        tools: [{ t: 'verificar_disponibilidad_evento',
+          args: { nombre_sede: 'Casa 74', fecha: '2026-03-15' },
+          revisar: (r, anota) => {
+            const t = (r[0] || {}).resultado || '';
+            if (!/YA PASO/.test(t)) anota('error', 'no detectó que la fecha ya pasó: ' + t.slice(0, 80));
+            if (!/domingo 15 de marzo de 2026/.test(t)) anota('error', 'no nombra la fecha que dijo la clienta, con su día');
+            if (!/lunes 15 de marzo de 2027/.test(t)) anota('error', 'no propone la misma fecha del año siguiente, con su día');
+            if (!/NO la apartes/.test(t)) anota('error', 'no le prohíbe apartar esa fecha');
+            if (/se equivoc|error/i.test(t)) anota('error', 'trata la fecha como un error de la clienta');
+          } }],
+        globos: [
+          'Ay, cuéntame una cosita para no equivocarme: el domingo 15 de marzo de 2026 ya pasó ☺️ ¿Me estás hablando del lunes 15 de marzo de 2027? Confírmame y te valido de una la disponibilidad para esa fecha 🤗',
+        ] },
+
+      { cliente: 'si si, del otro año',
+        tools: [{ t: 'verificar_disponibilidad_evento',
+          args: { nombre_sede: 'Casa 74', fecha: '2027-03-15' },
+          revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llegó: ' + r[0].resultado.slice(0, 60)); } }],
+        globos: [
+          '¡Perfecto, Ana! Te confirmo que el lunes 15 de marzo de 2027 está libre en Casa 74 ✨',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¿Te la separamos para que quede asegurada? 🤗',
+        ] },
+
+      // Y si el agente insistiera con la fecha vieja, tampoco se aparta.
+      { cliente: 'si, sepáramela. Ana Lucía Gómez, 3012223344',
+        tools: [
+          { t: 'separar_fecha_evento',
+            args: { nombre_sede: 'Casa 74', fecha: '2026-03-15',
+                    nombre_cliente: 'Ana Lucía Gómez', telefono_contacto: '3012223344' },
+            revisar: (r, anota) => {
+              const m = r[0] || {};
+              if (m.separada !== false) anota('error', 'apartó una fecha que ya pasó: ' + JSON.stringify(m).slice(0, 160));
+              if (!/lunes 15 de marzo de 2027/.test(m.mensaje || '')) anota('error', 'el rechazo no propone la fecha del año siguiente');
+            } },
+          { t: 'separar_fecha_evento',
+            args: { nombre_sede: 'Casa 74', fecha: '2027-03-15',
+                    nombre_cliente: 'Ana Lucía Gómez', telefono_contacto: '3012223344' },
+            revisar: (r, anota) => {
+              if ((r[0] || {}).estado_resultado !== 'separada')
+                anota('error', 'con la fecha buena no apartó: ' + JSON.stringify(r[0]).slice(0, 160));
+            } },
+        ],
+        globos: [
+          '¡Listo, Ana! El lunes 15 de marzo de 2027 queda apartado a tu nombre en Casa 74 ✨',
+          'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗',
+        ] },
+
+      { cliente: 'mañana en la mañana',
+        tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '10:00',
+          nombre: 'Ana Lucía Gómez', telefono_contacto: '3012223344', detalle: 'Llamada 15 años Casa 74, 100 invitados, 15 de marzo de 2027' } }],
+        globos: [
+          'Quedó agendada tu llamada para el viernes 28 de agosto a las 10:00 a.m., al 3012223344 ☎️',
           ...REDES,
         ] },
     ],
