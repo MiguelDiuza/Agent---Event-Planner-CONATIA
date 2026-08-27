@@ -64,7 +64,7 @@
       "notes": "Valida la entrada del LLM, aplica el horario de atencion y calcula la ventana de choque (cita 30 min + colchon 30 min).",
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Valida lo que manda el modelo y calcula la ventana en la que un evento\n// existente impediria agendar esta cita.\n//\n// Regla del negocio (2026-08-13): una sola persona atiende, asi que no puede\n// haber citas en paralelo. La cita ocupa [hora, hora+duracion] y ademas exige\n// su colchon a cada lado, asi que cualquier evento que toque\n// [hora-colchon, hora+duracion+colchon] es un choque.\n//\n// Duracion y colchon por tipo (2026-08-25): una llamada es mas corta y necesita\n// menos aire que recibir a alguien en la sede, asi que va de 20 con 20 de\n// colchon. El resto sigue en 30 y 30.\nconst MINUTOS = {\n  visita_sede:  { duracion: 30, colchon: 30 },\n  prueba_traje: { duracion: 30, colchon: 30 },\n  llamada:      { duracion: 20, colchon: 20 },\n  asesoria:     { duracion: 30, colchon: 30 },\n};\nconst ZONA = 'America/Bogota';\nconst TIPOS = Object.keys(MINUTOS);\n\n// Horario de atencion (2026-08-19). Clave = dia de la semana de Luxon:\n// 1=lunes ... 6=sabado, 7=domingo.\nconst HORARIO = {\n  1: ['10:00', '19:00'],\n  2: ['10:00', '19:00'],\n  3: ['10:00', '19:00'],\n  4: ['10:00', '19:00'],\n  5: ['10:00', '19:00'],\n  6: ['10:00', '18:30'],\n  7: ['10:30', '13:00'],\n};\n\nconst entrada = $input.first().json;\nconst texto = (v) => (v ?? '').toString().trim();\n\nconst tipo_cita = texto(entrada.tipo_cita);\nconst fecha = texto(entrada.fecha);\nconst hora = texto(entrada.hora);\nconst detalle = texto(entrada.detalle);\nconst telefono = texto(entrada.telefono);\nconst nombre = texto(entrada.nombre);\nconst telefono_contacto = texto(entrada.telefono_contacto);\n// Solo digitos: sirve para validar y para marcar.\nconst digitos = telefono_contacto.replace(/\\D/g, '');\n\n// El mensaje va de vuelta al agente, no al cliente: se redacta como\n// instruccion para que sepa que corregir y vuelva a llamar la herramienta.\nconst rechazar = (mensaje) => [{ json: { valido: false, agendada: false, mensaje } }];\n\nif (!TIPOS.includes(tipo_cita)) {\n  return rechazar(`tipo_cita invalido: \"${tipo_cita}\". Debe ser exactamente uno de: ${TIPOS.join(', ')}.`);\n}\n\nif (!nombre) {\n  return rechazar('Falta el nombre del cliente. Preguntaselo antes de agendar la cita.');\n}\n\n// Seguro despues de validar el tipo: aca ya se sabe que existe en MINUTOS.\nconst { duracion: DURACION_MIN, colchon: COLCHON_MIN } = MINUTOS[tipo_cita];\n\n// El telefono con el que escribe NO sirve para llamar: cuando el cliente tiene\n// el numero oculto llega como JID (@lid) o como userId, que no se puede marcar.\n// Por eso el numero de contacto se pide siempre, y en las llamadas es critico.\nif (digitos.length < 7) {\n  return rechazar(\n    tipo_cita === 'llamada'\n      ? 'Falta el numero al que hay que llamar. Pideselo al cliente antes de agendar la llamada: \"confirmame por fa a que numero te llamo\".'\n      : 'Falta el numero de contacto del cliente. Pideselo antes de agendar: \"por fa me confirmas un numero de contacto\".'\n  );\n}\n\n// Formato estricto a proposito: si el modelo manda \"manana\" o \"3pm\" hay que\n// devolverselo como error, no dejar que Google reciba una fecha inventada.\nconst inicio = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n\nif (!inicio.isValid) {\n  return rechazar(`Fecha u hora invalidas: \"${fecha} ${hora}\". Usa fecha en formato YYYY-MM-DD y hora en formato HH:MM de 24 horas.`);\n}\n\nif (inicio < DateTime.now().setZone(ZONA)) {\n  return rechazar(`Ese horario ya paso (${inicio.toFormat('dd/MM/yyyy HH:mm')}). Proponle al cliente una fecha y hora futuras.`);\n}\n\nconst fin = inicio.plus({ minutes: DURACION_MIN });\n\n// La cita COMPLETA debe caber en la franja: se valida el fin, no solo el\n// inicio. Si no, una cita de 30 min a las 18:45 el sabado terminaria a las\n// 19:15, con el local ya cerrado.\nconst [abre, cierra] = HORARIO[inicio.weekday];\n// sabado -> sabados, domingo -> domingos; lunes..viernes ya son invariables.\nconst diaBase = inicio.setLocale('es').toFormat('cccc');\nconst dia = diaBase.endsWith('s') ? diaBase : `${diaBase}s`;\nconst apertura = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${abre}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\nconst cierreDt = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${cierra}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n\nif (inicio < apertura || fin > cierreDt) {\n  const ultima = cierreDt.minus({ minutes: DURACION_MIN }).toFormat('HH:mm');\n  return rechazar(`Fuera del horario de atencion. Los ${dia} atendemos de ${abre} a ${cierra}, y como cada cita dura ${DURACION_MIN} minutos la ultima puede empezar a las ${ultima}. Proponle al cliente otra hora dentro de esa franja.`);\n}\n\nreturn [{\n  json: {\n    valido: true,\n    tipo_cita,\n    detalle,\n    telefono,\n    telefono_contacto,\n    nombre,\n    inicio: inicio.toISO(),\n    fin: fin.toISO(),\n    ventana_inicio: inicio.minus({ minutes: COLCHON_MIN }).toISO(),\n    ventana_fin: fin.plus({ minutes: COLCHON_MIN }).toISO(),\n    inicio_legible: inicio.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\"),\n    duracion_min: DURACION_MIN,\n    colchon_min: COLCHON_MIN,\n  },\n}];\n"
+        "jsCode": "// Valida lo que manda el modelo y calcula la ventana en la que un evento\n// existente impediria agendar esta cita.\n//\n// Regla del negocio (2026-08-13): una sola persona atiende, asi que no puede\n// haber citas en paralelo. La cita ocupa [hora, hora+duracion] y ademas exige\n// su colchon a cada lado, asi que cualquier evento que toque\n// [hora-colchon, hora+duracion+colchon] es un choque.\n//\n// Duracion y colchon por tipo (2026-08-25): una llamada es mas corta y necesita\n// menos aire que recibir a alguien en la sede, asi que va de 20 con 20 de\n// colchon. El resto sigue en 30 y 30.\n//\n// QUE CAMBIO EL 2026-08-27, y por que. Los rechazos por TIEMPO -- fuera de\n// horario, domingo, fecha ya pasada -- ya no cortan aqui. Antes cortaban, el\n// agente se quedaba sin una sola hora concreta y se inventaba una; si esa\n// tambien estaba ocupada se inventaba otra, y el cliente veia al agente\n// equivocarse tres veces seguidas. Pasaba sobre todo en la SEGUNDA cita del\n// mismo chat: la que el agente acababa de crear bloquea su colchon a cada lado,\n// que son justo las horas vecinas que iba a proponer. Reportado en produccion.\n//\n// Ahora esos casos salen marcados con `fuera_horario` y siguen hasta\n// `Calcular Libres`, que lee la agenda de verdad y devuelve horas que SI estan\n// libres. Los rechazos que NO son de tiempo (tipo invalido, falta el nombre o\n// el telefono, fecha impresentable) si cortan aqui: no hay nada que ofrecer.\nconst MINUTOS = {\n  visita_sede:  { duracion: 30, colchon: 30 },\n  prueba_traje: { duracion: 30, colchon: 30 },\n  llamada:      { duracion: 20, colchon: 20 },\n  asesoria:     { duracion: 30, colchon: 30 },\n};\nconst ZONA = 'America/Bogota';\nconst TIPOS = Object.keys(MINUTOS);\n\n// Horario de atencion (2026-08-27): jornada continua de 10:00 a 19:00, de lunes\n// a sabado, con cita previa. Clave = dia de la semana de Luxon, 1 = lunes.\n//\n// El DOMINGO no abre, y por eso simplemente NO tiene entrada: `HORARIO[7]` da\n// undefined y eso es lo que lo deja fuera, aqui y en Calcular Libres, sin un\n// `if` especial que haya que acordarse de mantener en los dos lados.\n//\n// Esta tabla es la UNICA copia del horario en el workflow: viaja en la salida\n// de este nodo para que Calcular Libres use exactamente la misma. Dos copias se\n// separan, y el dia que se separen el agente ofrecera horas que el validador\n// rechaza.\nconst HORARIO = {\n  1: ['10:00', '19:00'],\n  2: ['10:00', '19:00'],\n  3: ['10:00', '19:00'],\n  4: ['10:00', '19:00'],\n  5: ['10:00', '19:00'],\n  6: ['10:00', '19:00'],\n};\n// Hasta donde puede mirar Calcular Libres para encontrar huecos.\nconst DIAS_A_MIRAR = 7;\n\nconst entrada = $input.first().json;\nconst texto = (v) => (v ?? '').toString().trim();\n\nconst tipo_cita = texto(entrada.tipo_cita);\nconst fecha = texto(entrada.fecha);\nconst hora = texto(entrada.hora);\nconst detalle = texto(entrada.detalle);\nconst telefono = texto(entrada.telefono);\nconst nombre = texto(entrada.nombre);\nconst telefono_contacto = texto(entrada.telefono_contacto);\n// Solo digitos: sirve para validar y para marcar.\nconst digitos = telefono_contacto.replace(/\\D/g, '');\n\n// El mensaje va de vuelta al agente, no al cliente: se redacta como\n// instruccion para que sepa que corregir y vuelva a llamar la herramienta.\nconst rechazar = (mensaje) => [{ json: { valido: false, agendada: false, mensaje } }];\n\nif (!TIPOS.includes(tipo_cita)) {\n  return rechazar(`tipo_cita invalido: \"${tipo_cita}\". Debe ser exactamente uno de: ${TIPOS.join(', ')}.`);\n}\n\nif (!nombre) {\n  return rechazar('Falta el nombre del cliente. Preguntaselo antes de agendar la cita.');\n}\n\n// Seguro despues de validar el tipo: aca ya se sabe que existe en MINUTOS.\nconst { duracion: DURACION_MIN, colchon: COLCHON_MIN } = MINUTOS[tipo_cita];\n\n// El telefono con el que escribe NO sirve para llamar: cuando el cliente tiene\n// el numero oculto llega como JID (@lid) o como userId, que no se puede marcar.\n// Por eso el numero de contacto se pide siempre, y en las llamadas es critico.\nif (digitos.length < 7) {\n  return rechazar(\n    tipo_cita === 'llamada'\n      ? 'Falta el numero al que hay que llamar. Pideselo al cliente antes de agendar la llamada: \"confirmame por fa a que numero te llamo\".'\n      : 'Falta el numero de contacto del cliente. Pideselo antes de agendar: \"por fa me confirmas un numero de contacto\".'\n  );\n}\n\n// Formato estricto a proposito: si el modelo manda \"manana\" o \"3pm\" hay que\n// devolverselo como error, no dejar que Google reciba una fecha inventada.\nconst inicio = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n\nif (!inicio.isValid) {\n  return rechazar(`Fecha u hora invalidas: \"${fecha} ${hora}\". Usa fecha en formato YYYY-MM-DD y hora en formato HH:MM de 24 horas.`);\n}\n\nconst fin = inicio.plus({ minutes: DURACION_MIN });\nconst ahora = DateTime.now().setZone(ZONA);\n\n// De aqui en adelante, los motivos de TIEMPO. No cortan: marcan el pedido y\n// dejan que Calcular Libres proponga horas que existen de verdad.\nlet fuera_horario = null;\nconst franja = HORARIO[inicio.weekday];\n\nif (inicio < ahora) {\n  fuera_horario = `la hora que intentaste (${inicio.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\")}) ya paso`;\n} else if (!franja) {\n  // Unico dia sin franja. Se nombra el dia en vez de decir \"cerrado\" a secas\n  // para que el agente pueda repetirselo al cliente tal cual.\n  fuera_horario = 'los domingos no hay atencion';\n} else {\n  // La cita COMPLETA debe caber en la franja: se valida el fin, no solo el\n  // inicio. Si no, una cita de 30 min a las 18:45 terminaria a las 19:15, con\n  // el local ya cerrado.\n  const [abre, cierra] = franja;\n  const apertura = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${abre}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  const cierreDt = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${cierra}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  if (inicio < apertura || fin > cierreDt) {\n    const ultima = cierreDt.minus({ minutes: DURACION_MIN }).toFormat('HH:mm');\n    fuera_horario = `atendemos de ${abre} a ${cierra} de lunes a sabado, jornada continua, y como esa cita dura ${DURACION_MIN} minutos la ultima puede empezar a las ${ultima}`;\n  }\n}\n\n// Desde que dia se buscan huecos: el que pidio el cliente, o HOY si ese ya paso.\n// La consulta a Google se hace una sola vez y trae toda la ventana, para que\n// Calcular Libres pueda ofrecer horas de los dias siguientes sin otra llamada.\nconst desde = DateTime.max(inicio.startOf('day'), ahora.startOf('day'));\n\nreturn [{\n  json: {\n    valido: true,\n    fuera_horario,\n    tipo_cita,\n    detalle,\n    telefono,\n    telefono_contacto,\n    nombre,\n    inicio: inicio.toISO(),\n    fin: fin.toISO(),\n    ventana_inicio: inicio.minus({ minutes: COLCHON_MIN }).toISO(),\n    ventana_fin: fin.plus({ minutes: COLCHON_MIN }).toISO(),\n    inicio_legible: inicio.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\"),\n    duracion_min: DURACION_MIN,\n    colchon_min: COLCHON_MIN,\n    horario: HORARIO,\n    dias_a_mirar: DIAS_A_MIRAR,\n    rango_inicio: desde.toISO(),\n    rango_fin: desde.plus({ days: DIAS_A_MIRAR }).endOf('day').toISO(),\n  },\n}];\n"
       }
     },
     {
@@ -104,7 +104,7 @@
     },
     {
       "id": "e1000000-0000-4000-8000-000000000004",
-      "name": "Buscar Choques",
+      "name": "Leer Agenda",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -112,7 +112,7 @@
         180
       ],
       "alwaysOutputData": true,
-      "notes": "Cuenta de servicio via HTTP Request: su clave no caduca, a diferencia del OAuth de usuario que Google revoca a los 7 dias si la app esta en modo Testing. maxResults=1 porque solo importa SI hay choque.",
+      "notes": "Trae la agenda de los proximos dias completa, no solo la ventana de la hora pedida: es lo que le permite a Calcular Libres ofrecer horas que de verdad estan libres (2026-08-27).",
       "parameters": {
         "method": "GET",
         "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('christianeventos.bot@gmail.com') }}/events",
@@ -123,11 +123,11 @@
           "parameters": [
             {
               "name": "timeMin",
-              "value": "={{ $json.ventana_inicio }}"
+              "value": "={{ $json.rango_inicio }}"
             },
             {
               "name": "timeMax",
-              "value": "={{ $json.ventana_fin }}"
+              "value": "={{ $json.rango_fin }}"
             },
             {
               "name": "singleEvents",
@@ -139,7 +139,7 @@
             },
             {
               "name": "maxResults",
-              "value": "1"
+              "value": "250"
             },
             {
               "name": "showDeleted",
@@ -162,10 +162,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        660,
+        840,
         180
       ],
-      "notes": "Solo cuentan los eventos CON HORA. Los de dia completo son reservas de fecha de evento y no deben bloquear citas.",
+      "notes": "true = no se puede agendar, por choque o por estar fuera de horario. Los dos casos salen por la misma rama porque los dos se contestan igual: con las horas libres de verdad.",
       "parameters": {
         "conditions": {
           "options": {
@@ -177,11 +177,12 @@
           "conditions": [
             {
               "id": "cond-choque",
-              "leftValue": "={{ ($json.items || []).filter(e => e.start && e.start.dateTime).length }}",
-              "rightValue": 0,
+              "leftValue": "={{ $json.ocupado }}",
+              "rightValue": "",
               "operator": {
-                "type": "number",
-                "operation": "gt"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -197,7 +198,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        900,
+        1080,
         80
       ],
       "notes": "Cuenta de servicio via HTTP Request. La respuesta es el evento creado, asi que 'Cita Confirmada' sigue leyendo $json.id sin cambios.",
@@ -224,7 +225,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1140,
+        1320,
         80
       ],
       "parameters": {
@@ -262,7 +263,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        900,
+        1080,
         300
       ],
       "parameters": {
@@ -279,13 +280,14 @@
             {
               "id": "busy-2",
               "name": "mensaje",
-              "value": "=No se pudo agendar: ya hay algo ocupando el horario de las {{ $('Calcular Ventana').item.json.inicio_legible }}. REGLA: la nueva hora debe empezar al menos {{ $('Calcular Ventana').item.json.duracion_min + $('Calcular Ventana').item.json.colchon_min }} minutos ANTES o DESPUES de la que intentaste; acercarse mas no alcanza porque cada cita necesita {{ $('Calcular Ventana').item.json.colchon_min }} min libres a cada lado. Ofrecele una hora que cumpla esa separacion y vuelve a llamar la herramienta. NUNCA le digas al cliente que la hora \"se acaba de ocupar\": nunca estuvo libre.",
+              "value": "={{ $json.mensaje }}",
               "type": "string"
             }
           ]
         },
         "options": {}
-      }
+      },
+      "notes": "El texto lo arma Calcular Libres, que es el unico que sabe que horas quedaron libres."
     },
     {
       "id": "e1000000-0000-4000-8000-000000000009",
@@ -332,7 +334,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1024,
+        1204,
         80
       ],
       "alwaysOutputData": true,
@@ -344,6 +346,21 @@
           "name": "Supabase - Christian Sierra (nuevo)"
         }
       }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Que horas estan REALMENTE libres, leidas de la agenda.\n//\n// Por que existe este nodo (2026-08-27). Cuando la hora pedida estaba ocupada,\n// al agente se le devolvia una REGLA -- \"la nueva hora debe empezar al menos N\n// minutos antes o despues\" -- y ninguna hora concreta. El agente adivinaba, y\n// si la agenda tenia dos o tres citas ese dia adivinaba mal dos o tres veces\n// seguidas: \"¿las 3?\" -> ocupada -> \"¿las 4?\" -> ocupada. Al cliente le parece\n// que el sistema esta roto, y tiene razon.\n//\n// Se veia sobre todo en la SEGUNDA cita del mismo chat, y no es casualidad: la\n// cita que el agente acababa de crear bloquea su colchon a cada lado, que son\n// exactamente las horas vecinas que iba a proponer.\n//\n// Aqui se calcula la lista de horas que de verdad caben, con la misma regla de\n// colchon que valida el choque, y se le entrega al agente. El prompt le prohibe\n// ofrecer cualquier hora que no venga en esa lista.\nconst ZONA = 'America/Bogota';\n// Se ofrecen horas en punto y y media: es como las ofrece una persona, y con el\n// colchon de 30 minutos no tiene sentido una rejilla mas fina.\nconst PASO_MIN = 30;\nconst MAX_OPCIONES = 5;\n\nconst v = $('Calcular Ventana').first().json;\n\n// Los eventos de dia completo llegan con `start.date` y no `start.dateTime`.\n// Se ignoran, igual que hacia el chequeo anterior: son marcas del calendario\n// (una fecha de evento apartada, un festivo) y no citas que ocupen una hora.\nconst eventos = ($input.first().json.items || [])\n  .filter((e) => e.start && e.start.dateTime && e.end && e.end.dateTime)\n  .map((e) => ({\n    inicio: DateTime.fromISO(e.start.dateTime).setZone(ZONA),\n    fin: DateTime.fromISO(e.end.dateTime).setZone(ZONA),\n  }));\n\nconst chocaCon = (desde, hasta) => eventos.some((e) => e.inicio < hasta && e.fin > desde);\n\n// ¿La hora que pidio el cliente choca? Es el mismo criterio de siempre, pero\n// calculado aqui sobre la agenda completa en vez de con una consulta aparte.\nconst choque = chocaCon(\n  DateTime.fromISO(v.ventana_inicio).setZone(ZONA),\n  DateTime.fromISO(v.ventana_fin).setZone(ZONA),\n);\n\nconst ahora = DateTime.now().setZone(ZONA);\nconst pedida = DateTime.fromISO(v.inicio).setZone(ZONA);\n\n// Los huecos de un dia, en orden cronologico.\nfunction huecosDe(dia) {\n  const franja = v.horario[dia.weekday];\n  if (!franja) return [];                       // domingo: no abre\n  const [abre, cierra] = franja;\n  const ymd = dia.toFormat('yyyy-MM-dd');\n  const cierreDt = DateTime.fromFormat(`${ymd} ${cierra}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  const out = [];\n  let t = DateTime.fromFormat(`${ymd} ${abre}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  for (; t.plus({ minutes: v.duracion_min }) <= cierreDt; t = t.plus({ minutes: PASO_MIN })) {\n    if (t <= ahora) continue;\n    const finT = t.plus({ minutes: v.duracion_min });\n    // La misma regla del colchon que decide el choque: si se usara otra, el\n    // agente ofreceria horas que el validador rechaza al llamarlo de vuelta.\n    if (chocaCon(t.minus({ minutes: v.colchon_min }), finT.plus({ minutes: v.colchon_min }))) continue;\n    out.push(t);\n  }\n  return out;\n}\n\nconst desde = DateTime.fromISO(v.rango_inicio).setZone(ZONA).startOf('day');\nconst candidatos = [];\n\n// El dia que pidio el cliente va primero y ordenado por CERCANIA a la hora que\n// pidio: si queria las 3 de la tarde, ofrecerle las 10 de la manana es no\n// haberlo escuchado. Los dias siguientes van en orden normal.\nfor (let d = 0; d < v.dias_a_mirar && candidatos.length < MAX_OPCIONES; d++) {\n  const dia = desde.plus({ days: d });\n  const huecos = huecosDe(dia);\n  if (d === 0) huecos.sort((a, b) => Math.abs(a.diff(pedida).toMillis()) - Math.abs(b.diff(pedida).toMillis()));\n  for (const t of huecos) {\n    candidatos.push(t);\n    if (candidatos.length >= MAX_OPCIONES) break;\n  }\n}\n\nconst libres = candidatos.map((t) => ({\n  fecha: t.toFormat('yyyy-MM-dd'),\n  hora: t.toFormat('HH:mm'),\n  legible: t.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\"),\n}));\n\nconst ocupado = Boolean(v.fuera_horario) || choque;\nlet mensaje = null;\n\nif (ocupado) {\n  const motivo = v.fuera_horario\n    ? `No se pudo agendar porque ${v.fuera_horario}.`\n    : `No se pudo agendar: ya hay algo ocupando el horario de las ${v.inicio_legible}.`;\n\n  if (libres.length === 0) {\n    // Honesto y sin salida inventada: es preferible que el agente lo diga a que\n    // ofrezca una hora que no existe.\n    mensaje = `${motivo} Y NO queda ningun horario libre en los proximos ${v.dias_a_mirar} dias. ` +\n      'No te inventes ninguno. Dile al cliente que la agenda esta llena esos dias, preguntale en que ' +\n      'franja le sirve mejor mas adelante y ofrecele que un asesor lo contacte para cuadrarlo.';\n  } else {\n    const listado = libres.map((l) => `${l.legible} [fecha=${l.fecha} hora=${l.hora}]`).join(' | ');\n    mensaje = `${motivo} ESTOS HORARIOS SI ESTAN LIBRES, leidos de la agenda ahora mismo: ${listado}. ` +\n      'Ofrecele al cliente DOS o TRES de esos, con naturalidad y en formato de 12 horas (ej. \"3:00 p.m.\"). ' +\n      'NO ofrezcas NINGUNA hora que no este en esa lista: las demas estan ocupadas y volverias a quedar mal. ' +\n      'Cuando el cliente elija, vuelve a llamar esta herramienta con la fecha y la hora EXACTAS que aparecen ' +\n      'entre corchetes. Y no le digas que la hora \"se acaba de ocupar\": nunca estuvo libre.';\n  }\n}\n\nreturn [{ json: { ocupado, choque, libres, mensaje } }];\n"
+      },
+      "id": "c4l1b7e5-2a9d-4f60-b31c-7e8a5d0f2b44",
+      "name": "Calcular Libres",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        180
+      ],
+      "notes": "Convierte la agenda en horas que de verdad estan libres. Sin esto el agente adivina la hora alternativa y se equivoca varias veces seguidas delante del cliente (2026-08-27)."
     }
   ],
   "connections": {
@@ -373,7 +390,7 @@
       "main": [
         [
           {
-            "node": "Buscar Choques",
+            "node": "Leer Agenda",
             "type": "main",
             "index": 0
           }
@@ -381,17 +398,6 @@
         [
           {
             "node": "Entrada Inválida",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Choques": {
-      "main": [
-        [
-          {
-            "node": "¿Hay choque?",
             "type": "main",
             "index": 0
           }
@@ -432,6 +438,28 @@
         [
           {
             "node": "Cita Confirmada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Agenda": {
+      "main": [
+        [
+          {
+            "node": "Calcular Libres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Libres": {
+      "main": [
+        [
+          {
+            "node": "¿Hay choque?",
             "type": "main",
             "index": 0
           }
@@ -509,7 +537,7 @@
         "notes": "Valida la entrada del LLM, aplica el horario de atencion y calcula la ventana de choque (cita 30 min + colchon 30 min).",
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "// Valida lo que manda el modelo y calcula la ventana en la que un evento\n// existente impediria agendar esta cita.\n//\n// Regla del negocio (2026-08-13): una sola persona atiende, asi que no puede\n// haber citas en paralelo. La cita ocupa [hora, hora+duracion] y ademas exige\n// su colchon a cada lado, asi que cualquier evento que toque\n// [hora-colchon, hora+duracion+colchon] es un choque.\n//\n// Duracion y colchon por tipo (2026-08-25): una llamada es mas corta y necesita\n// menos aire que recibir a alguien en la sede, asi que va de 20 con 20 de\n// colchon. El resto sigue en 30 y 30.\nconst MINUTOS = {\n  visita_sede:  { duracion: 30, colchon: 30 },\n  prueba_traje: { duracion: 30, colchon: 30 },\n  llamada:      { duracion: 20, colchon: 20 },\n  asesoria:     { duracion: 30, colchon: 30 },\n};\nconst ZONA = 'America/Bogota';\nconst TIPOS = Object.keys(MINUTOS);\n\n// Horario de atencion (2026-08-19). Clave = dia de la semana de Luxon:\n// 1=lunes ... 6=sabado, 7=domingo.\nconst HORARIO = {\n  1: ['10:00', '19:00'],\n  2: ['10:00', '19:00'],\n  3: ['10:00', '19:00'],\n  4: ['10:00', '19:00'],\n  5: ['10:00', '19:00'],\n  6: ['10:00', '18:30'],\n  7: ['10:30', '13:00'],\n};\n\nconst entrada = $input.first().json;\nconst texto = (v) => (v ?? '').toString().trim();\n\nconst tipo_cita = texto(entrada.tipo_cita);\nconst fecha = texto(entrada.fecha);\nconst hora = texto(entrada.hora);\nconst detalle = texto(entrada.detalle);\nconst telefono = texto(entrada.telefono);\nconst nombre = texto(entrada.nombre);\nconst telefono_contacto = texto(entrada.telefono_contacto);\n// Solo digitos: sirve para validar y para marcar.\nconst digitos = telefono_contacto.replace(/\\D/g, '');\n\n// El mensaje va de vuelta al agente, no al cliente: se redacta como\n// instruccion para que sepa que corregir y vuelva a llamar la herramienta.\nconst rechazar = (mensaje) => [{ json: { valido: false, agendada: false, mensaje } }];\n\nif (!TIPOS.includes(tipo_cita)) {\n  return rechazar(`tipo_cita invalido: \"${tipo_cita}\". Debe ser exactamente uno de: ${TIPOS.join(', ')}.`);\n}\n\nif (!nombre) {\n  return rechazar('Falta el nombre del cliente. Preguntaselo antes de agendar la cita.');\n}\n\n// Seguro despues de validar el tipo: aca ya se sabe que existe en MINUTOS.\nconst { duracion: DURACION_MIN, colchon: COLCHON_MIN } = MINUTOS[tipo_cita];\n\n// El telefono con el que escribe NO sirve para llamar: cuando el cliente tiene\n// el numero oculto llega como JID (@lid) o como userId, que no se puede marcar.\n// Por eso el numero de contacto se pide siempre, y en las llamadas es critico.\nif (digitos.length < 7) {\n  return rechazar(\n    tipo_cita === 'llamada'\n      ? 'Falta el numero al que hay que llamar. Pideselo al cliente antes de agendar la llamada: \"confirmame por fa a que numero te llamo\".'\n      : 'Falta el numero de contacto del cliente. Pideselo antes de agendar: \"por fa me confirmas un numero de contacto\".'\n  );\n}\n\n// Formato estricto a proposito: si el modelo manda \"manana\" o \"3pm\" hay que\n// devolverselo como error, no dejar que Google reciba una fecha inventada.\nconst inicio = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n\nif (!inicio.isValid) {\n  return rechazar(`Fecha u hora invalidas: \"${fecha} ${hora}\". Usa fecha en formato YYYY-MM-DD y hora en formato HH:MM de 24 horas.`);\n}\n\nif (inicio < DateTime.now().setZone(ZONA)) {\n  return rechazar(`Ese horario ya paso (${inicio.toFormat('dd/MM/yyyy HH:mm')}). Proponle al cliente una fecha y hora futuras.`);\n}\n\nconst fin = inicio.plus({ minutes: DURACION_MIN });\n\n// La cita COMPLETA debe caber en la franja: se valida el fin, no solo el\n// inicio. Si no, una cita de 30 min a las 18:45 el sabado terminaria a las\n// 19:15, con el local ya cerrado.\nconst [abre, cierra] = HORARIO[inicio.weekday];\n// sabado -> sabados, domingo -> domingos; lunes..viernes ya son invariables.\nconst diaBase = inicio.setLocale('es').toFormat('cccc');\nconst dia = diaBase.endsWith('s') ? diaBase : `${diaBase}s`;\nconst apertura = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${abre}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\nconst cierreDt = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${cierra}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n\nif (inicio < apertura || fin > cierreDt) {\n  const ultima = cierreDt.minus({ minutes: DURACION_MIN }).toFormat('HH:mm');\n  return rechazar(`Fuera del horario de atencion. Los ${dia} atendemos de ${abre} a ${cierra}, y como cada cita dura ${DURACION_MIN} minutos la ultima puede empezar a las ${ultima}. Proponle al cliente otra hora dentro de esa franja.`);\n}\n\nreturn [{\n  json: {\n    valido: true,\n    tipo_cita,\n    detalle,\n    telefono,\n    telefono_contacto,\n    nombre,\n    inicio: inicio.toISO(),\n    fin: fin.toISO(),\n    ventana_inicio: inicio.minus({ minutes: COLCHON_MIN }).toISO(),\n    ventana_fin: fin.plus({ minutes: COLCHON_MIN }).toISO(),\n    inicio_legible: inicio.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\"),\n    duracion_min: DURACION_MIN,\n    colchon_min: COLCHON_MIN,\n  },\n}];\n"
+          "jsCode": "// Valida lo que manda el modelo y calcula la ventana en la que un evento\n// existente impediria agendar esta cita.\n//\n// Regla del negocio (2026-08-13): una sola persona atiende, asi que no puede\n// haber citas en paralelo. La cita ocupa [hora, hora+duracion] y ademas exige\n// su colchon a cada lado, asi que cualquier evento que toque\n// [hora-colchon, hora+duracion+colchon] es un choque.\n//\n// Duracion y colchon por tipo (2026-08-25): una llamada es mas corta y necesita\n// menos aire que recibir a alguien en la sede, asi que va de 20 con 20 de\n// colchon. El resto sigue en 30 y 30.\n//\n// QUE CAMBIO EL 2026-08-27, y por que. Los rechazos por TIEMPO -- fuera de\n// horario, domingo, fecha ya pasada -- ya no cortan aqui. Antes cortaban, el\n// agente se quedaba sin una sola hora concreta y se inventaba una; si esa\n// tambien estaba ocupada se inventaba otra, y el cliente veia al agente\n// equivocarse tres veces seguidas. Pasaba sobre todo en la SEGUNDA cita del\n// mismo chat: la que el agente acababa de crear bloquea su colchon a cada lado,\n// que son justo las horas vecinas que iba a proponer. Reportado en produccion.\n//\n// Ahora esos casos salen marcados con `fuera_horario` y siguen hasta\n// `Calcular Libres`, que lee la agenda de verdad y devuelve horas que SI estan\n// libres. Los rechazos que NO son de tiempo (tipo invalido, falta el nombre o\n// el telefono, fecha impresentable) si cortan aqui: no hay nada que ofrecer.\nconst MINUTOS = {\n  visita_sede:  { duracion: 30, colchon: 30 },\n  prueba_traje: { duracion: 30, colchon: 30 },\n  llamada:      { duracion: 20, colchon: 20 },\n  asesoria:     { duracion: 30, colchon: 30 },\n};\nconst ZONA = 'America/Bogota';\nconst TIPOS = Object.keys(MINUTOS);\n\n// Horario de atencion (2026-08-27): jornada continua de 10:00 a 19:00, de lunes\n// a sabado, con cita previa. Clave = dia de la semana de Luxon, 1 = lunes.\n//\n// El DOMINGO no abre, y por eso simplemente NO tiene entrada: `HORARIO[7]` da\n// undefined y eso es lo que lo deja fuera, aqui y en Calcular Libres, sin un\n// `if` especial que haya que acordarse de mantener en los dos lados.\n//\n// Esta tabla es la UNICA copia del horario en el workflow: viaja en la salida\n// de este nodo para que Calcular Libres use exactamente la misma. Dos copias se\n// separan, y el dia que se separen el agente ofrecera horas que el validador\n// rechaza.\nconst HORARIO = {\n  1: ['10:00', '19:00'],\n  2: ['10:00', '19:00'],\n  3: ['10:00', '19:00'],\n  4: ['10:00', '19:00'],\n  5: ['10:00', '19:00'],\n  6: ['10:00', '19:00'],\n};\n// Hasta donde puede mirar Calcular Libres para encontrar huecos.\nconst DIAS_A_MIRAR = 7;\n\nconst entrada = $input.first().json;\nconst texto = (v) => (v ?? '').toString().trim();\n\nconst tipo_cita = texto(entrada.tipo_cita);\nconst fecha = texto(entrada.fecha);\nconst hora = texto(entrada.hora);\nconst detalle = texto(entrada.detalle);\nconst telefono = texto(entrada.telefono);\nconst nombre = texto(entrada.nombre);\nconst telefono_contacto = texto(entrada.telefono_contacto);\n// Solo digitos: sirve para validar y para marcar.\nconst digitos = telefono_contacto.replace(/\\D/g, '');\n\n// El mensaje va de vuelta al agente, no al cliente: se redacta como\n// instruccion para que sepa que corregir y vuelva a llamar la herramienta.\nconst rechazar = (mensaje) => [{ json: { valido: false, agendada: false, mensaje } }];\n\nif (!TIPOS.includes(tipo_cita)) {\n  return rechazar(`tipo_cita invalido: \"${tipo_cita}\". Debe ser exactamente uno de: ${TIPOS.join(', ')}.`);\n}\n\nif (!nombre) {\n  return rechazar('Falta el nombre del cliente. Preguntaselo antes de agendar la cita.');\n}\n\n// Seguro despues de validar el tipo: aca ya se sabe que existe en MINUTOS.\nconst { duracion: DURACION_MIN, colchon: COLCHON_MIN } = MINUTOS[tipo_cita];\n\n// El telefono con el que escribe NO sirve para llamar: cuando el cliente tiene\n// el numero oculto llega como JID (@lid) o como userId, que no se puede marcar.\n// Por eso el numero de contacto se pide siempre, y en las llamadas es critico.\nif (digitos.length < 7) {\n  return rechazar(\n    tipo_cita === 'llamada'\n      ? 'Falta el numero al que hay que llamar. Pideselo al cliente antes de agendar la llamada: \"confirmame por fa a que numero te llamo\".'\n      : 'Falta el numero de contacto del cliente. Pideselo antes de agendar: \"por fa me confirmas un numero de contacto\".'\n  );\n}\n\n// Formato estricto a proposito: si el modelo manda \"manana\" o \"3pm\" hay que\n// devolverselo como error, no dejar que Google reciba una fecha inventada.\nconst inicio = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n\nif (!inicio.isValid) {\n  return rechazar(`Fecha u hora invalidas: \"${fecha} ${hora}\". Usa fecha en formato YYYY-MM-DD y hora en formato HH:MM de 24 horas.`);\n}\n\nconst fin = inicio.plus({ minutes: DURACION_MIN });\nconst ahora = DateTime.now().setZone(ZONA);\n\n// De aqui en adelante, los motivos de TIEMPO. No cortan: marcan el pedido y\n// dejan que Calcular Libres proponga horas que existen de verdad.\nlet fuera_horario = null;\nconst franja = HORARIO[inicio.weekday];\n\nif (inicio < ahora) {\n  fuera_horario = `la hora que intentaste (${inicio.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\")}) ya paso`;\n} else if (!franja) {\n  // Unico dia sin franja. Se nombra el dia en vez de decir \"cerrado\" a secas\n  // para que el agente pueda repetirselo al cliente tal cual.\n  fuera_horario = 'los domingos no hay atencion';\n} else {\n  // La cita COMPLETA debe caber en la franja: se valida el fin, no solo el\n  // inicio. Si no, una cita de 30 min a las 18:45 terminaria a las 19:15, con\n  // el local ya cerrado.\n  const [abre, cierra] = franja;\n  const apertura = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${abre}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  const cierreDt = DateTime.fromFormat(`${inicio.toFormat('yyyy-MM-dd')} ${cierra}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  if (inicio < apertura || fin > cierreDt) {\n    const ultima = cierreDt.minus({ minutes: DURACION_MIN }).toFormat('HH:mm');\n    fuera_horario = `atendemos de ${abre} a ${cierra} de lunes a sabado, jornada continua, y como esa cita dura ${DURACION_MIN} minutos la ultima puede empezar a las ${ultima}`;\n  }\n}\n\n// Desde que dia se buscan huecos: el que pidio el cliente, o HOY si ese ya paso.\n// La consulta a Google se hace una sola vez y trae toda la ventana, para que\n// Calcular Libres pueda ofrecer horas de los dias siguientes sin otra llamada.\nconst desde = DateTime.max(inicio.startOf('day'), ahora.startOf('day'));\n\nreturn [{\n  json: {\n    valido: true,\n    fuera_horario,\n    tipo_cita,\n    detalle,\n    telefono,\n    telefono_contacto,\n    nombre,\n    inicio: inicio.toISO(),\n    fin: fin.toISO(),\n    ventana_inicio: inicio.minus({ minutes: COLCHON_MIN }).toISO(),\n    ventana_fin: fin.plus({ minutes: COLCHON_MIN }).toISO(),\n    inicio_legible: inicio.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\"),\n    duracion_min: DURACION_MIN,\n    colchon_min: COLCHON_MIN,\n    horario: HORARIO,\n    dias_a_mirar: DIAS_A_MIRAR,\n    rango_inicio: desde.toISO(),\n    rango_fin: desde.plus({ days: DIAS_A_MIRAR }).endOf('day').toISO(),\n  },\n}];\n"
         }
       },
       {
@@ -549,7 +577,7 @@
       },
       {
         "id": "e1000000-0000-4000-8000-000000000004",
-        "name": "Buscar Choques",
+        "name": "Leer Agenda",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
@@ -557,7 +585,7 @@
           180
         ],
         "alwaysOutputData": true,
-        "notes": "Cuenta de servicio via HTTP Request: su clave no caduca, a diferencia del OAuth de usuario que Google revoca a los 7 dias si la app esta en modo Testing. maxResults=1 porque solo importa SI hay choque.",
+        "notes": "Trae la agenda de los proximos dias completa, no solo la ventana de la hora pedida: es lo que le permite a Calcular Libres ofrecer horas que de verdad estan libres (2026-08-27).",
         "parameters": {
           "method": "GET",
           "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('christianeventos.bot@gmail.com') }}/events",
@@ -568,11 +596,11 @@
             "parameters": [
               {
                 "name": "timeMin",
-                "value": "={{ $json.ventana_inicio }}"
+                "value": "={{ $json.rango_inicio }}"
               },
               {
                 "name": "timeMax",
-                "value": "={{ $json.ventana_fin }}"
+                "value": "={{ $json.rango_fin }}"
               },
               {
                 "name": "singleEvents",
@@ -584,7 +612,7 @@
               },
               {
                 "name": "maxResults",
-                "value": "1"
+                "value": "250"
               },
               {
                 "name": "showDeleted",
@@ -607,10 +635,10 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.3,
         "position": [
-          660,
+          840,
           180
         ],
-        "notes": "Solo cuentan los eventos CON HORA. Los de dia completo son reservas de fecha de evento y no deben bloquear citas.",
+        "notes": "true = no se puede agendar, por choque o por estar fuera de horario. Los dos casos salen por la misma rama porque los dos se contestan igual: con las horas libres de verdad.",
         "parameters": {
           "conditions": {
             "options": {
@@ -622,11 +650,12 @@
             "conditions": [
               {
                 "id": "cond-choque",
-                "leftValue": "={{ ($json.items || []).filter(e => e.start && e.start.dateTime).length }}",
-                "rightValue": 0,
+                "leftValue": "={{ $json.ocupado }}",
+                "rightValue": "",
                 "operator": {
-                  "type": "number",
-                  "operation": "gt"
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
                 }
               }
             ],
@@ -642,7 +671,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          900,
+          1080,
           80
         ],
         "notes": "Cuenta de servicio via HTTP Request. La respuesta es el evento creado, asi que 'Cita Confirmada' sigue leyendo $json.id sin cambios.",
@@ -669,7 +698,7 @@
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          1140,
+          1320,
           80
         ],
         "parameters": {
@@ -707,7 +736,7 @@
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          900,
+          1080,
           300
         ],
         "parameters": {
@@ -724,13 +753,14 @@
               {
                 "id": "busy-2",
                 "name": "mensaje",
-                "value": "=No se pudo agendar: ya hay algo ocupando el horario de las {{ $('Calcular Ventana').item.json.inicio_legible }}. REGLA: la nueva hora debe empezar al menos {{ $('Calcular Ventana').item.json.duracion_min + $('Calcular Ventana').item.json.colchon_min }} minutos ANTES o DESPUES de la que intentaste; acercarse mas no alcanza porque cada cita necesita {{ $('Calcular Ventana').item.json.colchon_min }} min libres a cada lado. Ofrecele una hora que cumpla esa separacion y vuelve a llamar la herramienta. NUNCA le digas al cliente que la hora \"se acaba de ocupar\": nunca estuvo libre.",
+                "value": "={{ $json.mensaje }}",
                 "type": "string"
               }
             ]
           },
           "options": {}
-        }
+        },
+        "notes": "El texto lo arma Calcular Libres, que es el unico que sabe que horas quedaron libres."
       },
       {
         "id": "e1000000-0000-4000-8000-000000000009",
@@ -777,7 +807,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.6,
         "position": [
-          1024,
+          1204,
           80
         ],
         "alwaysOutputData": true,
@@ -789,6 +819,21 @@
             "name": "Supabase - Christian Sierra (nuevo)"
           }
         }
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "// Que horas estan REALMENTE libres, leidas de la agenda.\n//\n// Por que existe este nodo (2026-08-27). Cuando la hora pedida estaba ocupada,\n// al agente se le devolvia una REGLA -- \"la nueva hora debe empezar al menos N\n// minutos antes o despues\" -- y ninguna hora concreta. El agente adivinaba, y\n// si la agenda tenia dos o tres citas ese dia adivinaba mal dos o tres veces\n// seguidas: \"¿las 3?\" -> ocupada -> \"¿las 4?\" -> ocupada. Al cliente le parece\n// que el sistema esta roto, y tiene razon.\n//\n// Se veia sobre todo en la SEGUNDA cita del mismo chat, y no es casualidad: la\n// cita que el agente acababa de crear bloquea su colchon a cada lado, que son\n// exactamente las horas vecinas que iba a proponer.\n//\n// Aqui se calcula la lista de horas que de verdad caben, con la misma regla de\n// colchon que valida el choque, y se le entrega al agente. El prompt le prohibe\n// ofrecer cualquier hora que no venga en esa lista.\nconst ZONA = 'America/Bogota';\n// Se ofrecen horas en punto y y media: es como las ofrece una persona, y con el\n// colchon de 30 minutos no tiene sentido una rejilla mas fina.\nconst PASO_MIN = 30;\nconst MAX_OPCIONES = 5;\n\nconst v = $('Calcular Ventana').first().json;\n\n// Los eventos de dia completo llegan con `start.date` y no `start.dateTime`.\n// Se ignoran, igual que hacia el chequeo anterior: son marcas del calendario\n// (una fecha de evento apartada, un festivo) y no citas que ocupen una hora.\nconst eventos = ($input.first().json.items || [])\n  .filter((e) => e.start && e.start.dateTime && e.end && e.end.dateTime)\n  .map((e) => ({\n    inicio: DateTime.fromISO(e.start.dateTime).setZone(ZONA),\n    fin: DateTime.fromISO(e.end.dateTime).setZone(ZONA),\n  }));\n\nconst chocaCon = (desde, hasta) => eventos.some((e) => e.inicio < hasta && e.fin > desde);\n\n// ¿La hora que pidio el cliente choca? Es el mismo criterio de siempre, pero\n// calculado aqui sobre la agenda completa en vez de con una consulta aparte.\nconst choque = chocaCon(\n  DateTime.fromISO(v.ventana_inicio).setZone(ZONA),\n  DateTime.fromISO(v.ventana_fin).setZone(ZONA),\n);\n\nconst ahora = DateTime.now().setZone(ZONA);\nconst pedida = DateTime.fromISO(v.inicio).setZone(ZONA);\n\n// Los huecos de un dia, en orden cronologico.\nfunction huecosDe(dia) {\n  const franja = v.horario[dia.weekday];\n  if (!franja) return [];                       // domingo: no abre\n  const [abre, cierra] = franja;\n  const ymd = dia.toFormat('yyyy-MM-dd');\n  const cierreDt = DateTime.fromFormat(`${ymd} ${cierra}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  const out = [];\n  let t = DateTime.fromFormat(`${ymd} ${abre}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  for (; t.plus({ minutes: v.duracion_min }) <= cierreDt; t = t.plus({ minutes: PASO_MIN })) {\n    if (t <= ahora) continue;\n    const finT = t.plus({ minutes: v.duracion_min });\n    // La misma regla del colchon que decide el choque: si se usara otra, el\n    // agente ofreceria horas que el validador rechaza al llamarlo de vuelta.\n    if (chocaCon(t.minus({ minutes: v.colchon_min }), finT.plus({ minutes: v.colchon_min }))) continue;\n    out.push(t);\n  }\n  return out;\n}\n\nconst desde = DateTime.fromISO(v.rango_inicio).setZone(ZONA).startOf('day');\nconst candidatos = [];\n\n// El dia que pidio el cliente va primero y ordenado por CERCANIA a la hora que\n// pidio: si queria las 3 de la tarde, ofrecerle las 10 de la manana es no\n// haberlo escuchado. Los dias siguientes van en orden normal.\nfor (let d = 0; d < v.dias_a_mirar && candidatos.length < MAX_OPCIONES; d++) {\n  const dia = desde.plus({ days: d });\n  const huecos = huecosDe(dia);\n  if (d === 0) huecos.sort((a, b) => Math.abs(a.diff(pedida).toMillis()) - Math.abs(b.diff(pedida).toMillis()));\n  for (const t of huecos) {\n    candidatos.push(t);\n    if (candidatos.length >= MAX_OPCIONES) break;\n  }\n}\n\nconst libres = candidatos.map((t) => ({\n  fecha: t.toFormat('yyyy-MM-dd'),\n  hora: t.toFormat('HH:mm'),\n  legible: t.setLocale('es').toFormat(\"cccc d 'de' LLLL 'a las' HH:mm\"),\n}));\n\nconst ocupado = Boolean(v.fuera_horario) || choque;\nlet mensaje = null;\n\nif (ocupado) {\n  const motivo = v.fuera_horario\n    ? `No se pudo agendar porque ${v.fuera_horario}.`\n    : `No se pudo agendar: ya hay algo ocupando el horario de las ${v.inicio_legible}.`;\n\n  if (libres.length === 0) {\n    // Honesto y sin salida inventada: es preferible que el agente lo diga a que\n    // ofrezca una hora que no existe.\n    mensaje = `${motivo} Y NO queda ningun horario libre en los proximos ${v.dias_a_mirar} dias. ` +\n      'No te inventes ninguno. Dile al cliente que la agenda esta llena esos dias, preguntale en que ' +\n      'franja le sirve mejor mas adelante y ofrecele que un asesor lo contacte para cuadrarlo.';\n  } else {\n    const listado = libres.map((l) => `${l.legible} [fecha=${l.fecha} hora=${l.hora}]`).join(' | ');\n    mensaje = `${motivo} ESTOS HORARIOS SI ESTAN LIBRES, leidos de la agenda ahora mismo: ${listado}. ` +\n      'Ofrecele al cliente DOS o TRES de esos, con naturalidad y en formato de 12 horas (ej. \"3:00 p.m.\"). ' +\n      'NO ofrezcas NINGUNA hora que no este en esa lista: las demas estan ocupadas y volverias a quedar mal. ' +\n      'Cuando el cliente elija, vuelve a llamar esta herramienta con la fecha y la hora EXACTAS que aparecen ' +\n      'entre corchetes. Y no le digas que la hora \"se acaba de ocupar\": nunca estuvo libre.';\n  }\n}\n\nreturn [{ json: { ocupado, choque, libres, mensaje } }];\n"
+        },
+        "id": "c4l1b7e5-2a9d-4f60-b31c-7e8a5d0f2b44",
+        "name": "Calcular Libres",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          600,
+          180
+        ],
+        "notes": "Convierte la agenda en horas que de verdad estan libres. Sin esto el agente adivina la hora alternativa y se equivoca varias veces seguidas delante del cliente (2026-08-27)."
       }
     ],
     "connections": {
@@ -818,7 +863,7 @@
         "main": [
           [
             {
-              "node": "Buscar Choques",
+              "node": "Leer Agenda",
               "type": "main",
               "index": 0
             }
@@ -826,17 +871,6 @@
           [
             {
               "node": "Entrada Inválida",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Buscar Choques": {
-        "main": [
-          [
-            {
-              "node": "¿Hay choque?",
               "type": "main",
               "index": 0
             }
@@ -877,6 +911,28 @@
           [
             {
               "node": "Cita Confirmada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Leer Agenda": {
+        "main": [
+          [
+            {
+              "node": "Calcular Libres",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Calcular Libres": {
+        "main": [
+          [
+            {
+              "node": "¿Hay choque?",
               "type": "main",
               "index": 0
             }

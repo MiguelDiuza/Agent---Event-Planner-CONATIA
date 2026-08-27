@@ -1,6 +1,6 @@
 # Estado del proyecto y prompt de continuación
 
-Documento de traspaso entre sesiones. Actualizado: 2026-08-26.
+Documento de traspaso entre sesiones. Actualizado: 2026-08-27.
 Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 
 ---
@@ -11,52 +11,60 @@ Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 > Event Planner) en `c:\Users\mandi\Documents\GitHub\Agent---Event-Planner-CONATIA`,
 > rama `gestorVideos`.
 >
-> El 2026-08-26 se refactorizó el embudo completo. **La base y los archivos ya
-> están listos y probados; lo único que falta es subirlo a n8n y salir a
-> producción.**
+> **Todo está en producción desde el 2026-08-27.** El embudo del 2026-08-26 y la
+> recotización del 2026-08-27 están publicados en el VPS y verificados contra la
+> base real. Lee `docs/ESTADO-Y-CONTINUACION.md`: la **sección 0 BIS** es lo
+> último que se hizo y la **sección 0** describe el embudo.
 >
-> Lee `docs/ESTADO-Y-CONTINUACION.md`, empezando por la **sección 0**, que es la
-> que describe el embudo nuevo.
+> **Lo único que falta es la prueba por WhatsApp con un número real**, que no se
+> puede hacer desde la máquina. Escríbele al **+573150290928** y comprueba, en
+> este orden:
 >
-> **La tarea de esta sesión, en orden:**
+> 1. **La primera cotización.** Saludo → nombre y evento → personas y fecha. Tiene
+>    que llegar: antesala → cotización parte 1 → parte 2 → parte 3 → obsequios →
+>    14 videos → *"¿cuál te llamó más la atención?"*.
+>    Si los videos llegan **antes** del texto, `Enviar Texto` no está publicado.
+> 2. **La segunda, en el mismo chat.** Pídele cotizar otro evento con otra
+>    cantidad de personas. Tiene que salir la cotización completa del paquete
+>    nuevo, un globo con la lista de valores para esa cantidad, y **cero videos**.
+>    La antesala debe **nombrar el paquete** ("…la cotización del paquete
+>    Matrimonio…"), no prometer videos.
+> 3. **El reenvío.** Pídele que te reenvíe el video de un salón. Primero debe
+>    mandarte a mirar más arriba en el chat; si insistes, llega el video.
 >
-> 1. **Importar los dos workflows al VPS** (`N8N_VPS_URL` + `N8N_VPS_API_KEY` en
->    `.env`, ya verificado que responde 200):
->    - `n8n/workflow-enviar-medios.json` → id `Tkh6deuiy663KNkl`
->    - `n8n/workflow-angie-otero.json` → id `NsJQxBhrNyrKFVJu`
+> **Estado del despliegue (2026-08-27):**
 >
->    Sube **primero** `enviar_medios`: el agente lo llama con dos entradas
->    nuevas (`tipo_evento` y `nombre_cliente`) que solo existen ahí. Al revés,
->    quedan unos minutos en que el agente manda parámetros que el sub-workflow
->    ignora y la cotización no sale.
+> | Workflow | id | versión activa | para volver atrás |
+> |---|---|---|---|
+> | `enviar_medios` | `Tkh6deuiy663KNkl` | v37 · `8094c587-42aa-4cee-a332-3d252eee082f` | v36 · `c345e1a6-f72b-41f7-8f5a-3b24d2c5f622` |
+> | Angie Otero (agente) | `NsJQxBhrNyrKFVJu` | v172 · `e17d1b6d-36e2-459b-a6a7-8faa81331a36` | v171 · `118a773a-b197-44ac-818c-d64c38804b55` |
 >
-> 2. **Publicar la versión.** n8n 2.x versiona: `versionId` es el borrador y
->    `activeVersionId` lo que corre. Un `PUT /api/v1/workflows/<id>` deja
->    borrador; hay que publicar para que tome efecto. Verifica después que
->    `activeVersionId` cambió y que `enviar_medios` tiene **20 nodos** (antes 17)
->    con `Guion Cotización`, `¿Hay guion?` y `Enviar Texto`.
->
-> 3. **Revisar las credenciales de los nodos nuevos.** `Guion Cotización` usa la
->    credencial Postgres `Ou3OkUR92F7f6ofK` y `Enviar Texto` la de YCloud
->    `FuwQeM17hSh07Wal`. Los ids van en el JSON, pero conviene abrirlos en el
->    editor y confirmar que quedaron enlazados.
->
-> 4. **Probar de punta a punta por WhatsApp.** Los chats están en cero (memoria,
->    envíos y estado de leads), así que cualquier número arranca limpio. Lo que
->    hay que ver, en este orden exacto:
->    antesala → cotización parte 1 → parte 2 → parte 3 → obsequios → 14 videos →
->    "¿cuál te llamó más la atención?".
->    Si los videos llegan **antes** del texto, `Enviar Texto` no quedó publicado.
->
-> 5. **Salir a producción** cuando el punto 4 pase.
+> Las versiones viejas siguen en el historial de n8n: se vuelve desde el
+> selector de versiones del editor. Un `PUT /api/v1/workflows/<id>` por la API
+> **publica** (al terminar `versionId` y `activeVersionId` quedan iguales); no
+> hace falta un paso aparte. Si alguna vez difieren, **lo que corre es
+> `activeVersion.nodes`**, no `nodes`.
 >
 > **Lo que ya está hecho y NO hay que rehacer:**
-> - Nueve migraciones aplicadas en Supabase (`20260826000000` a `20260826000008`).
+> - Migraciones aplicadas en Supabase hasta `20260826000010` inclusive.
+> - Los dos workflows publicados en el VPS, con las credenciales enlazadas y
+>   `active: true`. Los otros tres (`agendar_cita`, `separar_fecha_evento`,
+>   Seguimiento) no se tocaron.
 > - Sawa recomprimido a 14,75 MB y catalogado; Orquideorama y Gran Salón (foto)
 >   cargados. La tanda son **14 salones** más el promocional.
-> - `scripts/banco-pruebas.js` corre 5 conversaciones completas contra la base
->   real: 0 errores, 0 avisos. Correlo si tocas algo (`node scripts/banco-pruebas.js`,
->   con el `.env` cargado).
+> - Tres pruebas, y hay que correr las tres si se toca algo:
+>   `scripts/banco-pruebas.js` (8 conversaciones completas, 0 errores),
+>   `scripts/probar-ramas.js` (las diez ramas del turno 3 que las
+>   conversaciones no tocan) y `scripts/probar-agenda.js` (el horario de
+>   atención y las horas libres, sin base ni red). Las dos primeras necesitan
+>   el `.env` cargado.
+> - **Todo en cero el 2026-08-27, después de las pruebas del usuario:**
+>   `n8n_chat_histories`, `envios_medios`, `citas` y `agenda_reservas` vacías,
+>   con la secuencia del serial reajustada; **Google Calendar vacío** (se
+>   borraron los 22 eventos, citas y reservas incluidas, por decisión del
+>   usuario); y las cuatro filas de `leads` de vuelta en `estado = 'nuevo'`,
+>   sin seguimiento ni banderas. Las filas de `leads` se conservaron a
+>   propósito: no son chats, y son el único registro de quién escribió.
 >
 > **Tres trampas que ya costaron una vez:**
 > - **Los .json traen los nodos DOS veces**: `nodes` y `activeVersion.nodes`. Si
@@ -83,6 +91,197 @@ Rama de trabajo: **`gestorVideos`** (sin mergear a `main`).
 >   mano o con una corrida de n8n. Los dos que importan son las reservas del
 >   4 de octubre (Casa Christian's) y el 15 de diciembre (Sede Granada Gold):
 >   bloquean fechas reales y la base ya no sabe que existen.
+
+---
+
+## 0 TER. HORARIO NUEVO Y HORAS ALTERNATIVAS REALES (2026-08-27, tarde)
+
+Dos cosas, y la segunda salió de una prueba en producción.
+
+### El horario
+
+**Lunes a sábado, de 10:00 a 19:00, jornada continua, con cita previa. Los
+domingos no hay atención.** Antes eran tres franjas distintas (L-V hasta las 19,
+sábados hasta las 18:30, domingos de 10:30 a 13:00).
+
+Vive en **un solo sitio**: la tabla `HORARIO` del nodo `Calcular Ventana` de
+`agendar_cita`. El domingo no está en la tabla —`HORARIO[7]` es `undefined`— y
+eso es lo que lo deja fuera, sin un `if` aparte que haya que acordarse de
+mantener. Esa tabla **viaja en la salida del nodo** para que `Calcular Libres`
+use exactamente la misma: dos copias se separan, y el día que se separen el
+agente ofrecerá horas que el propio validador rechaza. El prompt la repite en
+prosa, que es la única duplicación que queda y es inevitable.
+
+### El agente ofrecía horas ocupadas, una detrás de otra
+
+Reportado en producción: *"el agente me decía cuáles estaban disponibles, yo
+escogía, se disculpaba, me daba más opciones, y esa tampoco"*. Y **pasaba sobre
+todo en la segunda reserva del mismo chat**.
+
+No era mala suerte, eran tres cosas encadenadas:
+
+1. **`Horario Ocupado` devolvía una REGLA, no una hora.** El texto decía *"la
+   nueva hora debe empezar al menos N minutos antes o después"* y ninguna hora
+   concreta. El agente adivinaba.
+2. **El workflow no podía hacer nada mejor:** `Buscar Choques` consultaba
+   *únicamente* la ventana de la hora pedida, con `maxResults: 1`. Literalmente
+   no sabía qué más había ese día.
+3. **Por qué en la segunda cita:** cada cita bloquea su colchón a cada lado —30
+   minutos para una visita, 20 para una llamada—, así que la cita que el agente
+   acababa de crear inutilizaba justo las horas vecinas, que son las que iba a
+   proponer después. La primera reserva casi nunca fallaba; la segunda, casi
+   siempre.
+
+**El arreglo.** `Buscar Choques` pasó a llamarse `Leer Agenda` y trae **siete
+días completos** (`maxResults: 250`). Un nodo nuevo, `Calcular Libres`, decide
+con esa agenda si la hora pedida choca **y** calcula la lista de horas que de
+verdad caben, con la misma regla de colchón que valida el choque. `Horario
+Ocupado` entrega esa lista. El prompt le prohíbe al agente ofrecer cualquier
+hora que no venga en ella.
+
+Detalles que importan:
+
+- **Se ordenan por cercanía a la hora que pidió el cliente.** Si quería las 3 de
+  la tarde, ofrecerle las 10 de la mañana es no haberlo escuchado.
+- **Si el día está lleno, pasa a los siguientes** en vez de inventar.
+- **Si no queda nada en siete días, lo dice** y manda a ofrecer que un asesor lo
+  contacte. Nunca una hora inventada.
+- Los rechazos de **tiempo** —fuera de horario, domingo, fecha pasada— ya no
+  cortan en `Calcular Ventana`: siguen hasta `Calcular Libres` para que también
+  ellos salgan con alternativas reales. Los que **no** son de tiempo (tipo
+  inválido, falta el nombre o el teléfono) sí cortan ahí: no hay nada que
+  ofrecer.
+- El agente **nunca ve la agenda**. El prompt lo dice con esas palabras y le
+  manda preguntar la hora al cliente en vez de presentarle un menú.
+
+### Qué se tocó
+
+| Pieza | Cambio |
+|---|---|
+| `Calcular Ventana` | `HORARIO` nuevo; los rechazos de tiempo pasan a marcar `fuera_horario` en vez de cortar; exporta `horario`, `rango_inicio` y `rango_fin`. |
+| `Buscar Choques` → **`Leer Agenda`** | Siete días completos, `maxResults: 250`. |
+| **`Calcular Libres`** | Nodo nuevo. Decide el choque y calcula las horas libres. |
+| `¿Hay choque?` | Lee `$json.ocupado`: choque y fuera de horario salen por la misma rama porque se contestan igual. |
+| `Horario Ocupado` | Pasa el mensaje que armó `Calcular Libres`. |
+| `agendar_cita` (herramienta) | Descripción nueva: es la única que ve la agenda y devuelve horas libres reales. |
+| `system-prompt-angie-otero.md` | Horario nuevo y la regla dura de no ofrecer horas sin verificar. |
+| `scripts/probar-agenda.js` | **Nuevo.** Corre el `jsCode` real de los dos nodos con el reloj congelado. |
+
+### Cómo se probó
+
+`node scripts/probar-agenda.js` — 10 bloques, sin fallos. No toca la base ni la
+red: lee el `jsCode` de los nodos del `.json`, congela el reloj con
+`Settings.now` y le pasa una agenda de mentira. Luxon sale del n8n instalado
+global, que es la misma versión con la que corren los nodos.
+
+El bloque que importa es el **5**: cada hora que la herramienta ofrece se le
+vuelve a meter a la herramienta, como haría el agente cuando el cliente elija, y
+**todas tienen que agendar al primer intento**. Esa es la invariante que se
+rompió en producción; si alguien vuelve a tocar el colchón o la rejilla y la
+rompe, ese bloque lo atrapa.
+
+---
+
+## 0 BIS. COTIZAR VARIAS VECES EN EL MISMO CHAT (2026-08-27)
+
+Esto es lo último que se hizo y **modifica el turno 3 que describe la sección 0**.
+Está **publicado en el VPS** (`enviar_medios` v37, agente v172) y verificado
+contra la base de producción — los ids de las versiones anteriores, por si hay
+que volver atrás, están en el prompt de traspaso de arriba.
+
+**El pedido del negocio.** Un cliente no siempre trae un solo evento: pregunta
+por los 15 de la hija y tres mensajes después por la boda del hermano, o vuelve
+otro día con algo distinto. La segunda cotización **no salía**. `Guion
+Cotización` terminaba en
+
+```sql
+and exists (select 1 from fn_medios_sedes_cotizacion($3, null))
+```
+
+o sea, *"solo mando el texto si detrás va a salir un video"*. Como los videos no
+se repiten, esa condición se volvía falsa apenas salía la primera tanda y el
+segundo evento se quedaba sin cotización: cero filas, sin error, sin nada en el
+log, y el agente contestando de memoria.
+
+**La regla nueva: la cotización se repite, los videos no.**
+
+| | Primera vez | Recotización |
+|---|---|---|
+| Antesala | *"…te voy a enviar nuestra cotización con los videos de cada salón disponible y valores PROMOCIONALES ✨"* | *"…te comparto la cotización del paquete **Matrimonio** con valores PROMOCIONALES ✨"* |
+| Guion del paquete | 3 globos | 3 globos |
+| Obsequios | 1 globo | 1 globo |
+| Precios | en el caption de cada video | **globo de texto** con la lista de salones y su valor |
+| Videos | los 14 salones + el promocional | ninguno |
+
+La antesala de la recotización **nombra el paquete** a propósito: el cliente ya
+tiene otra cotización más arriba en el mismo chat y las dos empiezan igual.
+
+**Por qué apareció `fn_lista_salones_valores`.** Los precios viajaban pegados a
+los videos. Sin videos, la segunda cotización habría salido sin un solo número —
+y es el caso normal, porque el segundo evento casi nunca es para la misma
+cantidad de personas. La función arma la lista de salones con su valor
+PROMOCIONAL para el escalón nuevo, ya repartida en globos. Reparte con el mismo
+algoritmo de `scripts/guion-cotizacion.js` (busca por bisección el límite más
+bajo que todavía cabe en la misma cantidad de globos), porque el reparto a ojo
+dejaba 593 caracteres y después un renglón suelto de 24. Lista **solo salones
+con material**, que es la otra mitad de su trabajo: es la lista de la que el
+cliente elige cuál quiere volver a ver.
+
+**Reenviar material.** `enviar_medios` tiene una entrada nueva, `reenviar`, que
+levanta el anti-repetición de `envios_medios`. El agente la usa **solo si el
+cliente lo pide**, y primero lo manda a mirar más arriba en el chat. Dos formas:
+
+- un salón suelto → `referencia` = ese salón, `reenviar` = true;
+- la tanda entera → `referencia` = `todas`, `invitados`, `reenviar` = true.
+
+En un reenvío **no se manda `tipo_evento`**: con él la herramienta vuelve a
+mandar la cotización completa, y el cliente pidió los videos.
+
+**El bug que salió de paso.** La autoprueba de la migración lo atrapó y ya
+estaba vivo: el anti-repetición de la tanda miraba la **pieza** y no el
+**salón**. Desde `20260826000008` la tanda elige `distinct on (sede_id)` el
+video y, si no hay, la foto — así que una sede con video Y foto (hoy Pilas
+Premium) mandaba el video en la primera tanda y **la foto del mismo salón** en
+la segunda, porque esa foto no figuraba como enviada. Ahora si el cliente ya vio
+ese salón, el salón entero queda fuera.
+
+### Qué se tocó
+
+| Pieza | Cambio |
+|---|---|
+| `20260826000010_recotizar.sql` | `p_reenviar` en `fn_medios_para_enviar` y `fn_medios_sedes_cotizacion` (las firmas viejas se **dropean**: con un default sin dropear, la llamada de 4 parámetros queda ambigua). `fn_lista_salones_valores` y `fn_empaquetar_globos`. El anti-repetición por salón. Autoprueba incluida. |
+| `Guion Cotización` | Dos entradas nuevas (`$6` invitados, `$7` reenviar). Se cayó el `and exists(...)` del final. Antesala en dos formas y lista de valores al final. |
+| `Seleccionar Medios` | `$6` reenviar, que pasa a las dos funciones. |
+| `Diagnóstico` | `$5`: si el guion salió o no. Cinco ramas en vez de tres — la nueva es la de la recotización, que es la que le dice al agente cómo cerrar el turno. |
+| `enviar_medios` (herramienta) | Entrada `reenviar` y descripción nueva. |
+| `system-prompt-angie-otero.md` | Secciones **TURNO 3 BIS** y **REENVIAR MATERIAL QUE EL CLIENTE YA RECIBIÓ**. |
+| `scripts/casos-prueba.js` | Tres conversaciones nuevas (6, 7 y 8). |
+| `scripts/probar-ramas.js` | **Nuevo.** Las diez ramas del turno 3 que las conversaciones no tocan. |
+
+### Cómo se probó
+
+```
+node scripts/banco-pruebas.js    # 8 conversaciones: 0 errores, 0 avisos
+node scripts/probar-ramas.js     # 10 ramas del turno 3: sin fallos
+```
+
+Las tres conversaciones nuevas:
+
+- **6. Julieta** — 15 años (100) y, en el mismo chat, un matrimonio (200). La
+  segunda cotización sale con 7 globos (5 + 2 de valores) y cero videos.
+- **7. Ricardo** — 15 años (150), después un grado (80), y pide de nuevo el
+  video de un salón suelto (`reenviar` = true, 1 pieza, cero globos de guion).
+- **8. Diana** — se le borró el chat y pide **todos** los videos otra vez. El
+  agente primero la manda a mirar arriba; solo cuando insiste reenvía las 14
+  piezas, sin `tipo_evento` y por lo tanto sin cotización.
+
+> ⚠️ **Una cosa quedó decidida y conviene saberla.** El mismo paquete con la
+> misma cantidad de personas, pedido dos veces, **sale las dos veces**. Es
+> decisión del negocio (2026-08-27). El costo: si el modelo llama la herramienta
+> dos veces en el mismo turno, el cliente recibe la cotización duplicada. Lo
+> único que lo evita hoy es el prompt, que dice "UNA vez". Si aparece en
+> producción, el arreglo es una tabla `envios_cotizacion` con (lead, paquete,
+> invitados) y una ventana de unos minutos.
 
 ---
 
@@ -1210,12 +1409,11 @@ Verificado en vivo, sembrando un lead con las 12 piezas ya registradas en
 > — *¡Qué extraño, Daniela! Deberían aparecerte justo arriba de nuestros
 > mensajes anteriores, por favor revisa un momentico que ahí siguen…*
 
-> ⚠️ **Decisión implícita que se puede revertir:** hoy **no existe forma de
-> reenviar** la tanda a un cliente que la perdió de verdad. El dedup es absoluto
-> y la salida honesta es mandarlo a mirar más arriba del chat — razonable en
-> WhatsApp, donde el material se queda en el hilo. Si el negocio quiere permitir
-> el reenvío, hay que darle a `enviar_medios` un parámetro tipo `reenviar` y
-> saltarse el `not exists` sobre `envios_medios` cuando venga en `true`.
+> ✅ **Resuelto el 2026-08-27.** Aquí quedaba anotado que no existía forma de
+> reenviar la tanda a un cliente que la perdió de verdad, y que la salida sería
+> "un parámetro tipo `reenviar` que se salte el `not exists` sobre
+> `envios_medios`". Eso es exactamente lo que hace la migración
+> `20260826000010`. Ver la sección **0 BIS**.
 
 ### El agente escribía Markdown en WhatsApp (2026-08-25)
 

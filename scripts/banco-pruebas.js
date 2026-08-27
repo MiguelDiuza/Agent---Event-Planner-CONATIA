@@ -32,8 +32,11 @@ if (!REF || !TOKEN) {
 }
 
 // 280 es el techo de lo que ESCRIBE el agente. El guion del paquete no pasa
-// por este lint: es una lista, va en tres partes y llega hasta ~480.
+// por este lint: es una lista, va en tres partes y llega hasta ~480. Lo que si
+// tiene es su propio techo, 600, que es donde WhatsApp empieza a colapsar con
+// "Leer mas".
 const MAX_GLOBO = 280;
+const MAX_GUION = 600;
 const c = { gris: s => `\x1b[90m${s}\x1b[0m`, verde: s => `\x1b[32m${s}\x1b[0m`,
             rojo: s => `\x1b[31m${s}\x1b[0m`, ama: s => `\x1b[33m${s}\x1b[0m`,
             cyan: s => `\x1b[36m${s}\x1b[0m`, neg: s => `\x1b[1m${s}\x1b[0m` };
@@ -146,15 +149,26 @@ function revisarTurno(globos, n) {
 
 async function enviarMedios(ctx, a) {
   const tel = ctx.telefono;
+  const invitados = a.invitados == null ? null : Number(a.invitados);
+  // El sub-workflow lo recibe como texto: ver el comentario del CTE `entrada`
+  // en el nodo Guion Cotizacion.
+  const reenviar = a.reenviar ? 'true' : 'false';
   let enviados = 0;
 
   const guion = await consulta(ligar(nodo(subMedios, 'Guion Cotización'),
-    [a.categoria, a.referencia || '', tel, a.tipo_evento || '', a.nombre_cliente || '']));
-  for (const g of guion) mensaje('herramienta', g.mensaje, '← guion');
+    [a.categoria, a.referencia || '', tel, a.tipo_evento || '', a.nombre_cliente || '',
+     invitados, reenviar]));
+  for (const g of guion) {
+    mensaje('herramienta', g.mensaje, '← guion');
+    // El guion no pasa por el lint de 280 -- es texto del negocio, va en lista
+    // y se lee de un vistazo -- pero sigue siendo un mensaje de WhatsApp: por
+    // encima de 600 le entra el "Leer mas" y esconde la mitad del paquete.
+    if (g.mensaje.length > MAX_GUION)
+      anota('error', `guion: un globo de ${g.mensaje.length} caracteres; WhatsApp le pone "Leer más"`);
+  }
 
   const medios = await consulta(ligar(nodo(subMedios, 'Seleccionar Medios'),
-    [a.categoria, a.referencia || '', tel, a.tipo_medio || 'ambos',
-     a.invitados == null ? null : Number(a.invitados)]));
+    [a.categoria, a.referencia || '', tel, a.tipo_medio || 'ambos', invitados, reenviar]));
 
   for (const m of medios) {
     if (!m.id) continue;
@@ -164,10 +178,14 @@ async function enviarMedios(ctx, a) {
   }
 
   if (enviados === 0) {
+    // Diagnostico necesita saber si el guion salio: es lo que distingue una
+    // recotizacion (texto sin videos, que esta bien) de una tanda muda.
     const diag = await consulta(ligar(nodo(subMedios, 'Diagnóstico'),
-      [a.categoria, a.referencia || '', a.tipo_medio || 'ambos', tel]));
+      [a.categoria, a.referencia || '', a.tipo_medio || 'ambos', tel,
+       guion.length > 0 ? 'true' : 'false']));
     const r = diag[0] || {};
-    return { resultado: r.resultado || r.mensaje || JSON.stringify(r) };
+    return { resultado: r.resultado || r.mensaje || JSON.stringify(r),
+             piezas: 0, globos_guion: guion.length };
   }
   return { resultado: `Se enviaron ${enviados} piezas y ${guion.length} mensajes de cotizacion.`,
            piezas: enviados, globos_guion: guion.length };
@@ -233,7 +251,7 @@ async function revisarPaquetes() {
       // El telefono no existe como lead, asi que no hay envios previos que
       // filtren: el guion sale entero siempre que el tipo resuelva.
       const g = await consulta(ligar(nodo(subMedios, 'Guion Cotización'),
-        ['sede', 'todas', tel, entrada, 'Prueba']));
+        ['sede', 'todas', tel, entrada, 'Prueba', 100, 'false']));
       const ok = g.length === 5;
       if (!ok) {
         casoActual = 'Chequeo previo de paquetes';

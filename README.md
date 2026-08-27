@@ -33,6 +33,28 @@ n8n start   # http://localhost:5678
 
 Usa la instalación global de npm y los datos en `~/.n8n`.
 
+## Pruebas
+
+Las dos corren contra la base **real** y ejecutan las queries que están dentro
+de los `.json` de los workflows — se leen de ahí, no se copian, para que no
+puedan quedar desincronizadas del nodo. Necesitan `SUPABASE_PROJECT_REF` y
+`SUPABASE_ACCESS_TOKEN` del `.env`.
+
+```bash
+node scripts/banco-pruebas.js    # 8 conversaciones completas, mensaje por mensaje
+node scripts/probar-ramas.js     # las ramas del turno 3 que los chats no tocan
+```
+
+Lo único simulado es el transporte: en vez de hacer POST a YCloud, imprimen.
+Limpian sus propios datos al terminar.
+
+La tercera no toca la base ni la red — corre el `jsCode` de los nodos de
+`agendar_cita` con el reloj congelado y una agenda de mentira:
+
+```bash
+node scripts/probar-agenda.js    # horario de atención y horas libres reales
+```
+
 ## Estructura de datos
 
 | Tabla | Contenido |

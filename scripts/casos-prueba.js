@@ -1,4 +1,4 @@
-// Cinco conversaciones completas, con cinco clientes distintos.
+// Ocho conversaciones completas, con ocho clientes distintos.
 //
 // Los turnos del AGENTE son los que el prompt manda escribir, redactados a mano
 // (la GOOGLE_GEMINI_API_KEY esta vacia en .env, asi que no se puede correr el
@@ -27,6 +27,29 @@ const revisarTanda = (esperaSalones, rotulos = []) => (r, anota) => {
   if (r.globos_guion !== 5)
     anota('error', `el guion salio con ${r.globos_guion} globos y son 5: antesala + 3 partes + obsequios. ` +
       'Cero globos = el tipo_evento no resolvio y los videos salieron sin cotizacion.');
+};
+
+// La SEGUNDA cotizacion del mismo chat (2026-08-27). Tiene que salir completa y
+// SIN videos: el cliente ya los tiene arriba y son los mismos catorce salones.
+// Los globos son los 5 del guion mas los de la lista de valores, que reemplaza a
+// los captions como unico portador del precio.
+const revisarRecotizacion = (globosValores) => (r, anota) => {
+  if (r.piezas !== 0)
+    anota('error', `la recotizacion mando ${r.piezas} piezas y no debia mandar ninguna: los videos no se repiten`);
+  if (r.globos_guion !== 5 + globosValores)
+    anota('error', `la recotizacion salio con ${r.globos_guion} globos y se esperaban ${5 + globosValores}: ` +
+      `antesala + 3 partes + obsequios + ${globosValores} de valores. Cero = el embudo volvio a callarse.`);
+  if (!/YA salió en este turno/.test(r.resultado || ''))
+    anota('error', 'el agente no recibio el aviso de que la cotizacion ya salio: ' + String(r.resultado).slice(0, 140));
+};
+
+// Un reenvio a pedido del cliente: material que ya recibio, sin guion detras.
+const revisarReenvio = (piezas) => (r, anota) => {
+  if (r.piezas !== piezas)
+    anota('error', `el reenvio mando ${r.piezas} piezas y se esperaban ${piezas}`);
+  if (r.globos_guion !== 0)
+    anota('error', `el reenvio mando ${r.globos_guion} globos de cotizacion y no debia mandar ninguno: ` +
+      'el cliente pidio los videos, no otra cotizacion');
 };
 
 module.exports = [
@@ -299,6 +322,191 @@ module.exports = [
     ],
     limpiarExtra: [
       `delete from agenda_reservas where nombre_cliente = 'RESERVA DE PRUEBA'`,
+    ],
+  },
+
+  // ------------------------------------------------------------------------
+  // 6. DOS EVENTOS EN EL MISMO CHAT (2026-08-27). Es el pedido del negocio:
+  //    el cliente cotiza los 15 de la hija y en el mismo hilo pregunta por el
+  //    matrimonio del hermano. La segunda cotizacion sale COMPLETA y sin
+  //    videos, con la lista de valores en texto porque los precios de 200
+  //    personas no son los de 100. Antes de esto la segunda cotizacion no
+  //    salia: cero filas, sin error, y el agente contestaba de memoria.
+  // ------------------------------------------------------------------------
+  {
+    nombre: '6. Julieta — 15 años (100) y en el mismo chat un matrimonio (200). Dos cotizaciones.',
+    telefono: 'test-ref-6', perfil: 'Julieta Arango',
+    turnos: [
+      { cliente: 'Hola buenas', globos: SALUDO },
+
+      { cliente: 'Julieta, quiero cotizar los 15 de mi hija',
+        globos: promo('Julieta', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
+
+      { cliente: '100 personas, el 5 de diciembre',
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 100,
+                  tipo_evento: '15 Años', nombre_cliente: 'Julieta', tipo_medio: 'ambos' } }],
+        globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
+
+      // El giro. El agente NO puede reusar los 100 ni la fecha de los 15: es
+      // otro evento. Vuelve a perfilar antes de cotizar.
+      { cliente: 'ay espera, y de una vez me cotizas el matrimonio de mi hermano?',
+        globos: [
+          '¡Claro que sí, Julieta! Con gusto te armo también la del matrimonio ✨',
+          'Cuéntame, ¿para cuántas personas sería y para qué fecha? 🤗',
+        ] },
+
+      { cliente: 'ellos son como 200 y seria el 14 de marzo',
+        tools: [{ t: 'enviar_medios', revisar: revisarRecotizacion(2),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 200,
+                  tipo_evento: 'Matrimonio', nombre_cliente: 'Julieta', tipo_medio: 'ambos' } }],
+        globos: [
+          'Los videos de cada salón te los envié un poquito más arriba en el chat ☝️ Son los mismos para los dos eventos, así que ahí los tienes.',
+          'Cuéntame cuál te llamó más la atención para el matrimonio, o si prefieres te reenvío el de alguno en particular 🤗',
+        ] },
+
+      { cliente: 'para el matrimonio nos gusta Casa 74',
+        tools: [{ t: 'verificar_disponibilidad_evento',
+          args: { nombre_sede: 'Casa 74', fecha: '2027-03-14' },
+          revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llego: ' + r[0].resultado.slice(0, 60)); } }],
+        globos: [
+          '¡Excelente elección, Julieta! Casa 74 es espectacular ✨ Te confirmo que el 14 de marzo de 2027 está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¿Te la separamos para que quede asegurada? 🤗',
+        ] },
+
+      { cliente: 'lo hablo con ellos y te digo. Mi numero es el 3112223344, llamenme en la tarde',
+        tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '16:00',
+          nombre: 'Julieta Arango', telefono_contacto: '3112223344', detalle: 'Llamada por dos eventos: 15 años 100 personas y matrimonio 200 personas' } }],
+        globos: [
+          'Quedó agendada tu llamada para el viernes 28 de agosto a las 4:00 p.m., al 3112223344 ☎️',
+          ...REDES,
+        ] },
+    ],
+  },
+
+  // ------------------------------------------------------------------------
+  // 7. TRES COTIZACIONES Y UN VIDEO SUELTO. El mismo cliente cotiza dos
+  //    eventos distintos y despues pide volver a ver UN salon. Ese reenvio va
+  //    con reenviar = true y sin tipo_evento: es material, no otra cotizacion.
+  // ------------------------------------------------------------------------
+  {
+    nombre: '7. Ricardo — 15 años (150), después un grado (80) y pide de nuevo UN video.',
+    telefono: 'test-ref-7', perfil: 'Ricardo Peña',
+    turnos: [
+      { cliente: 'buenas noches', globos: SALUDO },
+
+      { cliente: 'Ricardo. quiero los 15 de mi sobrina',
+        globos: promo('Ricardo', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
+
+      { cliente: '150 personas, 17 de abril',
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 150,
+                  tipo_evento: '15 Anos', nombre_cliente: 'Ricardo', tipo_medio: 'ambos' } }],
+        globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
+
+      { cliente: 'ah y tambien el grado de mi hijo, que es aparte',
+        globos: [
+          '¡Con gusto, Ricardo! Te armo también la del grado ✨',
+          'Cuéntame, ¿para cuántas personas y para qué fecha sería? 🤗',
+        ] },
+
+      { cliente: 'ese es mas pequeño, unas 80 personas, el 12 de junio',
+        tools: [{ t: 'enviar_medios', revisar: revisarRecotizacion(1),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 80,
+                  tipo_evento: 'graduacion', nombre_cliente: 'Ricardo', tipo_medio: 'ambos' } }],
+        globos: [
+          'Los salones son los mismos que te mandé arriba en el chat ☝️ Lo que cambia es el valor, porque son 80 personas.',
+          'Cuéntame cuál te gustó para el grado, o dime si quieres que te reenvíe el video de alguno 🤗',
+        ] },
+
+      // El reenvio de UNA pieza. Sin reenviar = true la herramienta no devuelve
+      // nada, porque ese video ya figura en envios_medios.
+      { cliente: 'me reenvias el de Sawa? no lo encuentro',
+        tools: [{ t: 'enviar_medios', revisar: revisarReenvio(1),
+          args: { categoria: 'sede', referencia: 'Sawa', tipo_medio: 'video', reenviar: true } }],
+        globos: ['Ahí te va de nuevo el de Sawa, Ricardo ✨ Es de los campestres más grandes que tenemos.'] },
+
+      { cliente: 'ese, ese nos gusta para los 15',
+        tools: [{ t: 'verificar_disponibilidad_evento',
+          args: { nombre_sede: 'Sawa', fecha: '2027-04-17' } }],
+        globos: [
+          '¡Excelente elección, Ricardo! Sawa es espectacular ✨ Te confirmo que el 17 de abril de 2027 está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¿Te la separamos para que quede asegurada? 🤗',
+        ] },
+
+      { cliente: 'si porfa. Ricardo Peña, 3145556677',
+        tools: [{ t: 'separar_fecha_evento',
+          args: { nombre_sede: 'Sawa', fecha: '2027-04-17', nombre_cliente: 'Ricardo Peña', telefono_contacto: '3145556677' },
+          revisar: (r, anota) => { if (!r[0] || !r[0].id_reserva) anota('error', 'el separado no dejo reserva: ' + JSON.stringify(r[0]).slice(0, 200)); } }],
+        globos: [
+          '¡Listo, Ricardo! El 17 de abril queda apartado para ti en Sawa ✨',
+          '¿En qué horario tienes disponibilidad para que uno de nuestros asesores te llame? ☎️',
+        ] },
+
+      { cliente: 'el sabado por la mañana',
+        tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-29', hora: '10:30',
+          nombre: 'Ricardo Peña', telefono_contacto: '3145556677', detalle: 'Llamada 15 años en Sawa el 17 de abril, 150 invitados, y grado de 80 el 12 de junio' } }],
+        globos: [
+          'Quedó agendada tu llamada para el sábado 29 de agosto a las 10:30 a.m., al 3145556677 ☎️',
+          ...REDES,
+        ] },
+    ],
+  },
+
+  // ------------------------------------------------------------------------
+  // 8. LE REENVIAMOS LA TANDA ENTERA. El cliente perdio el chat de verdad.
+  //    El agente primero lo manda a mirar mas arriba -- es lo barato y casi
+  //    siempre alcanza -- y solo reenvia cuando el cliente insiste. Ese reenvio
+  //    va SIN tipo_evento: pidio los videos, no otra cotizacion.
+  // ------------------------------------------------------------------------
+  {
+    nombre: '8. Diana — matrimonio (150), se le borró el chat y pide TODOS los videos otra vez.',
+    telefono: 'test-ref-8', perfil: 'Diana C.',
+    turnos: [
+      { cliente: 'hola, informacion de matrimonios porfa', globos: SALUDO },
+
+      { cliente: 'Diana. si, es para mi matrimonio',
+        globos: promo('Diana', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
+
+      { cliente: '150 invitados, el 7 de noviembre',
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 150,
+                  tipo_evento: 'boda', nombre_cliente: 'Diana', tipo_medio: 'ambos' } }],
+        globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
+
+      // Turno SIN herramienta a proposito: primero se le aconseja subir en el
+      // chat. Reenviar catorce videos es caro para el cliente -- datos, tiempo
+      // y una notificacion por cada uno -- y casi siempre estaban ahi.
+      { cliente: 'cambie de celular y se me borro todo el chat, me los mandas otra vez?',
+        globos: [
+          'Uy, Diana, qué pesar 😕 Antes de reenviártelos, sube un poquito en la conversación por fa: a veces el respaldo los trae y ahí siguen.',
+          'Si no aparecen, me dices y te los reenvío todos de una 🤗',
+        ] },
+
+      { cliente: 'ya mire y no estan, mandamelos todos porfa',
+        tools: [{ t: 'enviar_medios', revisar: revisarReenvio(14),
+          args: { categoria: 'sede', referencia: 'todas', invitados: 150,
+                  nombre_cliente: 'Diana', tipo_medio: 'ambos', reenviar: true } }],
+        globos: ['Ahí van de nuevo todos, Diana ✨ Cuéntame cuál te llamó más la atención 🤗'] },
+
+      { cliente: 'la Mansion Vallano',
+        tools: [{ t: 'verificar_disponibilidad_evento',
+          args: { nombre_sede: 'Mansión Vallano', fecha: '2026-11-07' } }],
+        globos: [
+          '¡Excelente elección, Diana! Mansión Vallano es espectacular ✨ Te confirmo que el 7 de noviembre está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¿Te la separamos para que quede asegurada? 🤗',
+        ] },
+
+      { cliente: 'todavia no, primero quiero hablar con alguien. 3186667788, en la tarde',
+        tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:30',
+          nombre: 'Diana', telefono_contacto: '3186667788', detalle: 'Llamada matrimonio Mansión Vallano, 150 invitados, 7 de noviembre' } }],
+        globos: [
+          'Quedó agendada tu llamada para el viernes 28 de agosto a las 3:30 p.m., al 3186667788 ☎️',
+          ...REDES,
+        ] },
     ],
   },
 ];
