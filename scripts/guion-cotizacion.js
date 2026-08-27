@@ -9,7 +9,12 @@ const NOMBRE_DB = {
   'Paquete primera comunión': 'Primera Comunión',
   'Paquete Baby Shower': 'Baby Shower',
 };
-const CIERRE = 'Con nosotros lo vas a tener *TODO INCLUIDO*, excepto el licor!';
+// Cabecera, cierre y remate del globo de obsequios (2026-08-26). Los tres son
+// literales del negocio y viven en docs/paquetes.txt: aqui estan para
+// reconocerlos al parsear y para volver a armarlos al emitir.
+const CABECERA = 'Te OBSEQUIAMOS ✨';
+const CIERRE = '(Con nosotros lo vas a tener TODO INCLUIDO, excepto el licor!)';
+const REMATE = 'Por obtener este paquete✨️';
 
 const crudo = fs.readFileSync(process.argv[2], 'utf8').replace(/\r\n/g, '\n');
 const bloques = crudo.split(/\n-{4,}\n/)
@@ -23,7 +28,7 @@ const paquetes = bloques.map(b => {
   if (!nombre) throw new Error('titulo sin mapeo: ' + JSON.stringify(titulo));
 
   const iPrimera = lineas.findIndex(l => /^- /.test(l));
-  const iObsequios = lineas.findIndex(l => /^Adicional: \*OBSEQUIOS\*/.test(l));
+  const iObsequios = lineas.findIndex(l => l.trim() === CABECERA);
   if (iPrimera < 0 || iObsequios < 0) throw new Error('estructura inesperada en ' + titulo);
 
   // Un item = la linea "- ..." mas sus continuaciones (sub-vinetas y renglones
@@ -39,7 +44,10 @@ const paquetes = bloques.map(b => {
     nombre,
     encabezado: lineas.slice(0, iPrimera).join('\n').trim(),
     items: agrupar(lineas.slice(iPrimera, iObsequios)),
-    obsequios: agrupar(lineas.slice(iObsequios + 1).filter(l => l.trim() !== CIERRE)),
+    // Fuera el cierre y el remate: agrupar() pega toda linea no vacia al item
+    // anterior, asi que sin filtrarlos colgarian de la ultima viñeta.
+    obsequios: agrupar(lineas.slice(iObsequios + 1)
+      .filter(l => l.trim() !== CIERRE && l.trim() !== REMATE)),
   };
 });
 
@@ -80,8 +88,8 @@ const salida = paquetes.map(p => {
   return {
     nombre: p.nombre,
     partes: mejor.map(x => x.trim()),
-    // Literal del negocio: encabezado, viñetas y linea de cierre, tal cual.
-    obsequio: 'Adicional: *OBSEQUIOS*✨\n' + p.obsequios.join('\n') + '\n\n' + CIERRE,
+    // Literal del negocio: cabecera, viñetas, cierre y remate, tal cual.
+    obsequio: CABECERA + '\n' + p.obsequios.join('\n') + '\n\n' + CIERRE + '\n\n' + REMATE,
   };
 });
 
@@ -93,6 +101,15 @@ if (process.argv[3] === '--sql') {
     console.log(p.partes.map(x => '        ' + esc(x)).join(',\n'));
     console.log('    ],');
     console.log('    mensaje_obsequio = ' + esc(p.obsequio));
+    console.log('where nombre_paquete = ' + esc(p.nombre) + ';');
+    console.log();
+  });
+} else if (process.argv[3] === '--sql-obsequios') {
+  // Solo el globo de obsequios, sin tocar mensajes_cotizacion. Sirve cuando el
+  // negocio reescribe el cierre pero el detalle del paquete sigue igual.
+  const esc = s => { let t = 'm'; while (s.includes('$' + t + '$')) t += 'm'; return '$' + t + '$' + s + '$' + t + '$'; };
+  salida.forEach(p => {
+    console.log('update tipos_evento set mensaje_obsequio = ' + esc(p.obsequio));
     console.log('where nombre_paquete = ' + esc(p.nombre) + ';');
     console.log();
   });

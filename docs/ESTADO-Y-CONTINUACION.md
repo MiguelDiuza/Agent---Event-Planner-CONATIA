@@ -163,11 +163,20 @@ negocio. Partidos en dos y tres globos, como estuvieron un rato, la
 conversación se leía como una máquina disparando.
 
 El **globo de obsequios va literal** de `docs/paquetes.txt`: encabezado
-`Adicional: *OBSEQUIOS*✨`, las viñetas, y la línea `Con nosotros lo vas a tener
-*TODO INCLUIDO*, excepto el licor!` cerrándolo. Esa última línea **no** va al
-final de la tercera parte: en el documento original los obsequios y el cierre
-son un bloque contiguo, y tenerla en los dos lados la mandaba repetida
+`Te OBSEQUIAMOS ✨`, las viñetas, la línea
+`(Con nosotros lo vas a tener TODO INCLUIDO, excepto el licor!)` y el remate
+`Por obtener este paquete✨️`. Esa línea del licor **no** va al final de la
+tercera parte: en el documento original los obsequios y el cierre son un bloque
+contiguo, y tenerla en los dos lados la mandaba repetida
 (migración `20260826000005`).
+
+> 📌 El marco cambió el 2026-08-26 por pedido del negocio (migración
+> `20260826000009`). Antes era `Adicional: *OBSEQUIOS*✨` con el cierre en
+> negrita. Dos trampas del texto nuevo: el cierre va **entre paréntesis y sin
+> asteriscos** —o sea, sin negrita en WhatsApp, y es a propósito—, y la
+> cabecera lleva ✨ pelado (U+2728) mientras el remate lleva ✨️ con selector
+> de variación (U+2728 U+FE0F). Se ven igual y no son el mismo carácter.
+> Las viñetas de cada paquete y los tres globos de la cotización no se tocaron.
 
 El corte de las tres partes cae entre viñetas, nunca dentro de una ni
 separando "Pasabocas dulces o salados" de sus sub-viñetas. Las migraciones
