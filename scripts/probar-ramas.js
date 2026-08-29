@@ -71,12 +71,13 @@ const nodo = (n) => {
 
 const guion = (a) => consulta(ligar(nodo('Guion Cotización'), [
   a.categoria, a.referencia || '', a.telefono, a.tipo_evento || '',
-  a.nombre_cliente || '', a.invitados == null ? null : Number(a.invitados),
+  // Texto y nunca null, igual que el nodo. Ver banco-pruebas.js.
+  a.nombre_cliente || '', a.invitados == null ? '' : String(a.invitados),
   a.reenviar ? 'true' : 'false']));
 
 const medios = (a) => consulta(ligar(nodo('Seleccionar Medios'), [
   a.categoria, a.referencia || '', a.telefono, a.tipo_medio || 'ambos',
-  a.invitados == null ? null : Number(a.invitados), a.reenviar ? 'true' : 'false']));
+  a.invitados == null ? '' : String(a.invitados), a.reenviar ? 'true' : 'false']));
 
 const diagnostico = (a, guionSalio) => consulta(ligar(nodo('Diagnóstico'), [
   a.categoria, a.referencia || '', a.tipo_medio || 'ambos', a.telefono,
@@ -112,7 +113,9 @@ async function main() {
     titulo('3. Diagnostico — el cliente ya vio los videos y la cotizacion NO salio');
     await consulta(ligar(
       `insert into envios_medios (lead_id, medio_id)
-       select l.id, f.id from leads l, fn_medios_sedes_cotizacion($1, 100) f
+       -- '100' entre comillas: fn_medios_sedes_cotizacion recibe el aforo como
+       -- TEXTO desde que acepta varios separados por coma (20260828000000).
+       select l.id, f.id from leads l, fn_medios_sedes_cotizacion($1, '100') f
        where l.telefono = $1`, [TEL]));
     const d3 = await diagnostico({ categoria: 'sede', referencia: 'todas', telefono: TEL }, false);
     chequeo(/ATENCIÓN: la cotización del paquete NO salió/.test(d3) && /reenviar = true/.test(d3),
@@ -136,13 +139,18 @@ async function main() {
                              tipo_evento: '15 Años', invitados: 100 });
     chequeo(g7.length === 0, `cero globos (${g7.length}): la tanda es lo unico que cotiza`);
 
-    titulo('8. Recotizacion — el mismo paquete pedido dos veces sale las dos veces');
+    titulo('8. Recotizacion — el mismo paquete y el mismo aforo NO se repiten');
+    // Esta prueba decia lo contrario hasta el 2026-08-28: esperaba los 6 globos
+    // las dos veces. Lo cambio 20260828000000, y por una razon que se vio en un
+    // chat real -- un cliente pidio Matrimonio para 50, 100 y 130, y recibio la
+    // descripcion completa del paquete TRES veces. Pedir dos veces lo mismo
+    // ahora no manda nada: no hay nada nuevo que decir.
     const args8 = { categoria: 'sede', referencia: 'todas', telefono: TEL,
                     tipo_evento: '15 Años', invitados: 100, nombre_cliente: 'Ana' };
     const g8a = await guion(args8);
     const g8b = await guion(args8);
-    chequeo(g8a.length === 6 && g8b.length === 6,
-      `6 globos las dos veces (${g8a.length} y ${g8b.length}): 5 del guion + 1 de valores`);
+    chequeo(g8a.length === 6 && g8b.length === 0,
+      `6 globos la primera vez y 0 la segunda (${g8a.length} y ${g8b.length}): 5 del guion + 1 de valores, y nada que repetir`);
     chequeo(/te comparto la cotización del paquete 15 Años/.test(g8a[0].mensaje),
       'la antesala nombra el paquete y no promete videos');
     console.log('    ' + c.gris(g8a[0].mensaje));

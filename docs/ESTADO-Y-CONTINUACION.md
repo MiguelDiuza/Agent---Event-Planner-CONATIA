@@ -1,7 +1,7 @@
 # Estado del proyecto y prompt de continuación
 
-Documento de traspaso entre sesiones. Actualizado: 2026-08-27.
-Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026-08-27.
+Documento de traspaso entre sesiones. Actualizado: 2026-08-28.
+Rama de trabajo: **`miguel`** — al día con `origin/main` al empezar el 2026-08-28.
 
 ---
 
@@ -9,15 +9,19 @@ Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026
 
 > Continúo el agente de ventas de WhatsApp **Angie Otero** (Christian Sierra
 > Event Planner) en `c:\Users\mandi\Documents\GitHub\Agent---Event-Planner-CONATIA`,
-> rama `main`.
+> rama `miguel`.
 >
-> **Todo está en producción desde el 2026-08-27.** Lee
-> `docs/ESTADO-Y-CONTINUACION.md`: la **sección 0 QUATER** es lo último que se
-> hizo —los mensajes que llegan por partes, el número de contacto y las fechas
-> que ya pasaron— y la **sección 0** describe el embudo.
+> **Todo está en producción desde el 2026-08-28.** Lee
+> `docs/ESTADO-Y-CONTINUACION.md`: la **sección 0 QUINQUIES** es lo último que
+> se hizo —la ficha de la reserva, el filtro de aforo y el comando `/new`—, la
+> **0 QUATER** lo anterior —los mensajes por partes, el número de contacto y
+> las fechas que ya pasaron— y la **sección 0** describe el embudo.
 >
-> **La base y el calendario están EN CERO** desde la noche del 2026-08-27, a
-> propósito, para que la próxima tanda de pruebas arranque limpia.
+> **La base NO está en cero:** quedaron seis conversaciones de las pruebas por
+> WhatsApp del 2026-08-28. `scripts/vaciar-calendario.js` y
+> `scripts/resetear-lead.js` siguen ahí para cuando haga falta, pero ahora
+> también se puede reiniciar un chat suelto escribiéndole **`/new`** desde el
+> propio WhatsApp.
 >
 > **Lo único que falta es la prueba por WhatsApp con un número real**, que no se
 > puede hacer desde la máquina. Escríbele al **+573150290928** y comprueba, en
@@ -25,40 +29,69 @@ Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026
 >
 > 1. **La primera cotización.** Saludo → nombre y evento → personas y fecha. Tiene
 >    que llegar: antesala → cotización parte 1 → parte 2 → parte 3 → obsequios →
->    14 videos → *"¿cuál te llamó más la atención?"*.
+>    los videos → *"¿cuál te llamó más la atención?"*.
 >    Si los videos llegan **antes** del texto, `Enviar Texto` no está publicado.
-> 2. **La segunda, en el mismo chat.** Pídele cotizar otro evento con otra
->    cantidad de personas. Tiene que salir la cotización completa del paquete
->    nuevo, un globo con la lista de valores para esa cantidad, y **cero videos**.
->    La antesala debe **nombrar el paquete** ("…la cotización del paquete
->    Matrimonio…"), no prometer videos.
-> 3. **El reenvío.** Pídele que te reenvíe el video de un salón. Primero debe
+> 2. **El filtro de aforo.** Pídele para **180 personas**: tienen que llegar
+>    **8 salones** más el promocional, y ninguno debe ser Casa 5, Casa 74,
+>    Mansión Vallano, Marquez De Loyola, Granada Gold, Sede Norte ni Sede Sur 66.
+>    Con **60** son 13, sin Gran Salón ni Valdemoro. Con **100**, los 15.
+>    Y ningún rótulo debe decir "(hasta 150 personas)": eso era el disimulo viejo.
+> 3. **Que no repregunte.** Dale las personas y la fecha en el primer mensaje y
+>    sigue la conversación cinco o seis turnos. **En ningún momento** puede
+>    volver a preguntarte para cuántas personas es ni para qué fecha. Si lo
+>    hace, la ficha no le está llegando al modelo.
+> 4. **Que no invente.** En otro chat, dale personas pero **no** la fecha, y
+>    elige un salón. Tiene que **pedirte la fecha**, no confirmarte
+>    disponibilidad de una que no diste. Este es el que más importa.
+> 5. **El número, una sola vez.** Cuando te muestre tu número y te pregunte si
+>    es ese, contéstale **"sí"** a secas. Tiene que seguir de largo: no puede
+>    pedirte que lo escribas ni que "lo confirmes completo".
+> 6. **`/new`.** Escríbele `/new`: tiene que llegar el saludo de apertura, casi
+>    al instante. Contéstale con tu nombre y el evento: tiene que pasar al
+>    turno 2 —la promo y la pregunta de personas y fecha— **sin volver a
+>    saludar**. Y la cotización que pidas después tiene que traer los videos
+>    otra vez.
+> 7. **La segunda cotización, en el mismo chat.** Pídele cotizar otro evento con
+>    otra cantidad de personas. Sale la cotización completa del paquete nuevo,
+>    un globo con la lista de valores, y **cero videos** de los que ya viste
+>    (pueden llegar los que ese aforo nuevo habilite y no hayas visto). La
+>    antesala debe **nombrar el paquete**, no prometer videos. Y **no** puede
+>    volver a pedirte tu nombre ni tu número: esos se heredan.
+> 8. **El reenvío.** Pídele que te reenvíe el video de un salón. Primero debe
 >    mandarte a mirar más arriba en el chat; si insistes, llega el video.
-> 4. **Los mensajes por partes.** Mándale cuatro seguidos, rápido: `quiero`,
+> 9. **Los mensajes por partes.** Mándale cuatro seguidos, rápido: `quiero`,
 >    `que sea`, `para 150`, `personas`. Tiene que llegar **una sola respuesta**,
 >    unos ocho segundos después del último, y tiene que hablar de 150 personas.
 >    Si contesta cuatro veces, el buffer no está publicado.
-> 5. **Que lo normal siga siendo rápido.** En el mismo chat, contéstale `sí` a
+> 10. **Que lo normal siga siendo rápido.** En el mismo chat, contéstale `sí` a
 >    cualquier pregunta. Tiene que responder de una, sin los ocho segundos. Esa
 >    es la mitad del cambio que más fácil se rompe.
-> 6. **Un número a medias.** Cuando te pida el número de contacto, dale
+> 11. **Un número a medias.** Cuando te pida el número de contacto, dale
 >    `31502909`. Debe pedírtelo otra vez, con calidez, sin decirte que lo
 >    escribiste mal, y **sin agendar nada**.
-> 7. **Una fecha que ya pasó.** Pídele cotizar para "el 15 de marzo". Debe
->    preguntarte si te refieres al **lunes 15 de marzo de 2027**, con el día de
->    la semana, y esperar a que confirmes antes de mirar disponibilidad.
+> 12. **Una fecha que ya pasó.** Pídele cotizar para "el 15 de marzo". Debe
+>    decirte con calidez que esa fecha pasó y ofrecerte **la fecha libre real
+>    más próxima de esa sede**, sin dar por hecho que quisiste decir 2027.
 >
-> **Estado del despliegue (2026-08-27):**
+> **Estado del despliegue (2026-08-28):** repo y VPS **idénticos**, comprobado
+> nodo por nodo después de publicar.
 >
 > | Workflow | id | versión activa | para volver atrás |
 > |---|---|---|---|
-> | `enviar_medios` | `Tkh6deuiy663KNkl` | `8094c587-42aa-4cee-a332-3d252eee082f` (no se tocó) | `c345e1a6-f72b-41f7-8f5a-3b24d2c5f622` |
-> | Angie Otero (agente) | `NsJQxBhrNyrKFVJu` | `c0b1faaa-6b6d-4da6-a519-3709eebb12bd` | `257af8d2-0628-4cdf-9568-f35a942446d4` |
-> | `agendar_cita` | `w3p5TRsicq13Jmig` | `9f2279e2-2ff2-44c1-99ca-adccf90a69b9` | `335bfd36-35ad-4a4c-90fe-c1d0589222ca` |
-> | `separar_fecha_evento` | `Mxz7P208vVXhyNg9` | `8a109ad9-bc1a-4367-aa5d-59afa5c9cf75` | `db9d09b4-c3d8-4753-b10b-d94a9690a87d` |
+> | `enviar_medios` | `Tkh6deuiy663KNkl` | `e007257c` | `b918b882` |
+> | Angie Otero (agente) | `NsJQxBhrNyrKFVJu` | `a47264e3` | `d21c07f3` |
+> | `agendar_cita` | `w3p5TRsicq13Jmig` | `be2191fa` | `9f2279e2` |
+> | `separar_fecha_evento` | `Mxz7P208vVXhyNg9` | `e623c23a` | `8a109ad9` |
 >
-> Los `.json` de las versiones anteriores están en `.respaldo-vps-2026-08-27/`
-> (fuera de git), tal como los devolvió la API antes de publicar.
+> Los `.json` de las versiones anteriores están en `.respaldo-vps-2026-08-29/`
+> (fuera de git; el nombre lleva la fecha UTC), tal como los devolvió la API
+> antes de publicar.
+>
+> Una trampa nueva al publicar por la API: **el nombre visible de la credencial
+> Postgres es `Supabase - Christian Sierra (nuevo)`**, no
+> `Postgres Supabase (Christian Sierra)`. n8n resuelve por `id`, así que un
+> nombre equivocado no rompe nada, pero lo corrige solo al publicar y el repo
+> queda distinto del VPS hasta que se alinea.
 >
 > Las versiones viejas siguen en el historial de n8n: se vuelve desde el
 > selector de versiones del editor. Un `PUT /api/v1/workflows/<id>` por la API
@@ -67,23 +100,21 @@ Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026
 > `activeVersion.nodes`**, no `nodes`.
 >
 > **Lo que ya está hecho y NO hay que rehacer:**
-> - Migraciones aplicadas en Supabase hasta `20260827000001` inclusive.
+> - Migraciones aplicadas en Supabase hasta `20260828000004` inclusive.
 > - Cuatro workflows publicados en el VPS, con las credenciales enlazadas y
 >   `active: true`: `enviar_medios`, el agente, `agendar_cita` y
 >   `separar_fecha_evento`. El de Seguimiento sigue inactivo y sin tocar.
-> - Sawa recomprimido a 14,75 MB y catalogado; Orquideorama y Gran Salón (foto)
->   cargados. La tanda son **14 salones** más el promocional.
-> - Siete pruebas, y hay que correr las siete si se toca algo. Están listadas
+> - Sawa recomprimido a 14,75 MB y catalogado; Orquideorama, Gran Salón (foto) y
+>   Casa 5 cargados. Los **15 salones** tienen material; cuántos salen en cada
+>   cotización depende del aforo (0 QUINQUIES §2).
+> - **Ocho** pruebas, y hay que correr las ocho si se toca algo. Están listadas
 >   en el README con lo que hace cada una; las de base necesitan el `.env`
 >   cargado, y `probar-en-vivo.js` habla con el VPS y gasta cuota de Gemini.
-> - **Todo en cero la noche del 2026-08-27:** `leads`, `n8n_chat_histories`,
->   `envios_medios`, `citas`, `agenda_reservas` y `mensajes_fragmentos`
->   vacías, con las secuencias reajustadas, y **Google Calendar vacío**. Esta
->   vez `leads` **sí se borró** —el 26 se había conservado por ser el único
->   registro de quién escribió—, por decisión del usuario. El respaldo está en
->   `.respaldo-2026-08-27-limpieza/`, fuera de git. El catálogo no se tocó.
+> - Se vació todo la noche del 2026-08-27, pero **la base ya no está en cero**:
+>   las pruebas por WhatsApp del 28 dejaron seis conversaciones. El catálogo no
+>   se ha tocado nunca.
 >
-> **Cuatro trampas que ya costaron una vez:**
+> **Cinco trampas que ya costaron una vez:**
 > - **Los .json traen los nodos DOS veces**: `nodes` y `activeVersion.nodes`. Si
 >   editas uno a mano hay que tocar los dos, o el `grep` te miente.
 > - **`GOOGLE_GEMINI_API_KEY` está vacía en `.env`**, así que no se puede correr
@@ -95,12 +126,23 @@ Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026
 > - **El prompt vive DOS veces**: en `system-prompt-angie-otero.md` y en el
 >   `systemMessage` del nodo. Se edita el `.md` y se vuelca con
 >   `node scripts/sincronizar-prompt.js --escribir`; sin argumentos, dice si se
->   separaron. Y ojo con el `=` delante del `systemMessage`: sin él, la fecha y
->   el catálogo le llegan al modelo sin evaluar.
+>   separaron. Y ojo con el `=` delante del `systemMessage`: sin él, la fecha,
+>   el catálogo y la ficha le llegan al modelo sin evaluar.
+> - **Acumula BUFFERS, no strings**, al leer una respuesta HTTP. Con
+>   `d += chunk` cada trozo se decodifica por separado y un carácter multibyte
+>   que caiga partido entre dos se convierte en dos mitades inválidas. Ya
+>   pareció dato corrupto tres veces: el 🎈 de Primera Comunión en la base, y
+>   un `¿Hay guion?` del VPS que parecía un nodo desconectado en producción y
+>   era el script que lo leía.
 >
 > **Lo que sigue abierto y depende del negocio:**
-> - **Casa 5** no tiene video ni foto: es el único salón fuera de la tanda.
-> - **Gran Salón** entra solo con foto; falta su video.
+> - **Gran Salón** entra solo con foto; falta su video. (Casa 5 ya tiene el
+>   suyo desde el 2026-08-27, así que la tanda son **15 salones** más el
+>   promocional — cuántos salen depende del aforo, ver 0 QUINQUIES §2.)
+> - **`fn_proxima_fecha_disponible` puede ofrecer HOY** como fecha alterna del
+>   evento cuando el cliente dio una que ya pasó. Para una cita no pasaría, pero
+>   para un evento es raro. No se tocó: viene de `20260828000002` y cambiarlo es
+>   decisión del negocio (¿cuántos días de anticipación mínimos?).
 > - **Cuatro sedes sin clasificar** como cerradas o campestres (Sede Granada
 >   Gold, Valdemoro, Gran Salón, Orquideorama). De esas el agente no dice el
 >   valor de separación. Se arregla con un `update sedes set tipo_espacio`.
@@ -113,6 +155,161 @@ Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026
 >   mano o con una corrida de n8n. Los dos que importan son las reservas del
 >   4 de octubre (Casa Christian's) y el 15 de diciembre (Sede Granada Gold):
 >   bloquean fechas reales y la base ya no sabe que existen.
+
+---
+
+## 0 QUINQUIES. LA FICHA, EL FILTRO DE AFORO Y /NEW (2026-08-28)
+
+Lo último que se hizo. **Publicado en el VPS y verificado en vivo**, con
+`scripts/probar-en-vivo.js`, que ahora prueba también estas tres cosas.
+
+### 1. El agente repreguntaba, y a veces se inventaba la respuesta
+
+**El problema, dicho por el negocio:** *"a veces le dicen que es para x cantidad
+de personas y sigue preguntando en otro momento de la conversación"*.
+
+**La causa.** Lo único que el agente sabía de un cliente eran los últimos 30
+mensajes de la memoria. `leads` tiene desde el primer día las columnas
+`num_invitados`, `fecha_evento_deseada`, `tipo_evento_interes` y `sede_interes`,
+y **ninguna se escribía nunca** — se comprueba con un `grep` de `update leads`
+sobre los cinco workflows. Fuera de la ventana del modelo, el perfil del cliente
+no existía en ninguna parte.
+
+Y el modo de fallar no era solo repreguntar. En una conversación real de ese
+mismo día (`+573145755349`, mensajes 42–45) el cliente **nunca dio una fecha** y
+el agente contestó *"para el jueves 12 de agosto de 2027 está disponible"*:
+sin un lugar donde leerla, se la inventó. Repreguntar es molesto; inventar es
+peor, porque el cliente se lo cree.
+
+**Cómo quedó.** Una tabla `reservas`: una fila por cada cosa que el cliente
+quiere cotizar, que se va llenando de a poco.
+
+- **Se llena sola**, como efecto lateral de las herramientas que el agente ya
+  llamaba — `enviar_medios` (evento, aforo, nombre), `verificar_disponibilidad_evento`
+  (la fecha), `separar_fecha_evento` (salón, fecha, nombre, número) y
+  `agendar_cita` (nombre completo y número) — más una herramienta chica,
+  **`anotar_datos`**, para lo que el cliente suelta sin que ninguna otra la vea.
+  Sobre todo la fecha, que llega en el turno 2 y no se usa hasta el turno 4.
+- **En cada turno se vuelca al system prompt** (nodo `Ficha del Cliente` →
+  sección `LO QUE YA SABES DE ESTE CLIENTE`). El agente ya no depende de
+  acordarse: lo lee.
+- **Lo que no se sabe se dice**, con esas palabras: `TODAVÍA NO LO SABES —
+  pregúntaselo`. Si se omitiera, el modelo no tendría cómo distinguir "no se lo
+  preguntaron" de "no cabe en la ficha", que es justo el hueco por el que se
+  inventó la fecha.
+
+**Cuándo se abre una reserva nueva**, que fue la decisión del negocio: solo
+cuando cambia el **tipo de evento**. La anterior queda `pausada` —a medias, por
+si la retoma— y no se borra. Cambiar la cantidad de personas **actualiza** la
+que está abierta: *"si quiere cotizar diferentes paquetes o precios se
+actualiza… para 100 es así, si luego quiere 150 entonces dice para 150 es así"*.
+
+Al abrir una reserva nueva, el **nombre y el número de contacto sí se heredan**
+—son de la persona, no del evento— y las personas, la fecha y el salón **no**:
+el prompt ya decía que entre un evento y otro casi nunca coinciden.
+
+### 2. El filtro de aforo estaba apagado
+
+**El pedido:** *"si dice que para x personas solo se le envían los videos y la
+cotización de los salones con aforo para esas personas"*.
+
+`fn_medios_sedes_cotizacion` (con un aforo) y `fn_lista_salones_valores` no
+filtraban nada: buscaban el escalón **más cercano** de cada sede con un
+`order by abs(capacidad - escalón) limit 1` y disimulaban el desajuste en el
+rótulo, con un `(hasta 150 personas)` pegado al precio. A quien pedía 180 le
+llegaban los quince videos y siete eran de salones donde no cabe.
+
+Curiosamente el modo **multi-aforo** sí filtraba, con un join exacto. Las dos
+mitades del mismo nodo se comportaban distinto según el cliente pidiera "para
+180" o "para 100 y 180".
+
+Ahora el filtro es **exacto** en las dos: un salón entra si tiene fila en
+`precios_sedes` para ese escalón. Como los escalones de cada sede son continuos
+de a 10, es lo mismo que decir que el aforo cae dentro de su rango:
+
+| Personas | Salones |
+|---|---|
+| 50 – 90 | 13 (todos menos Gran Salón y Valdemoro) |
+| 100 – 150 | 15 |
+| 160 – 200 | 8 (Casa 4, Casa Christian's, Hacienda El Talismán, Orquideorama, Pilas Premium, Sawa, Gran Salón y Valdemoro) |
+
+Se movió una tercera cosa con ellas: `Guion Cotización` decidía si la antesala
+promete videos mirando si quedaba material sin mandar, **sin mirar el aforo**.
+Con el filtro puesto eso se rompe solo — un cliente que ya vio los 8 grandes y
+pide 60 tiene material pendiente, pero al revés la antesala prometía videos que
+no iban a salir. Ese cálculo es ahora `fn_hay_material_sedes`, que sí mira el
+aforo, y el nodo la llama en vez de repetir el predicado a mano.
+
+### 3. El comando `/new`
+
+El cliente escribe `/new` y el chat vuelve a cero. Se intercepta **antes** de
+`Registrar Fragmento` —si entrara al buffer, un `/new` escrito justo después de
+otro mensaje se le pegaría— y va por un camino que se salta al agente por
+completo: `¿Comando /new?` → `Reiniciar Chat` → `Saludo Reinicio` →
+`Sembrar Saludo` → el mismo `Canal de prueba?` de siempre, así que funciona
+igual por WhatsApp y por el chat de prueba. Contesta en menos de un segundo,
+porque no pasa por Gemini.
+
+**`Sembrar Saludo` es la parte que no es obvia.** El saludo sale por fuera del
+agente, así que la memoria no se entera de que salió; sin sembrarlo, el cliente
+contesta "Miguel" con la memoria vacía y el agente **vuelve a saludar y a
+pedirle el nombre** — la misma redundancia, reaparecida por la puerta de atrás.
+Se siembra el par `human: "Hola"` / `ai: <el saludo>` y no solo el `ai`, porque
+`Sanear Memoria` recorta el historial para que empiece en un turno `human`.
+
+**Lo que `/new` NO borra, y no es un olvido:** `citas` y `agenda_reservas`. Esas
+filas tienen un `google_event_id` que el workflow no puede borrar del
+calendario, y borrar la fila dejando el evento deja una fecha real bloqueada que
+la base ya no sabe que existe — ya pasó, son los quince eventos huérfanos de
+agosto. La función devuelve cuántas encontró, para que quede a la vista.
+
+### 4. Dos cosas que estaban mal y se vieron de paso
+
+- **Los `$fromAI` de `telefono_contacto`** en `agendar_cita` y
+  `separar_fecha_evento` seguían diciendo *"NO uses el número de WhatsApp:
+  pregúntaselo al cliente"*, lo contrario de lo que dice `CONFIRMAR NÚMERO DE
+  CONTACTO` desde esa misma mañana. El modelo tenía dos órdenes opuestas y a
+  veces obedecía la equivocada: en `CO.1748724682844706` el cliente dijo dos
+  veces *"a este mismo número"* y el agente se lo pidió dos veces más.
+- **`reenviar = true` ahora también levanta el "esto ya se cotizó"**, no solo el
+  anti-repetición de los videos. Desde `20260828000000`, a un cliente que pedía
+  todo de nuevo porque se le borró el chat le volvían los videos y ni una
+  palabra de la cotización. `reenviar` significa lo mismo en los tres sitios.
+
+### Qué se tocó
+
+| | |
+|---|---|
+| `20260828000003_filtro_aforo.sql` | `fn_hay_material_sedes` (nueva), y el filtro exacto en `fn_medios_sedes_cotizacion` y `fn_lista_salones_valores` |
+| `20260828000004_reservas.sql` | tabla `reservas`, `fn_reserva_anotar`, `fn_reserva_ficha`, `fn_reiniciar_chat` |
+| agente | nodos nuevos `Ficha del Cliente`, `anotar_datos`, `¿Comando /new?`, `Reiniciar Chat`, `Saludo Reinicio`, `Sembrar Saludo`; `verificar_disponibilidad_evento` recibe el teléfono y anota la fecha |
+| `enviar_medios` | nodo nuevo `Anotar Reserva`; `Guion Cotización` usa `fn_hay_material_sedes` y respeta `reenviar` |
+| `agendar_cita`, `separar_fecha_evento` | anotan nombre y número en la reserva, como efecto lateral del nodo que ya corría |
+| prompt | `LO QUE YA SABES DE ESTE CLIENTE`, `CUÁNTA GENTE CABE EN CADA UNO`, y retoques en los turnos 2, 3, 4 y en `CONFIRMAR NÚMERO DE CONTACTO` |
+| `scripts/editar-workflow.js` | helper nuevo: edita los `.json` aplicando cada cambio a `nodes` **y** a `activeVersion.nodes`, que es la trampa que ya costó una vez |
+| `scripts/probar-reserva.js` | prueba nueva: tres clientes distintos |
+
+### Cómo se probó
+
+Las siete pruebas de siempre más la nueva, todas en verde, y `probar-en-vivo.js`
+contra el VPS con Gemini de verdad — donde se ve que después de decir "150
+personas" y "20 de diciembre" el agente pasa directo a la cotización sin
+repreguntar, y que `/new` contesta el saludo en 906 ms y deja la memoria con las
+dos filas sembradas.
+
+`scripts/probar-reserva.js` corre tres conversaciones con tres clientes que se
+comportan distinto: **Ana**, que lo suelta todo en el primer mensaje (la ficha
+queda completa y salen 9 piezas, no 16); **Don Jorge**, que pasa de 60 a 200 —y
+recibe solo los 2 salones nuevos que ese aforo habilita, sin que se repita la
+descripción del paquete— y después se va a otro evento y vuelve; y
+**Katherine**, que confirma su número con un "sí" y después manda `/new`.
+
+**Tres pruebas llevaban rotas desde el 2026-08-28 por la mañana** y no se habían
+corrido: `probar-ramas.js` y `banco-pruebas.js` ligaban `invitados` como número
+—`coalesce(100, '')` revienta con 22P02, porque Postgres deduce el tipo del
+primer argumento— y `casos-prueba.js` esperaba 14 salones fijos, el "FALTAN
+SOLO" del mensaje viejo de fecha próxima y que el agente propusiera el año
+siguiente, que es justo lo que `0 QUATER §3` prohibió. Están corregidas.
 
 ---
 

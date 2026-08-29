@@ -125,9 +125,90 @@ async function main() {
        'y no pidió que le repitieran nada');
   }
 
+  // ------------------------------------------------------------------------
+  titulo('4. La ficha: no vuelve a preguntar lo que el cliente ya dijo');
+  // Contra n8n de verdad se prueban dos cosas que el .json no muestra: que el
+  // nodo `Ficha del Cliente` corra antes del agente sin romper la cadena, y
+  // que el modelo de verdad use lo que la ficha le pone delante. Lo segundo es
+  // lo único que no se puede comprobar sin llamar a Gemini.
+  {
+    const r = await escribir('es un matrimonio');
+    console.log(c.gris(`      → ${String(r.salida).slice(0, 200)}`));
+    ok(!!r.salida, 'contestó');
+    // Ya dijo 150 personas y el 20 de diciembre, dos turnos antes. Si vuelve a
+    // preguntar cualquiera de las dos, la ficha no le está llegando al modelo.
+    ok(!/cu[áa]ntas personas|cu[áa]ntos invitados/i.test(r.salida || ''),
+       'no vuelve a preguntar para cuántas personas: ya está en la ficha', r.salida);
+    ok(!/para qu[ée] fecha|qu[ée] fecha tienes/i.test(r.salida || ''),
+       'ni la fecha, que es la que antes se inventaba cuando no la tenía', r.salida);
+  }
+
+  // ------------------------------------------------------------------------
+  titulo('5. El comando /new deja el chat en cero');
+  // El único camino del workflow que se salta al agente por completo:
+  // ¿Comando /new? → Reiniciar Chat → Saludo Reinicio → Sembrar Saludo.
+  // Si cualquiera de los cuatro falla, aquí no llega el saludo.
+  {
+    const r = await escribir('/new');
+    console.log(c.gris(`      → ${String(r.salida).slice(0, 120)}  (${r.ms} ms)`));
+    ok(/Angie Otero/.test(r.salida || '') && /tengo el gusto/.test(r.salida || ''),
+       'el saludo de apertura vuelve, palabra por palabra', r.salida);
+    // Sin Gemini de por medio esto son dos consultas y un insert: si tarda lo
+    // que tarda un turno del agente, se fue por la rama equivocada.
+    ok(r.ms < 8000, `y llega sin pasar por el modelo (${r.ms} ms)`);
+
+    const estado = await mirar(
+      `select (select count(*)::int from n8n_chat_histories where session_id = $T) as memoria,
+              (select count(*)::int from reservas rr
+                 join leads l on l.id = rr.lead_id where l.telefono = $T) as reservas`);
+    // Dos filas y no cero: el saludo que acaba de salir queda sembrado en la
+    // memoria —el "Hola" del cliente y la respuesta de Angie— para que en el
+    // mensaje siguiente el agente pase al turno 2 en vez de volver a saludar.
+    ok(estado === null || estado.memoria === 2,
+       `la memoria queda solo con el saludo sembrado (${estado ? estado.memoria : 'sin credenciales'} filas)`);
+    ok(estado === null || estado.reservas === 0,
+       'y sin ninguna reserva: el embudo arranca de cero');
+  }
+
+  // ------------------------------------------------------------------------
+  titulo('6. Y después de /new sigue en el turno 2, no vuelve a saludar');
+  {
+    const r = await escribir('Miguel, unos 15 años');
+    console.log(c.gris(`      → ${String(r.salida).slice(0, 160)}`));
+    ok(!!r.salida, 'contestó');
+    ok(!/Gracias por comunicarte con Christian Sierra/.test(r.salida || ''),
+       'no repite el saludo: la siembra en memoria hizo su trabajo', r.salida);
+    ok(/Miguel/.test(r.salida || ''), 'y usa el nombre que acaba de dar');
+  }
+
   await limpiar();
   console.log('\n' + (fallos ? c.rojo(`${fallos} fallo(s)`) : c.verde('sin fallos')) + '\n');
   process.exit(fallos ? 1 : 0);
+}
+
+// Una consulta de solo lectura contra la base, para mirar lo que dejó el
+// workflow. Devuelve null si no hay credenciales de Supabase, y las pruebas de
+// arriba lo tratan como "no se pudo comprobar" en vez de como un fallo.
+async function mirar(sql) {
+  const REF = process.env.SUPABASE_PROJECT_REF, TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+  if (!REF || !TOKEN) return null;
+  const cuerpo = JSON.stringify({ query: sql.split('$T').join(`'${TELEFONO}'`) });
+  return new Promise((resolve) => {
+    const req = https.request({
+      host: 'api.supabase.com', path: `/v1/projects/${REF}/database/query`, method: 'POST',
+      headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json',
+                 'Content-Length': Buffer.byteLength(cuerpo) },
+    }, res => {
+      const t = [];
+      res.on('data', x => t.push(x));
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(t).toString('utf8'))[0] ?? null); }
+        catch { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.write(cuerpo); req.end();
+  });
 }
 
 // Borra el lead de humo y lo que dejó colgando.

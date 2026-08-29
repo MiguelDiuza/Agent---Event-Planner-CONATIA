@@ -54,6 +54,7 @@ node scripts/probar-telefono.js    # el número de contacto y la fecha del event
 node scripts/banco-pruebas.js      # 10 conversaciones completas, mensaje por mensaje
 node scripts/probar-ramas.js       # las ramas del turno 3 que los chats no tocan
 node scripts/probar-fragmentos.js  # los mensajes que llegan por partes
+node scripts/probar-reserva.js     # tres clientes distintos: la ficha, el filtro de aforo y /new
 ```
 
 Lo único simulado es el transporte: en vez de hacer POST a YCloud, imprimen.
@@ -92,6 +93,29 @@ catálogo (`sedes`, `precios_sedes`, `tipos_evento`, `medios`) no se toca nunca.
 | `agenda_reservas` | Fechas separadas por sede, con su `google_event_id` |
 | `citas` | Citas con el asesor: llamadas, visitas, pruebas de traje |
 | `mensajes_fragmentos` | Mensajes de WhatsApp a la espera de que les llegue el resto |
+| `reservas` | Lo que el agente sabe de cada cosa que el cliente quiere cotizar. Se llena sola y se le muestra al agente en cada turno, para que no repregunte |
+| `cotizaciones_aforos` | Qué (cliente, evento, aforo) ya recibió la cotización, para no repetirla |
+
+### Cuántos salones salen según el aforo
+
+El catálogo tiene 15 salones, pero no todos sirven para todas las cantidades:
+`precios_sedes` solo tiene fila donde hay tarifa, y desde el 2026-08-28 eso
+**filtra** los videos y la cotización (`20260828000003_filtro_aforo.sql`).
+
+| Personas | Salones | Cuáles quedan fuera |
+|---|---|---|
+| 50 – 90 | 13 | Gran Salón y Valdemoro (arrancan en 100) |
+| 100 – 150 | 15 | ninguno |
+| 160 – 200 | 8 | Casa 5, Casa 74, Mansión Vallano, Marquez De Loyola, Sede Granada Gold, Sede Norte y Sede Sur 66 (llegan hasta 150) |
+
+### Reiniciar un chat desde el propio WhatsApp
+
+El cliente —o quien esté probando— escribe **`/new`** y el chat vuelve a cero:
+memoria, fragmentos, material enviado, cotizaciones y reservas. Contesta con el
+saludo de apertura sin pasar por el modelo. **No borra citas ni fechas
+apartadas**: sus eventos de Google Calendar no se pueden borrar desde el
+workflow, y dejar la fila sin el evento bloquearía una fecha real que la base ya
+no sabría que existe. Para eso está `scripts/resetear-lead.js`.
 
 ## Credenciales pendientes de configurar en n8n
 

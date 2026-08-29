@@ -178,7 +178,14 @@ function revisarTurno(globos, n) {
 
 async function enviarMedios(ctx, a) {
   const tel = ctx.telefono;
-  const invitados = a.invitados == null ? null : Number(a.invitados);
+  // TEXTO, no numero, y nunca null. Es lo que manda el nodo:
+  // `String($('Entrada de la Herramienta').first().json.invitados || '')`.
+  // Ligado como numero, el `coalesce($6, '')` de `aforos_pedidos` queda
+  // `coalesce(100, '')` y Postgres revienta con 22P02: deduce el tipo del
+  // primer argumento. Estas pruebas leen el SQL del .json justamente para no
+  // separarse del nodo, y aqui se habian separado en el binding, que es la
+  // parte que el .json no dicta.
+  const invitados = a.invitados == null ? '' : String(a.invitados);
   // El sub-workflow lo recibe como texto: ver el comentario del CTE `entrada`
   // en el nodo Guion Cotizacion.
   const reenviar = a.reenviar ? 'true' : 'false';
@@ -233,7 +240,11 @@ const herramientas = {
     consulta(nodo(principal, 'consultar_servicios_upselling')),
 
   verificar_disponibilidad_evento: (ctx, a) =>
-    consulta(ligar(nodo(principal, 'verificar_disponibilidad_evento'), [a.nombre_sede, a.fecha])),
+    // El tercer parametro es el telefono: desde el 2026-08-28 el nodo apunta
+    // la fecha del evento en la reserva del cliente ademas de responder si
+    // esta libre. Ver 20260828000004_reservas.sql.
+    consulta(ligar(nodo(principal, 'verificar_disponibilidad_evento'),
+      [a.nombre_sede, a.fecha, ctx.telefono])),
 
   // Pasa por `Validar Datos`, igual que en el workflow: si la fecha ya paso o
   // el telefono viene a medias, no llega al insert y no se bloquea nada en
@@ -305,7 +316,9 @@ async function revisarPaquetes() {
       // El telefono no existe como lead, asi que no hay envios previos que
       // filtren: el guion sale entero siempre que el tipo resuelva.
       const g = await consulta(ligar(nodo(subMedios, 'Guion Cotización'),
-        ['sede', 'todas', tel, entrada, 'Prueba', 100, 'false']));
+        // '100' entre comillas: el nodo liga invitados como texto. Ver el
+        // comentario de `invitados` en enviarMedios.
+        ['sede', 'todas', tel, entrada, 'Prueba', '100', 'false']));
       const ok = g.length === 5;
       if (!ok) {
         casoActual = 'Chequeo previo de paquetes';
