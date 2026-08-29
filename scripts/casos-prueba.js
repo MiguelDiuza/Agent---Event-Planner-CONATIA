@@ -75,45 +75,44 @@ const enDias = (n) => {
   return d.toISOString().slice(0, 10);
 };
 
-const revisarTanda = () => (r, anota, args) => {
+// `conPromocional` en false para la segunda tanda del chat: el video
+// institucional de promocion sale UNA vez en la vida del cliente, la primera
+// que ve un salon, y no vuelve.
+const revisarTanda = (conPromocional = true) => (r, anota, args) => {
   const salones = salonesDe(args, anota);
   if (salones == null) return;
+  const esperadas = salones + (conPromocional ? 1 : 0);
   if (r.piezas == null) return anota('error', 'la tanda no envio nada: ' + JSON.stringify(r).slice(0, 200));
-  if (r.piezas !== salones + 1)
-    anota('error', `la tanda mando ${r.piezas} piezas y se esperaban ${salones + 1} (${salones} salones + promocional)`);
+  if (r.piezas !== esperadas)
+    anota('error', `la tanda mando ${r.piezas} piezas y se esperaban ${esperadas} (${salones} salones` +
+      (conPromocional ? ' + promocional)' : ', sin promocional: ese ya salio)'));
   if (r.globos_guion !== 5)
     anota('error', `el guion salio con ${r.globos_guion} globos y son 5: antesala + 3 partes + obsequios. ` +
       'Cero globos = el tipo_evento no resolvio y los videos salieron sin cotizacion.');
 };
 
-// La SEGUNDA cotizacion del mismo chat (2026-08-27). Tiene que salir completa y
-// SIN videos: el cliente ya los tiene arriba y son los mismos salones. Como no
-// hay captions, el unico sitio donde viaja el precio es la lista de valores en
-// texto.
+// La SEGUNDA cotizacion del mismo chat, CON OTRO AFORO.
 //
-// Lo que se comprueba NO es cuantos globos salieron. Eso estaba escrito a mano
-// -- un `2` -- y depende de cuantos caracteres quepan por globo, asi que
-// cambiaba de valor cada vez que alguien tocaba un nombre de salon o un precio,
-// y el error hablaba de globos en vez de hablar del cliente. Lo que importa es
-// que NO FALTE NINGUN SALON: un salon que se cae de la lista es un salon que el
-// cliente no va a considerar, y eso no se ve en un conteo de globos.
-const revisarRecotizacion = () => (r, anota, args) => {
-  if (r.piezas !== 0)
-    anota('error', `la recotizacion mando ${r.piezas} piezas y no debia mandar ninguna: los videos no se repiten`);
-  if (r.globos_guion < 6)
-    anota('error', `la recotizacion salio con ${r.globos_guion} globos: faltan el guion (5) o la lista de valores. ` +
-      'Cero = el embudo volvio a callarse.');
-  if (!/YA salió en este turno/.test(r.resultado || ''))
-    anota('error', 'el agente no recibio el aviso de que la cotizacion ya salio: ' + String(r.resultado).slice(0, 140));
-
-  const nombres = nombresDe(args, anota);
-  if (!nombres) return;
-  const texto = (r.mensajes || []).join(' ');
-  const faltan = nombres.filter(n => !texto.includes(n));
-  if (faltan.length)
-    anota('error', `la lista de valores para ${args.invitados} personas no nombra ${faltan.length} salon(es): ` +
-      faltan.join(', '));
-};
+// CAMBIO DE REGLA, 2026-08-29. Hasta hoy esto exigia lo contrario: cero videos,
+// el guion con la lista de valores en texto, y el aviso de "ya salio, mandalo a
+// mirar arriba". Se escribio asi el 2026-08-27 pensando en el segundo evento
+// del mismo chat, y tenia sentido mientras los videos fueran intercambiables.
+//
+// No lo son. El caption de cada video lo arma la base y lleva DENTRO el precio
+// de ese aforo -- "Casa 5 - valor PROMOCIONAL: $20.500.000 - 150 personas" --
+// asi que el video de Casa 5 a 150 personas y el de Casa 5 a 80 son dos
+// mensajes distintos, y mandar al cliente a mirar mas arriba lo manda a unos
+// precios que no son los suyos.
+//
+// Lo que se veia en produccion era peor que cualquiera de las dos reglas: como
+// el filtro miraba la sede y no el aforo, de la segunda tanda salia un
+// subconjunto arbitrario -- los salones que no existian en el aforo anterior --
+// y ni salian todos ni dejaba de salir ninguno. El 2026-08-29, en un chat real,
+// eso fueron 2 salones de 15. Ver 20260829000003_aforo_en_envios.sql.
+//
+// Asi que la segunda tanda de otro aforo es una tanda normal: sus salones, con
+// sus precios en el caption. Lo unico que no se repite es el promocional.
+const revisarRecotizacion = () => revisarTanda(false);
 
 // Un reenvio a pedido del cliente: material que ya recibio, sin guion detras.
 const revisarReenvio = (piezasEsperadas) => (r, anota, args) => {
@@ -415,10 +414,12 @@ module.exports = [
   // ------------------------------------------------------------------------
   // 6. DOS EVENTOS EN EL MISMO CHAT (2026-08-27). Es el pedido del negocio:
   //    el cliente cotiza los 15 de la hija y en el mismo hilo pregunta por el
-  //    matrimonio del hermano. La segunda cotizacion sale COMPLETA y sin
-  //    videos, con la lista de valores en texto porque los precios de 200
-  //    personas no son los de 100. Antes de esto la segunda cotizacion no
-  //    salia: cero filas, sin error, y el agente contestaba de memoria.
+  //    matrimonio del hermano. La segunda cotizacion sale COMPLETA. Antes de
+  //    esto no salia: cero filas, sin error, y el agente contestaba de memoria.
+  //
+  //    Desde el 2026-08-29 sale ademas con SUS VIDEOS: son 200 personas, y el
+  //    precio de cada salon a 200 va dentro del caption. Ver el comentario de
+  //    `revisarRecotizacion` arriba.
   // ------------------------------------------------------------------------
   {
     nombre: '6. Julieta — 15 años (100) y en el mismo chat un matrimonio (200). Dos cotizaciones.',
@@ -448,8 +449,8 @@ module.exports = [
           args: { categoria: 'sede', referencia: 'todas', invitados: 200,
                   tipo_evento: 'Matrimonio', nombre_cliente: 'Julieta', tipo_medio: 'ambos' } }],
         globos: [
-          'Los videos de cada salón te los envié un poquito más arriba en el chat ☝️ Son los mismos para los dos eventos, así que ahí los tienes.',
-          'Cuéntame cuál te llamó más la atención para el matrimonio, o si prefieres te reenvío el de alguno en particular 🤗',
+          'Ahí te van los salones que nos sirven para 200 personas, con el valor de ese tamaño ✨',
+          'Cuéntame cuál te llamó más la atención para el matrimonio 🤗',
         ] },
 
       { cliente: 'para el matrimonio nos gusta Casa 74',
@@ -503,8 +504,8 @@ module.exports = [
           args: { categoria: 'sede', referencia: 'todas', invitados: 80,
                   tipo_evento: 'graduacion', nombre_cliente: 'Ricardo', tipo_medio: 'ambos' } }],
         globos: [
-          'Los salones son los mismos que te mandé arriba en el chat ☝️ Lo que cambia es el valor, porque son 80 personas.',
-          'Cuéntame cuál te gustó para el grado, o dime si quieres que te reenvíe el video de alguno 🤗',
+          'Ahí te van los salones para 80 personas, Ricardo ✨ Son los mismos espacios, pero con el valor de ese tamaño.',
+          'Cuéntame cuál te gustó para el grado 🤗',
         ] },
 
       // El reenvio de UNA pieza. Sin reenviar = true la herramienta no devuelve

@@ -54,17 +54,29 @@ node scripts/probar-telefono.js    # el número de contacto y la fecha del event
 node scripts/banco-pruebas.js      # 10 conversaciones completas, mensaje por mensaje
 node scripts/probar-ramas.js       # las ramas del turno 3 que los chats no tocan
 node scripts/probar-fragmentos.js  # los mensajes que llegan por partes
+node scripts/probar-aforos.js      # cuántos salones salen para cada aforo, y con qué precio
 ```
 
 Lo único simulado es el transporte: en vez de hacer POST a YCloud, imprimen.
 
-**Contra el n8n que está corriendo.** Es la única que prueba a n8n mismo — sobre
-todo que el nodo `Esperar Continuación` exista y funcione, que es algo que no se
-ve en un `.json`. Llama a Gemini de verdad:
+`probar-aforos.js` acepta `--mutar`: saca la definición viva de
+`fn_medios_sedes_cotizacion`, le rompe una línea, la instala **con otro nombre**
+—la de producción no se toca— y exige que las comprobaciones se pongan en rojo.
+Una prueba que no puede fallar no sirve, y esa es la forma de saberlo.
+
+**Contra el n8n que está corriendo.** Las únicas que prueban a n8n mismo —
+`Esperar Continuación`, la memoria, el reparto de fragmentos despierto— y lo
+único que ve el texto que el cliente lee. Llaman a Gemini de verdad:
 
 ```bash
-node scripts/probar-en-vivo.js     # una ráfaga de cuatro mensajes contra el VPS
+node scripts/probar-en-vivo.js       # humo: una ráfaga de cuatro mensajes contra el VPS
+node scripts/probar-conversacion.js  # 10 conversaciones: que no se repita, no olvide ni suene a máquina
 ```
+
+`probar-conversacion.js` imprime al final cuántos **turnos se perdieron**:
+Gemini devuelve 0 tokens, la herramienta no corre y el cliente se queda sin
+respuesta. En WhatsApp lo tapa el "Dame un segundito" de `Dividir Mensajes`. Es
+un dato del modelo, no un fallo del banco, y por eso va aparte de los fallos.
 
 ### Dejar todo en cero
 
@@ -92,6 +104,7 @@ catálogo (`sedes`, `precios_sedes`, `tipos_evento`, `medios`) no se toca nunca.
 | `agenda_reservas` | Fechas separadas por sede, con su `google_event_id` |
 | `citas` | Citas con el asesor: llamadas, visitas, pruebas de traje |
 | `mensajes_fragmentos` | Mensajes de WhatsApp a la espera de que les llegue el resto |
+| `envios_medios` | Qué pieza se le mandó a quién — y con qué aforo, porque el precio va dentro del caption |
 
 ## Credenciales pendientes de configurar en n8n
 

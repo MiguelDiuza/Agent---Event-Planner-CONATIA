@@ -70,9 +70,15 @@ if (!ESCRIBIR) {
 }
 
 agente.parameters.options.systemMessage = '=' + delMd;
-// Los .json traen los nodos DOS veces y lo que corre en el VPS es
-// `activeVersion`. Tocar solo uno deja el repo mintiendo.
-w.activeVersion.nodes = w.nodes;
-w.activeVersion.connections = w.connections;
+// Algunos .json traen los nodos DOS veces (`nodes` y `activeVersion.nodes`) y
+// lo que corre en el VPS es la segunda. Cuando está, se actualizan las dos o el
+// repo miente. Y cuando NO está -- que es el caso desde que los .json se
+// guardan limpios -- esto se salta: hasta el 2026-08-29 asumía que existía
+// siempre y reventaba con un TypeError DESPUÉS de haber impreso el diff, así
+// que parecía que el volcado había salido bien.
+if (w.activeVersion) {
+  w.activeVersion.nodes = w.nodes;
+  w.activeVersion.connections = w.connections;
+}
 fs.writeFileSync(RUTA_WF, JSON.stringify(w, null, 2) + '\n');
 console.log(c.verde(`\nvolcado: ${delMd.length} caracteres del .md al nodo "${NODO}"`));
