@@ -246,7 +246,13 @@ async function enviarMedios(ctx, a) {
   for (const m of medios) {
     if (!m.id) continue;
     mensaje('media', `[${m.tipo}] ${m.caption || '(sin caption)'}`, '← ' + m.descripcion);
-    await consulta(ligar('select fn_registrar_envio($1::uuid, $2::text)', [m.id, tel]));
+    // La query sale del nodo, no de aqui. Estaba escrita a mano y por eso el
+    // banco no se entero de que `Registrar Envio` pasaba de dos parametros a
+    // cinco el 2026-08-29: seguia anotando los envios SIN el aforo, y toda la
+    // regla nueva -- que la misma pieza puede volver a salir con otro aforo --
+    // quedaba sin probar dando verde.
+    await consulta(ligar(nodo(subMedios, 'Registrar Envío'),
+      [m.id, tel, a.categoria, a.referencia || '', invitados]));
     enviados++;
   }
 

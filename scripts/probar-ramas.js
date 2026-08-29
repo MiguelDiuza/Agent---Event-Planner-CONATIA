@@ -153,13 +153,16 @@ async function main() {
       'dice que la cotizacion salio, y NO manda a mirar mas arriba: no hay nada arriba');
 
     titulo('3. Diagnostico — el cliente ya vio los videos y la cotizacion NO salio');
-    await consulta(ligar(
-      `insert into envios_medios (lead_id, medio_id)
-       -- Tres argumentos y el aforo como TEXTO: la firma cambio el 2026-08-28
-       -- al admitir varios aforos ("50,100,130"). Con la vieja, esto reventaba
-       -- con un 42883 a mitad de la prueba.
-       select l.id, f.id from leads l, fn_medios_sedes_cotizacion($1, '100', false) f
-       where l.telefono = $1`, [TEL]));
+    // Los envios se anotan con la query REAL del nodo `Registrar Envío`, pieza
+    // por pieza, igual que en produccion. Antes se hacia con un `insert into
+    // envios_medios (lead_id, medio_id)` escrito aqui, y eso dejo de valer el
+    // 2026-08-29: desde que el envio guarda CON QUE AFORO salio, un insert que
+    // no pone la clave describe un cliente que no existe -- uno al que se le
+    // mandaron los videos sin cotizacion de por medio -- y los bloques 4 y 8
+    // pasaban a medir otra cosa. Ver 20260829000003_aforo_en_envios.sql.
+    for (const p of m1) {
+      await consulta(ligar(nodo('Registrar Envío'), [p.id, TEL, 'sede', 'todas', '100']));
+    }
     const d3 = await diagnostico({ categoria: 'sede', referencia: 'todas', telefono: TEL }, false);
     chequeo(/ATENCIÓN: la cotización del paquete NO salió/.test(d3) && /reenviar = true/.test(d3),
       'avisa que la cotizacion no salio y ofrece el reenvio: sin esto el fallo es mudo');
@@ -220,7 +223,16 @@ async function main() {
       'vuelve la antesala CON videos y sin lista de valores: los precios viajan en los captions');
     const m10 = await medios({ categoria: 'sede', referencia: 'todas', telefono: TEL,
                                invitados: 100, reenviar: true });
-    chequeo(m10.length === m1.length, `vuelven las mismas ${m10.length} piezas`);
+    // Vuelven los salones, pero NO el video institucional de promocion, y eso
+    // esta bien: la promocion sale una sola vez en la vida del cliente ("la
+    // primera vez que ve un salon"), y ya salio en el bloque 1. Antes esto se
+    // comparaba contra m1 -- que la lleva incluida -- y cuadraba solo porque la
+    // prueba anotaba los envios a mano y se saltaba justo esa pieza.
+    const sedes10 = m1.filter(p => p.caption && /personas$/.test(p.caption)).length;
+    chequeo(m10.length === sedes10,
+      `vuelven los ${m10.length} salones (de las ${m1.length} piezas de la primera vez)`);
+    chequeo(m10.length === m1.length - 1,
+      'y la promocion institucional no se repite: esa sale una sola vez');
   } finally {
     await consulta(ligar(
       `delete from envios_medios where lead_id in (select id from leads where telefono = $1);
