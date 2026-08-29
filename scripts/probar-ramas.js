@@ -27,7 +27,28 @@ if (!REF || !TOKEN) {
 const c = { verde: s => `\x1b[32m${s}\x1b[0m`, rojo: s => `\x1b[31m${s}\x1b[0m`,
             gris: s => `\x1b[90m${s}\x1b[0m`, neg: s => `\x1b[1m${s}\x1b[0m` };
 
-function consulta(sqlTexto) {
+// La Management API de Supabase corta conexiones de vez en cuando (ECONNRESET,
+// ENOTFOUND, timeouts). El 2026-08-29 tumbó tres corridas de este banco a
+// mitad, y un banco que falla al azar es un banco que se deja de mirar: el
+// siguiente fallo de verdad se lee como "otra vez la red". Dos reintentos con
+// un respiro corto hacen que un fallo signifique algo.
+async function consulta(sqlTexto) {
+  let ultimo;
+  for (let intento = 1; intento <= 3; intento++) {
+    try {
+      return await consultaUnaVez(sqlTexto);
+    } catch (e) {
+      // Un error de SQL no se reintenta: la query está mal y va a estarlo
+      // igual la segunda vez. Solo se reintenta lo que huele a red.
+      if (!/ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|socket hang up|timeout/i.test(e.message)) throw e;
+      ultimo = e;
+      await new Promise(r => setTimeout(r, 800 * intento));
+    }
+  }
+  throw ultimo;
+}
+
+function consultaUnaVez(sqlTexto) {
   const cuerpo = JSON.stringify({ query: sqlTexto });
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -52,6 +73,26 @@ function consulta(sqlTexto) {
 // El endpoint no acepta parametros, asi que $1..$n se sustituyen aqui. Es solo
 // para la prueba: los nodos si van parametrizados.
 function ligar(sqlTexto, params) {
+  // Antes de sustituir nada: ¿la query pide exactamente los parametros que le
+  // estan pasando? Esta comprobacion existe por el 2026-08-29. El nodo
+  // `verificar_disponibilidad_evento` habia pasado de dos parametros a tres y
+  // la prueba seguia mandando dos; lo que salia era un `42P02: there is no
+  // parameter $3` de Postgres, cincuenta lineas mas abajo, sin decir que nodo
+  // ni que prueba. Lo mismo con los aforos, que pasaron de numero a texto y
+  // reventaban con un `22P02` igual de mudo.
+  //
+  // Cuando un nodo cambia de firma, el que se queda atras es este archivo. Que
+  // lo diga aqui y con nombre y apellido es la diferencia entre arreglarlo en
+  // un minuto y no enterarse.
+  const pedidos = new Set((sqlTexto.match(/\$\d+/g) || []).map((s) => Number(s.slice(1))));
+  const faltan = [...pedidos].filter((n) => n > params.length).sort((a, b) => a - b);
+  if (faltan.length) {
+    throw new Error(
+      `la query usa ${faltan.map((n) => '$' + n).join(', ')} y solo le pasaste ` +
+      `${params.length} parametro(s): el nodo cambio de firma y esta llamada se quedo atras`
+    );
+  }
+
   let out = sqlTexto;
   params.forEach((v, i) => {
     const lit = v === null || v === undefined ? 'null'
@@ -71,12 +112,14 @@ const nodo = (n) => {
 
 const guion = (a) => consulta(ligar(nodo('Guion Cotización'), [
   a.categoria, a.referencia || '', a.telefono, a.tipo_evento || '',
-  a.nombre_cliente || '', a.invitados == null ? null : Number(a.invitados),
+  // String y no Number: el nodo manda `String(...invitados || '')` desde que
+  // el parametro admite varios aforos separados por coma.
+  a.nombre_cliente || '', a.invitados == null ? '' : String(a.invitados),
   a.reenviar ? 'true' : 'false']));
 
 const medios = (a) => consulta(ligar(nodo('Seleccionar Medios'), [
   a.categoria, a.referencia || '', a.telefono, a.tipo_medio || 'ambos',
-  a.invitados == null ? null : Number(a.invitados), a.reenviar ? 'true' : 'false']));
+  a.invitados == null ? '' : String(a.invitados), a.reenviar ? 'true' : 'false']));
 
 const diagnostico = (a, guionSalio) => consulta(ligar(nodo('Diagnóstico'), [
   a.categoria, a.referencia || '', a.tipo_medio || 'ambos', a.telefono,
@@ -112,7 +155,10 @@ async function main() {
     titulo('3. Diagnostico — el cliente ya vio los videos y la cotizacion NO salio');
     await consulta(ligar(
       `insert into envios_medios (lead_id, medio_id)
-       select l.id, f.id from leads l, fn_medios_sedes_cotizacion($1, 100) f
+       -- Tres argumentos y el aforo como TEXTO: la firma cambio el 2026-08-28
+       -- al admitir varios aforos ("50,100,130"). Con la vieja, esto reventaba
+       -- con un 42883 a mitad de la prueba.
+       select l.id, f.id from leads l, fn_medios_sedes_cotizacion($1, '100', false) f
        where l.telefono = $1`, [TEL]));
     const d3 = await diagnostico({ categoria: 'sede', referencia: 'todas', telefono: TEL }, false);
     chequeo(/ATENCIÓN: la cotización del paquete NO salió/.test(d3) && /reenviar = true/.test(d3),
@@ -136,16 +182,32 @@ async function main() {
                              tipo_evento: '15 Años', invitados: 100 });
     chequeo(g7.length === 0, `cero globos (${g7.length}): la tanda es lo unico que cotiza`);
 
-    titulo('8. Recotizacion — el mismo paquete pedido dos veces sale las dos veces');
+    // El 2026-08-28 esto cambio de sentido y la prueba se quedo con el viejo:
+    // decia "el mismo paquete pedido dos veces sale las dos veces". Ya no, y a
+    // proposito -- pedir Matrimonio para 50, luego 100 y luego 130 repetia tres
+    // veces la misma descripcion del paquete. Nadie lo noto porque este archivo
+    // llevaba desde entonces muriendose en el bloque 3, antes de llegar aqui.
+    titulo('8. Recotizacion — la descripcion del paquete NO se repite; los precios del aforo nuevo, si');
     const args8 = { categoria: 'sede', referencia: 'todas', telefono: TEL,
                     tipo_evento: '15 Años', invitados: 100, nombre_cliente: 'Ana' };
     const g8a = await guion(args8);
-    const g8b = await guion(args8);
-    chequeo(g8a.length === 6 && g8b.length === 6,
-      `6 globos las dos veces (${g8a.length} y ${g8b.length}): 5 del guion + 1 de valores`);
+    chequeo(g8a.length === 6,
+      `la primera vez salen 6 globos (${g8a.length}): 5 del paquete + 1 de valores`);
     chequeo(/te comparto la cotización del paquete 15 Años/.test(g8a[0].mensaje),
       'la antesala nombra el paquete y no promete videos');
     console.log('    ' + c.gris(g8a[0].mensaje));
+
+    const g8b = await guion(args8);
+    chequeo(g8b.length === 0,
+      `pedir EXACTAMENTE lo mismo otra vez no saca nada (${g8b.length}): el cliente ya lo tiene en el chat`);
+
+    // Pero otro aforo del MISMO evento si tiene precios nuevos que dar, y esos
+    // van solos: sin volver a describir el paquete.
+    const g8c = await guion({ ...args8, invitados: 150 });
+    chequeo(g8c.length === 1,
+      `otro aforo del mismo evento saca 1 globo (${g8c.length}): la tabla de precios, sin repetir la descripcion`);
+    chequeo(g8c.length === 1 && /150 personas/.test(g8c[0].mensaje),
+      'y es la tabla del aforo nuevo', g8c.length === 1 ? g8c[0].mensaje.slice(0, 70) : '');
 
     titulo('9. Recotizacion sin cantidad de personas');
     const g9 = await guion({ categoria: 'sede', referencia: 'todas', telefono: TEL, tipo_evento: 'boda' });

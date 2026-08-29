@@ -74,21 +74,24 @@ for (const archivo of ARCHIVOS) {
   const conex = w.connections || {};
 
   // --- el espejo -----------------------------------------------------------
-  // Un workflow que nunca se activó no tiene versión publicada: su
-  // `activeVersion` viene vacía y eso no es un error. El error es que tenga
-  // una y sea distinta de `nodes`, porque entonces el repo dice una cosa y el
-  // VPS corre otra.
-  const av = w.activeVersion || {};
-  const publicado = (av.nodes || []).length > 0;
-  if (!publicado) {
-    ojo(`${nodos.length} nodos, sin versión publicada (activeVersion vacía)`,
-        w.active ? 'pero el workflow figura como ACTIVO: eso sí es raro' : 'coherente: el workflow está inactivo');
-  } else {
-    const espejoNodos = JSON.stringify(nodos) === JSON.stringify(av.nodes);
+  // Los .json del repo ya no llevan `activeVersion` (desde el 2026-08-29): eran
+  // una copia entera de `nodes` dentro del mismo archivo, duplicaban su tamaño
+  // y no aportaban nada que se pudiera comprobar aquí.
+  //
+  // Y comprobarlo aquí era, además, engañoso. Este archivo mira el REPO; si el
+  // repo se quedó atrás, `activeVersion` era el espejo de un despliegue viejo y
+  // salía en verde igual. Lo único que responde de verdad "¿esto es lo que
+  // corre?" es preguntárselo al VPS: eso lo hace `verificar-despliegue.js`, y
+  // es el que hay que correr antes de dar nada por bueno.
+  if (w.activeVersion) {
+    const av = w.activeVersion;
+    const espejoNodos = JSON.stringify(nodos) === JSON.stringify(av.nodes || []);
     const espejoConex = JSON.stringify(conex) === JSON.stringify(av.connections || {});
     if (espejoNodos && espejoConex) bien(`${nodos.length} nodos, y activeVersion es un espejo exacto`);
     else mal('`nodes` y `activeVersion.nodes` NO coinciden: en el VPS corre activeVersion',
              `nodos iguales: ${espejoNodos} · conexiones iguales: ${espejoConex}`);
+  } else {
+    bien(`${nodos.length} nodos (si corren o no en el VPS lo dice verificar-despliegue.js)`);
   }
 
   // --- nombres repetidos ---------------------------------------------------

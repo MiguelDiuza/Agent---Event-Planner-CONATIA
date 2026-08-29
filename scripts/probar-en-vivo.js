@@ -125,6 +125,40 @@ async function main() {
        'y no pidió que le repitieran nada');
   }
 
+  titulo('4. El chat real del 2026-08-29: "Me gustó" / "El Márquez"');
+  // Este es el que se rompió delante de un cliente. Angie preguntó cuál de los
+  // salones le había llamado más la atención y el cliente contestó en dos
+  // mensajes con 1,6 s de diferencia. Le llegaron DOS respuestas, cruzadas: una
+  // celebraba su elección y la otra volvía a preguntarle cuál le había gustado.
+  //
+  // Vive aquí y no en el banco de la base porque el reparto depende de que n8n
+  // despierte la ejecución dormida con su estado intacto: eso solo se ve con
+  // n8n de por medio.
+  {
+    const PEDAZOS = ['Me gustó', 'El Márquez'];
+    const vuelos = [];
+    for (const m of PEDAZOS) {
+      vuelos.push(escribir(m));
+      await esperar(1600);          // los 1,6 s exactos del chat real
+    }
+    const rs = await Promise.all(vuelos);
+    for (const r of rs) {
+      console.log(c.gris(`      "${r.texto}" -> ${r.salida ? String(r.salida).slice(0, 90) : '(callado)'}  (${r.ms} ms)`));
+    }
+
+    const contestaron = rs.filter(r => r.salida);
+    ok(contestaron.length === 1,
+       `los 2 pedazos produjeron UNA respuesta, no dos (fueron ${contestaron.length})`,
+       JSON.stringify(rs.map(r => ({ m: r.texto, out: r.salida }))));
+    ok(contestaron.length === 1 && contestaron[0].texto === 'El Márquez',
+       'y contestó el último, que es el que trae la frase entera');
+    // Lo que delataba el fallo en el chat real: la respuesta volvía a preguntar
+    // cuál le había gustado, porque solo había visto "Me gustó".
+    const salida = contestaron.length === 1 ? String(contestaron[0].salida) : '';
+    ok(!/cuál (de esos|de estos|te (gustó|llamó))/i.test(salida),
+       'y no le vuelve a preguntar cuál le gustó: ya se lo dijo', salida.slice(0, 200));
+  }
+
   await limpiar();
   console.log('\n' + (fallos ? c.rojo(`${fallos} fallo(s)`) : c.verde('sin fallos')) + '\n');
   process.exit(fallos ? 1 : 0);

@@ -31,6 +31,26 @@ const detector = (() => {
 
 // La Management API no acepta parámetros: $1..$n se sustituyen aquí.
 function ligar(sqlTexto, params) {
+  // Antes de sustituir nada: ¿la query pide exactamente los parametros que le
+  // estan pasando? Esta comprobacion existe por el 2026-08-29. El nodo
+  // `verificar_disponibilidad_evento` habia pasado de dos parametros a tres y
+  // la prueba seguia mandando dos; lo que salia era un `42P02: there is no
+  // parameter $3` de Postgres, cincuenta lineas mas abajo, sin decir que nodo
+  // ni que prueba. Lo mismo con los aforos, que pasaron de numero a texto y
+  // reventaban con un `22P02` igual de mudo.
+  //
+  // Cuando un nodo cambia de firma, el que se queda atras es este archivo. Que
+  // lo diga aqui y con nombre y apellido es la diferencia entre arreglarlo en
+  // un minuto y no enterarse.
+  const pedidos = new Set((sqlTexto.match(/\$\d+/g) || []).map((s) => Number(s.slice(1))));
+  const faltan = [...pedidos].filter((n) => n > params.length).sort((a, b) => a - b);
+  if (faltan.length) {
+    throw new Error(
+      `la query usa ${faltan.map((n) => '$' + n).join(', ')} y solo le pasaste ` +
+      `${params.length} parametro(s): el nodo cambio de firma y esta llamada se quedo atras`
+    );
+  }
+
   let out = sqlTexto;
   params.forEach((v, i) => {
     const lit = v === null || v === undefined ? 'null'

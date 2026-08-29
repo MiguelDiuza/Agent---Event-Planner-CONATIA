@@ -24,31 +24,104 @@ const REDES = ['Y si quieres ver más de nuestros eventos, síguenos en redes �
 
 // Comprobaciones que dependen de los datos y no del texto: son las que
 // atrapan una migracion mal aplicada o un rotulo que cambio sin querer.
-const revisarTanda = (esperaSalones, rotulos = []) => (r, anota) => {
+//
+// Cuantos salones entran en la tanda NO se escribe a mano aqui: lo rellena
+// `banco-pruebas.js` contra la base antes de correr nada. Se escribia a mano
+// -- un `14` repetido en once casos -- y el 2026-08-29, al catalogar el video
+// de Casa 5, los once se pusieron en rojo a la vez con un error que hablaba de
+// piezas y no de sedes. El numero de salones es un dato del negocio.
+//
+// Y va POR AFORO, que es la parte que no se ve a simple vista: la tanda solo
+// manda los salones que tienen precio para esa cantidad de personas. Hoy son 15
+// para 100 personas, 13 para 60 y 8 para 200. Un solo numero para todos los
+// casos estaria mal en dos de cada tres.
+const catalogo = { nombresPorAforo: null };
+
+// Cuantos salones le tocan a este caso, segun el aforo que pide. `args` es el
+// mismo objeto que el caso le pasa a la herramienta, asi que el aforo no se
+// repite en ningun lado.
+const salonesDe = (args, anota) => {
+  const nombres = nombresDe(args, anota);
+  return nombres && nombres.length;
+};
+
+// Los NOMBRES de esos salones. Sirven para lo que de verdad importa de una
+// cotizacion: que no falte ninguno.
+const nombresDe = (args, anota) => {
+  if (!catalogo.nombresPorAforo) {
+    anota('error', 'nadie relleno catalogo.nombresPorAforo antes de correr los casos');
+    return null;
+  }
+  const aforo = Number(args.invitados);
+  const nombres = catalogo.nombresPorAforo[aforo];
+  if (!nombres) {
+    anota('error', `no hay salones catalogados para ${aforo} personas: ¿el caso pide un aforo que no existe?`);
+    return null;
+  }
+  return nombres;
+};
+
+// Fechas relativas a HOY, no escritas a mano.
+//
+// El caso 3 comprueba la rama de "faltan pocos días" y tenia escrito
+// '2026-08-29' porque el dia que se escribio faltaban tres. El 2026-08-29 esa
+// fecha era HOY, el caso cayo en otra rama y lo que salio fue un error que
+// hablaba de nombres de rama y no de que la prueba habia caducado. Una prueba
+// sobre fechas relativas con la fecha escrita a mano se rompe sola, y siempre
+// un dia en que nadie la esta mirando.
+const enDias = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+const revisarTanda = () => (r, anota, args) => {
+  const salones = salonesDe(args, anota);
+  if (salones == null) return;
   if (r.piezas == null) return anota('error', 'la tanda no envio nada: ' + JSON.stringify(r).slice(0, 200));
-  if (r.piezas !== esperaSalones + 1)
-    anota('error', `la tanda mando ${r.piezas} piezas y se esperaban ${esperaSalones + 1} (${esperaSalones} salones + promocional)`);
+  if (r.piezas !== salones + 1)
+    anota('error', `la tanda mando ${r.piezas} piezas y se esperaban ${salones + 1} (${salones} salones + promocional)`);
   if (r.globos_guion !== 5)
     anota('error', `el guion salio con ${r.globos_guion} globos y son 5: antesala + 3 partes + obsequios. ` +
       'Cero globos = el tipo_evento no resolvio y los videos salieron sin cotizacion.');
 };
 
 // La SEGUNDA cotizacion del mismo chat (2026-08-27). Tiene que salir completa y
-// SIN videos: el cliente ya los tiene arriba y son los mismos catorce salones.
-// Los globos son los 5 del guion mas los de la lista de valores, que reemplaza a
-// los captions como unico portador del precio.
-const revisarRecotizacion = (globosValores) => (r, anota) => {
+// SIN videos: el cliente ya los tiene arriba y son los mismos salones. Como no
+// hay captions, el unico sitio donde viaja el precio es la lista de valores en
+// texto.
+//
+// Lo que se comprueba NO es cuantos globos salieron. Eso estaba escrito a mano
+// -- un `2` -- y depende de cuantos caracteres quepan por globo, asi que
+// cambiaba de valor cada vez que alguien tocaba un nombre de salon o un precio,
+// y el error hablaba de globos en vez de hablar del cliente. Lo que importa es
+// que NO FALTE NINGUN SALON: un salon que se cae de la lista es un salon que el
+// cliente no va a considerar, y eso no se ve en un conteo de globos.
+const revisarRecotizacion = () => (r, anota, args) => {
   if (r.piezas !== 0)
     anota('error', `la recotizacion mando ${r.piezas} piezas y no debia mandar ninguna: los videos no se repiten`);
-  if (r.globos_guion !== 5 + globosValores)
-    anota('error', `la recotizacion salio con ${r.globos_guion} globos y se esperaban ${5 + globosValores}: ` +
-      `antesala + 3 partes + obsequios + ${globosValores} de valores. Cero = el embudo volvio a callarse.`);
+  if (r.globos_guion < 6)
+    anota('error', `la recotizacion salio con ${r.globos_guion} globos: faltan el guion (5) o la lista de valores. ` +
+      'Cero = el embudo volvio a callarse.');
   if (!/YA salió en este turno/.test(r.resultado || ''))
     anota('error', 'el agente no recibio el aviso de que la cotizacion ya salio: ' + String(r.resultado).slice(0, 140));
+
+  const nombres = nombresDe(args, anota);
+  if (!nombres) return;
+  const texto = (r.mensajes || []).join(' ');
+  const faltan = nombres.filter(n => !texto.includes(n));
+  if (faltan.length)
+    anota('error', `la lista de valores para ${args.invitados} personas no nombra ${faltan.length} salon(es): ` +
+      faltan.join(', '));
 };
 
 // Un reenvio a pedido del cliente: material que ya recibio, sin guion detras.
-const revisarReenvio = (piezas) => (r, anota) => {
+const revisarReenvio = (piezasEsperadas) => (r, anota, args) => {
+  // Sin argumento = la tanda entera para el aforo del caso. Se resuelve al
+  // llamar y no al definir el caso porque cuando se construye la lista el
+  // catalogo todavia no se ha consultado.
+  const piezas = piezasEsperadas == null ? salonesDe(args, anota) : piezasEsperadas;
+  if (piezas == null) return;
   if (r.piezas !== piezas)
     anota('error', `el reenvio mando ${r.piezas} piezas y se esperaban ${piezas}`);
   if (r.globos_guion !== 0)
@@ -72,7 +145,7 @@ module.exports = [
         globos: promo('Sofía', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: 'Para unas 100 personas el 10 de diciembre',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 100,
                   tipo_evento: '15 Años', nombre_cliente: 'Sofía', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -126,7 +199,7 @@ module.exports = [
         globos: promo('Édgar', 'Cuéntame, ¿para qué fecha estás pensando el matrimonio?') },
 
       { cliente: '15 de mayo del otro año',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 180,
                   tipo_evento: 'Matrimonio', nombre_cliente: 'Édgar', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -177,18 +250,28 @@ module.exports = [
         globos: promo('Katherine', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: 'somos como 55 personas, el 29 de agosto',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 60,
                   tipo_evento: 'graduacion', nombre_cliente: 'Katherine', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
 
       { cliente: 'me encanto Pilas Premium',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Pilas Premium', fecha: '2026-08-29' },
-          revisar: (r, anota) => { if (!/FALTAN SOLO/.test(r[0].resultado)) anota('error', 'se esperaba la rama de menos de 7 dias y llego: ' + r[0].resultado.slice(0, 60)); } }],
+          args: { nombre_sede: 'Pilas Premium', fecha: enDias(3) },
+          revisar: (r, anota) => {
+            const t = r[0].resultado || '';
+            // La rama se llamaba FALTAN SOLO hasta el 2026-08-28.
+            if (!/MUY PRÓXIMA/.test(t))
+              anota('error', 'se esperaba la rama de poca anticipación y llegó: ' + t.slice(0, 60));
+            // Y lo que de verdad importa de esta rama: NO se le confirma la
+            // fecha. Con tres días no hay tiempo de cuadrar montaje y personal,
+            // así que el turno se encamina a la llamada, no al cierre.
+            if (!/NO le confirmes ni le niegues/.test(t))
+              anota('error', 'le está dejando confirmar una fecha a tres días');
+          } }],
         globos: [
-          '¡Excelente elección, Katherine! Pilas Premium es hermosa ✨ Te confirmo que el sábado 29 de agosto está libre en esa sede 😁',
-          'Como está a la vuelta de la esquina, prefiero que cuadremos juntos el montaje y el personal para que te quede perfecto 🤗',
+          '¡Excelente elección, Katherine! Pilas Premium es hermosa ✨',
+          'Como esa fecha está a la vuelta de la esquina, prefiero que cuadremos juntos el montaje y el personal para que te quede perfecto 🤗',
           '¿Prefieres que un asesor te llame hoy, o te queda mejor pasar por la sede?',
         ] },
 
@@ -220,7 +303,7 @@ module.exports = [
         globos: promo('Marcela', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: 'seriamos 200 personas, el 20 de febrero',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 200,
                   tipo_evento: 'Cumpleanos', nombre_cliente: 'Marcela', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -285,7 +368,7 @@ module.exports = [
         globos: promo('Andrés', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: '130 personas, el 14 de noviembre',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 130,
                   tipo_evento: 'Empresa', nombre_cliente: 'Andrés', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -347,7 +430,7 @@ module.exports = [
         globos: promo('Julieta', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: '100 personas, el 5 de diciembre',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 100,
                   tipo_evento: '15 Años', nombre_cliente: 'Julieta', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -361,7 +444,7 @@ module.exports = [
         ] },
 
       { cliente: 'ellos son como 200 y seria el 14 de marzo',
-        tools: [{ t: 'enviar_medios', revisar: revisarRecotizacion(2),
+        tools: [{ t: 'enviar_medios', revisar: revisarRecotizacion(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 200,
                   tipo_evento: 'Matrimonio', nombre_cliente: 'Julieta', tipo_medio: 'ambos' } }],
         globos: [
@@ -404,7 +487,7 @@ module.exports = [
         globos: promo('Ricardo', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: '150 personas, 17 de abril',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 150,
                   tipo_evento: '15 Anos', nombre_cliente: 'Ricardo', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -416,7 +499,7 @@ module.exports = [
         ] },
 
       { cliente: 'ese es mas pequeño, unas 80 personas, el 12 de junio',
-        tools: [{ t: 'enviar_medios', revisar: revisarRecotizacion(1),
+        tools: [{ t: 'enviar_medios', revisar: revisarRecotizacion(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 80,
                   tipo_evento: 'graduacion', nombre_cliente: 'Ricardo', tipo_medio: 'ambos' } }],
         globos: [
@@ -475,7 +558,7 @@ module.exports = [
         globos: promo('Diana', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: '150 invitados, el 7 de noviembre',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 150,
                   tipo_evento: 'boda', nombre_cliente: 'Diana', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -490,7 +573,7 @@ module.exports = [
         ] },
 
       { cliente: 'ya mire y no estan, mandamelos todos porfa',
-        tools: [{ t: 'enviar_medios', revisar: revisarReenvio(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarReenvio(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 150,
                   nombre_cliente: 'Diana', tipo_medio: 'ambos', reenviar: true } }],
         globos: ['Ahí van de nuevo todos, Diana ✨ Cuéntame cuál te llamó más la atención 🤗'] },
@@ -546,7 +629,7 @@ module.exports = [
         globos: ['¿Y para qué fecha lo tienes pensado, Camilo? 🤗'] },
 
       { cliente: 'el 5 de diciembre',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 150,
                   tipo_evento: 'Matrimonio', nombre_cliente: 'Camilo', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -624,7 +707,7 @@ module.exports = [
         globos: promo('Ana', 'Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha?') },
 
       { cliente: 'para 100 personas, el 15 de marzo',
-        tools: [{ t: 'enviar_medios', revisar: revisarTanda(14),
+        tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 100,
                   tipo_evento: '15 Años', nombre_cliente: 'Ana', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
@@ -635,11 +718,17 @@ module.exports = [
           args: { nombre_sede: 'Casa 74', fecha: '2026-03-15' },
           revisar: (r, anota) => {
             const t = (r[0] || {}).resultado || '';
-            if (!/YA PASO/.test(t)) anota('error', 'no detectó que la fecha ya pasó: ' + t.slice(0, 80));
+            if (!/YA PAS[OÓ]/.test(t)) anota('error', 'no detectó que la fecha ya pasó: ' + t.slice(0, 80));
             if (!/domingo 15 de marzo de 2026/.test(t)) anota('error', 'no nombra la fecha que dijo la clienta, con su día');
-            if (!/lunes 15 de marzo de 2027/.test(t)) anota('error', 'no propone la misma fecha del año siguiente, con su día');
             if (!/NO la apartes/.test(t)) anota('error', 'no le prohíbe apartar esa fecha');
             if (/se equivoc|error/i.test(t)) anota('error', 'trata la fecha como un error de la clienta');
+            // El 2026-08-28 el diseño cambió: NO se adivina el año que viene.
+            // La clienta pudo querer decir marzo de 2027, pero también otra
+            // fecha cualquiera -- en el chat real del 2026-08-29 el cliente
+            // dijo "20 de agosto" y quería decir el 20 de SEPTIEMBRE. Lo que
+            // se le pide al agente es que pregunte, no que acierte.
+            if (/2027/.test(t)) anota('error', 'volvió a adivinar el año que viene en vez de preguntar');
+            if (!/preguntarle para qué fecha/.test(t)) anota('error', 'no le dice al agente que pregunte por la fecha buena');
           } }],
         globos: [
           'Ay, cuéntame una cosita para no equivocarme: el domingo 15 de marzo de 2026 ya pasó ☺️ ¿Me estás hablando del lunes 15 de marzo de 2027? Confírmame y te valido de una la disponibilidad para esa fecha 🤗',
@@ -689,3 +778,7 @@ module.exports = [
     ],
   },
 ];
+
+// El array sigue siendo lo que se exporta (banco-pruebas.js lo recorre), y el
+// catalogo viaja colgado de el para que quien lo corra pueda rellenarlo.
+module.exports.catalogo = catalogo;

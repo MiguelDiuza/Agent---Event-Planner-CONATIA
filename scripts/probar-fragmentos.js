@@ -44,7 +44,28 @@ const titulo = (t) => console.log('\n' + c.neg(t));
 // --------------------------------------------------------------------------
 // Base
 // --------------------------------------------------------------------------
-function consulta(sqlTexto) {
+// La Management API de Supabase corta conexiones de vez en cuando (ECONNRESET,
+// ENOTFOUND, timeouts). El 2026-08-29 tumbó tres corridas de este banco a
+// mitad, y un banco que falla al azar es un banco que se deja de mirar: el
+// siguiente fallo de verdad se lee como "otra vez la red". Dos reintentos con
+// un respiro corto hacen que un fallo signifique algo.
+async function consulta(sqlTexto) {
+  let ultimo;
+  for (let intento = 1; intento <= 3; intento++) {
+    try {
+      return await consultaUnaVez(sqlTexto);
+    } catch (e) {
+      // Un error de SQL no se reintenta: la query está mal y va a estarlo
+      // igual la segunda vez. Solo se reintenta lo que huele a red.
+      if (!/ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|socket hang up|timeout/i.test(e.message)) throw e;
+      ultimo = e;
+      await new Promise(r => setTimeout(r, 800 * intento));
+    }
+  }
+  throw ultimo;
+}
+
+function consultaUnaVez(sqlTexto) {
   const cuerpo = JSON.stringify({ query: sqlTexto });
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -85,6 +106,48 @@ async function main() {
   await consulta(`delete from mensajes_fragmentos where telefono = '${TELEFONO}'`);
 
   // ------------------------------------------------------------------------
+  titulo('0. `pendientes` cuenta bien, incluido el mensaje que acaba de entrar');
+  // Esta prueba nace de un fallo que estuvo dos días en producción sin que nada
+  // lo dijera, con todo este archivo en verde.
+  //
+  // `Registrar Fragmento` inserta la fila y en la MISMA sentencia cuenta los
+  // pendientes con un sub-select. En Postgres eso no funciona: lo que inserta
+  // una CTE no lo ve el resto del statement, que corre sobre el snapshot
+  // anterior. Así que `pendientes` llegaba siempre uno corto.
+  //
+  // Y era invisible desde aquí porque el resto de los bloques le pasan el
+  // número al detector A MANO (`esFragmento(t, 1)`, `esFragmento(t, 4)`), con
+  // el valor que uno cree que la base va a mandar. La prueba comprobaba la
+  // creencia, no la base. Por eso este bloque no llama al detector: compara la
+  // salida real de la query real contra un `count(*)` aparte.
+  {
+    await consulta(`delete from mensajes_fragmentos where telefono = '${TELEFONO}'`);
+
+    const uno = await registrar('primero');
+    ok(Number(uno.pendientes) === 1,
+       'el primer mensaje de una ráfaga llega al detector como pendientes = 1',
+       `llegó ${uno.pendientes} — si es 0, el sub-select no está viendo su propia fila`);
+
+    const dos = await registrar('segundo');
+    ok(Number(dos.pendientes) === 2,
+       'el segundo, con uno ya esperando, llega como pendientes = 2',
+       `llegó ${dos.pendientes} — con 1, la rama "la ráfaga ya venía" no se activa`);
+
+    // El número que ve el detector tiene que ser el que hay en la tabla, sin
+    // interpretación de por medio.
+    const real = await pendientes();
+    ok(Number(dos.pendientes) === real,
+       'y coincide con lo que de verdad hay sin consumir en la tabla',
+       `la query dijo ${dos.pendientes}, la tabla tiene ${real}`);
+
+    // La consecuencia concreta del fallo: con pendientes corto, el SEGUNDO
+    // pedazo de una ráfaga se juzgaba con la vara del primero.
+    ok(detector.esFragmento('personas', Number(dos.pendientes)).esperar === true,
+       'con ese número, el segundo pedazo suelto sí se suma a la ráfaga');
+
+    await consulta(`delete from mensajes_fragmentos where telefono = '${TELEFONO}'`);
+  }
+
   titulo('1. Un primer mensaje normal NUNCA espera');
   // Esta es la regla que no se puede romper: el cliente que escribe completo no
   // puede pagar ni un segundo por el que escribe por pedazos.
@@ -192,6 +255,50 @@ async function main() {
     ok(salida[0].texto === 'Hola, buenas tardes', 'y el huérfano no viaja en el texto', salida[0].texto);
     ok(salida[0].descartados === 1, 'pero se marca como consumido, para que no se acumule');
     ok(await pendientes() === 0, 'no queda nada pendiente');
+  }
+
+  titulo('9. El chat real del 2026-08-29: "Me gustó" / "El Márquez"');
+  {
+    // Lo que pasó de verdad. El agente preguntó cuál de los salones le había
+    // llamado más la atención y el cliente contestó en dos mensajes, con 1,6 s
+    // entre uno y otro. Le llegaron DOS respuestas, cruzadas: la primera
+    // contestaba "El Márquez" y la segunda "Me gustó" volviendo a preguntar
+    // cuál le había gustado.
+    //
+    // "gustó" no abría ráfaga, así que el primer mensaje se contestó en 132 ms
+    // y cuando entró el segundo ya no había con qué juntarlo.
+    ok(detector.esFragmento('Me gustó', 1).esperar === true,
+       '"Me gustó" solo no dice qué le gustó: espera al resto');
+
+    const respuestas = await correrConversacion(['Me gustó', 'El Márquez']);
+    ok(respuestas.length === 1, 'sale UNA respuesta, no dos',
+       JSON.stringify(respuestas.map(r => r.texto)));
+    ok(respuestas[0] && respuestas[0].texto === 'Me gustó El Márquez',
+       'y el agente ve la frase entera: "Me gustó El Márquez"',
+       respuestas[0] && respuestas[0].texto);
+    ok(await pendientes() === 0, 'sin pendientes al terminar');
+  }
+
+  titulo('10. Lo que cuesta el arreglo de arriba, dicho en voz alta');
+  {
+    // Ampliar ABREN no es gratis: un cliente que mande uno de estos verbos como
+    // turno completo se come los ocho segundos. Están aquí para que el costo se
+    // vea y se pueda discutir, no escondido dentro de una lista de cien
+    // palabras. Si algún día uno de estos resulta frecuente de verdad, se saca
+    // de ABREN -- lo que NO se hace es bajarle la vara al primer mensaje.
+    const PAGAN = ['me gustó', 'me encanta', 'prefiero', 'me interesa'];
+    const esperan = PAGAN.filter(t => detector.esFragmento(t, 1).esperar);
+    ok(esperan.length === PAGAN.length,
+       `los ${PAGAN.length} verbos de gustar/elegir esperan 8 s aunque vengan solos`,
+       'estos no esperaron: ' + JSON.stringify(PAGAN.filter(t => !esperan.includes(t))));
+
+    // Y la frontera: con su complemento detrás, no esperan nada.
+    const COMPLETOS = ['me gustó Casa Christian\'s', 'me gusta el de la 66',
+                       'prefiero el Márquez', 'me interesa el paquete de 100'];
+    const paganDeMas = COMPLETOS.filter(t => detector.esFragmento(t, 1).esperar);
+    ok(paganDeMas.length === 0,
+       'pero con el complemento detrás contestan de una, sin esperar',
+       'estos sí esperaron: ' + JSON.stringify(paganDeMas));
   }
 
   await consulta(`delete from mensajes_fragmentos where telefono = '${TELEFONO}'`);

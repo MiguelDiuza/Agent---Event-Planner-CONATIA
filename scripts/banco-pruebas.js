@@ -45,7 +45,28 @@ const c = { gris: s => `\x1b[90m${s}\x1b[0m`, verde: s => `\x1b[32m${s}\x1b[0m`,
 // Acceso a la base
 // --------------------------------------------------------------------------
 
-function consulta(sqlTexto) {
+// La Management API de Supabase corta conexiones de vez en cuando (ECONNRESET,
+// ENOTFOUND, timeouts). El 2026-08-29 tumbó tres corridas de este banco a
+// mitad, y un banco que falla al azar es un banco que se deja de mirar: el
+// siguiente fallo de verdad se lee como "otra vez la red". Dos reintentos con
+// un respiro corto hacen que un fallo signifique algo.
+async function consulta(sqlTexto) {
+  let ultimo;
+  for (let intento = 1; intento <= 3; intento++) {
+    try {
+      return await consultaUnaVez(sqlTexto);
+    } catch (e) {
+      // Un error de SQL no se reintenta: la query está mal y va a estarlo
+      // igual la segunda vez. Solo se reintenta lo que huele a red.
+      if (!/ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|socket hang up|timeout/i.test(e.message)) throw e;
+      ultimo = e;
+      await new Promise(r => setTimeout(r, 800 * intento));
+    }
+  }
+  throw ultimo;
+}
+
+function consultaUnaVez(sqlTexto) {
   const cuerpo = JSON.stringify({ query: sqlTexto });
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -75,6 +96,26 @@ function consulta(sqlTexto) {
 // El endpoint de la Management API no acepta parametros, asi que $1..$n se
 // sustituyen aqui. Es solo para el banco: los nodos si van parametrizados.
 function ligar(sqlTexto, params) {
+  // Antes de sustituir nada: ¿la query pide exactamente los parametros que le
+  // estan pasando? Esta comprobacion existe por el 2026-08-29. El nodo
+  // `verificar_disponibilidad_evento` habia pasado de dos parametros a tres y
+  // la prueba seguia mandando dos; lo que salia era un `42P02: there is no
+  // parameter $3` de Postgres, cincuenta lineas mas abajo, sin decir que nodo
+  // ni que prueba. Lo mismo con los aforos, que pasaron de numero a texto y
+  // reventaban con un `22P02` igual de mudo.
+  //
+  // Cuando un nodo cambia de firma, el que se queda atras es este archivo. Que
+  // lo diga aqui y con nombre y apellido es la diferencia entre arreglarlo en
+  // un minuto y no enterarse.
+  const pedidos = new Set((sqlTexto.match(/\$\d+/g) || []).map((s) => Number(s.slice(1))));
+  const faltan = [...pedidos].filter((n) => n > params.length).sort((a, b) => a - b);
+  if (faltan.length) {
+    throw new Error(
+      `la query usa ${faltan.map((n) => '$' + n).join(', ')} y solo le pasaste ` +
+      `${params.length} parametro(s): el nodo cambio de firma y esta llamada se quedo atras`
+    );
+  }
+
   let out = sqlTexto;
   params.forEach((v, i) => {
     const lit = v === null || v === undefined ? 'null'
@@ -178,9 +219,12 @@ function revisarTurno(globos, n) {
 
 async function enviarMedios(ctx, a) {
   const tel = ctx.telefono;
-  const invitados = a.invitados == null ? null : Number(a.invitados);
-  // El sub-workflow lo recibe como texto: ver el comentario del CTE `entrada`
-  // en el nodo Guion Cotizacion.
+  // Texto, no numero, y no por gusto: los dos nodos de este sub-workflow
+  // mandan `String($json.invitados || '')`, porque desde el 2026-08-28 el
+  // parametro admite varios aforos separados por coma ("50,100,130").
+  // Pasarlo como numero revienta con 22P02 en `Guion Cotizacion` y con
+  // 42883 en `Seleccionar Medios`. Aqui el que manda es el nodo.
+  const invitados = a.invitados == null ? '' : String(a.invitados);
   const reenviar = a.reenviar ? 'true' : 'false';
   let enviados = 0;
 
@@ -214,10 +258,15 @@ async function enviarMedios(ctx, a) {
        guion.length > 0 ? 'true' : 'false']));
     const r = diag[0] || {};
     return { resultado: r.resultado || r.mensaje || JSON.stringify(r),
-             piezas: 0, globos_guion: guion.length };
+             piezas: 0, globos_guion: guion.length,
+             // El texto de los globos, para que las comprobaciones puedan mirar
+             // DENTRO de la cotizacion y no solo contarla. Es lo unico que
+             // permite exigir que no falte ningun salon en la lista de valores.
+             mensajes: guion.map(g => g.mensaje) };
   }
   return { resultado: `Se enviaron ${enviados} piezas y ${guion.length} mensajes de cotizacion.`,
-           piezas: enviados, globos_guion: guion.length };
+           piezas: enviados, globos_guion: guion.length,
+           mensajes: guion.map(g => g.mensaje) };
 }
 
 const herramientas = {
@@ -232,8 +281,13 @@ const herramientas = {
   consultar_servicios_upselling: () =>
     consulta(nodo(principal, 'consultar_servicios_upselling')),
 
+  // Tres parametros, no dos: desde el 2026-08-28 este nodo, ademas de
+  // consultar, anota la fecha del evento en la reserva del cliente, y para
+  // eso necesita el telefono. Es un efecto lateral que corre en produccion
+  // en cada consulta de disponibilidad, asi que la prueba tambien lo corre.
   verificar_disponibilidad_evento: (ctx, a) =>
-    consulta(ligar(nodo(principal, 'verificar_disponibilidad_evento'), [a.nombre_sede, a.fecha])),
+    consulta(ligar(nodo(principal, 'verificar_disponibilidad_evento'),
+                   [a.nombre_sede, a.fecha, ctx.telefono])),
 
   // Pasa por `Validar Datos`, igual que en el workflow: si la fecha ya paso o
   // el telefono viene a medias, no llega al insert y no se bloquea nada en
@@ -305,7 +359,7 @@ async function revisarPaquetes() {
       // El telefono no existe como lead, asi que no hay envios previos que
       // filtren: el guion sale entero siempre que el tipo resuelva.
       const g = await consulta(ligar(nodo(subMedios, 'Guion Cotización'),
-        ['sede', 'todas', tel, entrada, 'Prueba', 100, 'false']));
+        ['sede', 'todas', tel, entrada, 'Prueba', '100', 'false']));
       const ok = g.length === 5;
       if (!ok) {
         casoActual = 'Chequeo previo de paquetes';
@@ -361,7 +415,7 @@ async function correr(caso) {
       const resumen = Array.isArray(r) ? (r[0] ? JSON.stringify(r[0]).slice(0, 150) : '(0 filas)')
                                        : JSON.stringify(r).slice(0, 150);
       console.log(`  ${c.gris('herramienta')} ${c.gris(llamada.t)} ${c.gris('→ ' + resumen)}`);
-      if (llamada.revisar) llamada.revisar(r, anota);
+      if (llamada.revisar) llamada.revisar(r, anota, llamada.args || {});
     }
 
     (t.globos || []).forEach(g => mensaje('agente', g));
@@ -386,6 +440,26 @@ async function limpiar(casos) {
 
 async function main() {
   const casos = require('./casos-prueba.js');
+
+  // Cuantos salones entran en la tanda se le pregunta a la base, no se escribe
+  // en los casos, y va POR AFORO: la tanda solo manda los salones que tienen
+  // precio para esa cantidad de personas. Mismo criterio que usa la tanda de
+  // verdad -- sede con medio activo Y con precio para ese aforo.
+  //
+  // Asi, catalogar una sede nueva no pone en rojo once casos con un error que
+  // habla de piezas y no de sedes, que es lo que paso el 2026-08-29 al entrar
+  // el video de Casa 5.
+  const filas = await consulta(
+    `select p.capacidad_invitados as aforo,
+            array_agg(distinct s.nombre_sede order by s.nombre_sede) as nombres
+       from sedes s
+       join precios_sedes p on p.sede_id = s.id_sede
+      where exists (select 1 from medios m where m.sede_id = s.id_sede and m.activo)
+      group by 1 order by 1`
+  );
+  casos.catalogo.nombresPorAforo = Object.fromEntries(filas.map(f => [f.aforo, f.nombres]));
+  console.log(c.gris('  catalogo: ' + filas.map(f => `${f.aforo}→${f.nombres.length}`).join(' ')));
+
   const filtro = process.argv[2] ? [casos[Number(process.argv[2]) - 1]] : casos;
   await limpiar(filtro);
   try {

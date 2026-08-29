@@ -1,11 +1,5 @@
 {
-  "id": "fWtN6n18kbcYyAga",
   "name": "Christian Sierra — Seguimiento automático",
-  "description": null,
-  "active": false,
-  "activeVersionId": null,
-  "versionCounter": 11,
-  "sourceWorkflowId": null,
   "nodes": [
     {
       "parameters": {
@@ -294,7 +288,6 @@
       ]
     }
   },
-  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1"
   },
@@ -308,5 +301,5 @@
       ]
     }
   },
-  "activeVersion": null
+  "pinData": {}
 }
