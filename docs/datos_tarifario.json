@@ -1,0 +1,2860 @@
+{
+  "sedes": [
+    {
+      "id_sede": "5612f52f-ba73-47ea-9c0a-0588da124731",
+      "nombre_sede": "Casa 4",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "163ec079-ebf9-4f87-bf7a-7010b22a3da4",
+      "nombre_sede": "Casa 5",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "49e3aa1d-e66f-47b8-9c04-7422a2095a97",
+      "nombre_sede": "Casa 74",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "61212907-d8b7-4310-aed3-d9612eecf328",
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "id_sede": "e91a057b-1216-46f8-a6a8-38a23dc8c7a9",
+      "nombre_sede": "Gran Salón",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "f396ca38-8f13-4a8c-9f17-ab2d40420372",
+      "nombre_sede": "Hacienda El Talismán",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "7a4ad884-a773-4e5e-978b-8ca5d3a48e66",
+      "nombre_sede": "Mansión Vallano",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "5447c790-9897-417d-aedb-2314ed1e2ab6",
+      "nombre_sede": "Marquez De Loyola",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "06f42cab-858a-4978-b655-5e32b29b0609",
+      "nombre_sede": "Orquideorama",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "cca87a9b-d0fa-446d-b1c1-e20f64a8c421",
+      "nombre_sede": "Pilas Premium",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "3ab78501-0860-40fb-a52d-39b3e139c16e",
+      "nombre_sede": "Sawa",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "7eccad42-3848-4535-9ef1-44a1fe1999c7",
+      "nombre_sede": "Sede Granada Gold",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "id_sede": "e442ea2b-b6ac-46f6-97ea-6ff4144e6124",
+      "nombre_sede": "Sede Norte",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "id_sede": "9e751524-7542-4554-831a-344c52b9aa89",
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "id_sede": "bf6bb57f-942f-4c17-b662-b0a9149789a6",
+      "nombre_sede": "Valdemoro",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    }
+  ],
+  "porAforo": {
+    "50": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 50,
+        "precio_total": "6500000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 50,
+        "precio_total": "7000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 50,
+        "precio_total": "7000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 50,
+        "precio_total": "8500000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 50,
+        "precio_total": "9500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 50,
+        "precio_total": "11800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 50,
+        "precio_total": "11800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 50,
+        "precio_total": "11800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 50,
+        "precio_total": "11800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 50,
+        "precio_total": "11800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 50,
+        "precio_total": "11800000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 50,
+        "precio_total": "11800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 50,
+        "precio_total": "12000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "60": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 60,
+        "precio_total": "6900000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 60,
+        "precio_total": "7400000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 60,
+        "precio_total": "7500000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 60,
+        "precio_total": "9000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 60,
+        "precio_total": "10000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 60,
+        "precio_total": "12600000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 60,
+        "precio_total": "12600000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 60,
+        "precio_total": "12600000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 60,
+        "precio_total": "12600000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 60,
+        "precio_total": "12600000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 60,
+        "precio_total": "12600000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 60,
+        "precio_total": "12600000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 60,
+        "precio_total": "12700000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "70": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 70,
+        "precio_total": "7300000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 70,
+        "precio_total": "7800000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 70,
+        "precio_total": "8000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 70,
+        "precio_total": "9500000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 70,
+        "precio_total": "10500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 70,
+        "precio_total": "13200000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 70,
+        "precio_total": "13200000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 70,
+        "precio_total": "13200000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 70,
+        "precio_total": "13200000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 70,
+        "precio_total": "13200000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 70,
+        "precio_total": "13200000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 70,
+        "precio_total": "13200000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 70,
+        "precio_total": "13400000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "80": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 80,
+        "precio_total": "7700000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 80,
+        "precio_total": "8200000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 80,
+        "precio_total": "8500000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 80,
+        "precio_total": "10000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 80,
+        "precio_total": "11000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 80,
+        "precio_total": "13800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 80,
+        "precio_total": "13800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 80,
+        "precio_total": "13800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 80,
+        "precio_total": "13800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 80,
+        "precio_total": "13800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 80,
+        "precio_total": "13800000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 80,
+        "precio_total": "13800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 80,
+        "precio_total": "14100000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "90": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 90,
+        "precio_total": "8100000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 90,
+        "precio_total": "8600000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 90,
+        "precio_total": "9000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 90,
+        "precio_total": "10500000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 90,
+        "precio_total": "11500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 90,
+        "precio_total": "14400000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 90,
+        "precio_total": "14400000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 90,
+        "precio_total": "14400000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 90,
+        "precio_total": "14400000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 90,
+        "precio_total": "14400000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 90,
+        "precio_total": "14400000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 90,
+        "precio_total": "14400000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 90,
+        "precio_total": "14800000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "100": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 100,
+        "precio_total": "8500000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 100,
+        "precio_total": "9000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 100,
+        "precio_total": "9500000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 100,
+        "precio_total": "11000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 100,
+        "precio_total": "12000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 100,
+        "precio_total": "13000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 100,
+        "precio_total": "13000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 100,
+        "precio_total": "15000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 100,
+        "precio_total": "15000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 100,
+        "precio_total": "15000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 100,
+        "precio_total": "15000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 100,
+        "precio_total": "15000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 100,
+        "precio_total": "15000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 100,
+        "precio_total": "15000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 100,
+        "precio_total": "15500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "110": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 110,
+        "precio_total": "9300000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 110,
+        "precio_total": "9800000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 110,
+        "precio_total": "10300000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 110,
+        "precio_total": "11800000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 110,
+        "precio_total": "13000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 110,
+        "precio_total": "14000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 110,
+        "precio_total": "14000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 110,
+        "precio_total": "16000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 110,
+        "precio_total": "16000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 110,
+        "precio_total": "16000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 110,
+        "precio_total": "16000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 110,
+        "precio_total": "16000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 110,
+        "precio_total": "16000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 110,
+        "precio_total": "16000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 110,
+        "precio_total": "16500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "120": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 120,
+        "precio_total": "10000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 120,
+        "precio_total": "10600000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 120,
+        "precio_total": "11100000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 120,
+        "precio_total": "12400000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 120,
+        "precio_total": "14000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 120,
+        "precio_total": "15000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 120,
+        "precio_total": "15000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 120,
+        "precio_total": "17000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 120,
+        "precio_total": "17000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 120,
+        "precio_total": "17000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 120,
+        "precio_total": "17000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 120,
+        "precio_total": "17000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 120,
+        "precio_total": "17000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 120,
+        "precio_total": "17000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 120,
+        "precio_total": "17500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "130": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 130,
+        "precio_total": "10800000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 130,
+        "precio_total": "11400000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 130,
+        "precio_total": "11900000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 130,
+        "precio_total": "13200000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 130,
+        "precio_total": "15000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 130,
+        "precio_total": "16000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 130,
+        "precio_total": "16000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 130,
+        "precio_total": "18000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 130,
+        "precio_total": "18000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 130,
+        "precio_total": "18000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 130,
+        "precio_total": "18000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 130,
+        "precio_total": "18000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 130,
+        "precio_total": "18000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 130,
+        "precio_total": "18000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 130,
+        "precio_total": "18500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "140": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 140,
+        "precio_total": "11500000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 140,
+        "precio_total": "12200000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 140,
+        "precio_total": "12400000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 140,
+        "precio_total": "14000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 140,
+        "precio_total": "16000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 140,
+        "precio_total": "17000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 140,
+        "precio_total": "17000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 140,
+        "precio_total": "19000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 140,
+        "precio_total": "19000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 140,
+        "precio_total": "19000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 140,
+        "precio_total": "19000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 140,
+        "precio_total": "19000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 140,
+        "precio_total": "19000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 140,
+        "precio_total": "19000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 140,
+        "precio_total": "19500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "150": [
+      {
+        "nombre_sede": "Sede Sur 66 Mundo Foto",
+        "capacidad_invitados": 150,
+        "precio_total": "12000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sede Granada Gold",
+        "capacidad_invitados": 150,
+        "precio_total": "13000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Sede Norte",
+        "capacidad_invitados": 150,
+        "precio_total": "13000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 150,
+        "precio_total": "14800000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 150,
+        "precio_total": "17000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 150,
+        "precio_total": "18000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 150,
+        "precio_total": "18000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 150,
+        "precio_total": "20000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 74",
+        "capacidad_invitados": 150,
+        "precio_total": "20000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 150,
+        "precio_total": "20000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Mansión Vallano",
+        "capacidad_invitados": 150,
+        "precio_total": "20000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Marquez De Loyola",
+        "capacidad_invitados": 150,
+        "precio_total": "20000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 150,
+        "precio_total": "20000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 150,
+        "precio_total": "20000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 5",
+        "capacidad_invitados": 150,
+        "precio_total": "20500000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "160": [
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 160,
+        "precio_total": "15600000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 160,
+        "precio_total": "18000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 160,
+        "precio_total": "19000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 160,
+        "precio_total": "19000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 160,
+        "precio_total": "21000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 160,
+        "precio_total": "21000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 160,
+        "precio_total": "21000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 160,
+        "precio_total": "21000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "170": [
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 170,
+        "precio_total": "16400000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 170,
+        "precio_total": "19000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 170,
+        "precio_total": "20000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 170,
+        "precio_total": "20000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 170,
+        "precio_total": "22000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 170,
+        "precio_total": "22000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 170,
+        "precio_total": "22000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 170,
+        "precio_total": "22000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "180": [
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 180,
+        "precio_total": "17200000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 180,
+        "precio_total": "20000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 180,
+        "precio_total": "21000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 180,
+        "precio_total": "21000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 180,
+        "precio_total": "23000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 180,
+        "precio_total": "23000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 180,
+        "precio_total": "23000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 180,
+        "precio_total": "23000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "190": [
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 190,
+        "precio_total": "18000000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 190,
+        "precio_total": "21000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 190,
+        "precio_total": "22000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 190,
+        "precio_total": "22000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 190,
+        "precio_total": "24000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 190,
+        "precio_total": "24000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 190,
+        "precio_total": "24000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 190,
+        "precio_total": "24000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ],
+    "200": [
+      {
+        "nombre_sede": "Pilas Premium",
+        "capacidad_invitados": 200,
+        "precio_total": "18800000",
+        "tipo_espacio": "cerrado",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa Christian's Ciudad Jardín",
+        "capacidad_invitados": 200,
+        "precio_total": "22000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": true
+      },
+      {
+        "nombre_sede": "Gran Salón",
+        "capacidad_invitados": 200,
+        "precio_total": "23000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Valdemoro",
+        "capacidad_invitados": 200,
+        "precio_total": "23000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Casa 4",
+        "capacidad_invitados": 200,
+        "precio_total": "25000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Hacienda El Talismán",
+        "capacidad_invitados": 200,
+        "precio_total": "25000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Orquideorama",
+        "capacidad_invitados": 200,
+        "precio_total": "25000000",
+        "tipo_espacio": null,
+        "incluye_pista_cristal": false
+      },
+      {
+        "nombre_sede": "Sawa",
+        "capacidad_invitados": 200,
+        "precio_total": "25000000",
+        "tipo_espacio": "campestre",
+        "incluye_pista_cristal": false
+      }
+    ]
+  },
+  "precios": [
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 50,
+      "precio_total": "6500000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 50,
+      "precio_total": "7000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 50,
+      "precio_total": "7000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 50,
+      "precio_total": "8500000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 50,
+      "precio_total": "9500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 50,
+      "precio_total": "11800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 50,
+      "precio_total": "11800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 50,
+      "precio_total": "11800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 50,
+      "precio_total": "11800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 50,
+      "precio_total": "11800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 50,
+      "precio_total": "11800000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 50,
+      "precio_total": "11800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 50,
+      "precio_total": "12000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 60,
+      "precio_total": "6900000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 60,
+      "precio_total": "7400000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 60,
+      "precio_total": "7500000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 60,
+      "precio_total": "9000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 60,
+      "precio_total": "10000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 60,
+      "precio_total": "12600000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 60,
+      "precio_total": "12600000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 60,
+      "precio_total": "12600000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 60,
+      "precio_total": "12600000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 60,
+      "precio_total": "12600000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 60,
+      "precio_total": "12600000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 60,
+      "precio_total": "12600000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 60,
+      "precio_total": "12700000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 70,
+      "precio_total": "7300000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 70,
+      "precio_total": "7800000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 70,
+      "precio_total": "8000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 70,
+      "precio_total": "9500000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 70,
+      "precio_total": "10500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 70,
+      "precio_total": "13200000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 70,
+      "precio_total": "13200000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 70,
+      "precio_total": "13200000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 70,
+      "precio_total": "13200000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 70,
+      "precio_total": "13200000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 70,
+      "precio_total": "13200000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 70,
+      "precio_total": "13200000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 70,
+      "precio_total": "13400000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 80,
+      "precio_total": "7700000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 80,
+      "precio_total": "8200000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 80,
+      "precio_total": "8500000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 80,
+      "precio_total": "10000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 80,
+      "precio_total": "11000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 80,
+      "precio_total": "13800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 80,
+      "precio_total": "13800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 80,
+      "precio_total": "13800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 80,
+      "precio_total": "13800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 80,
+      "precio_total": "13800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 80,
+      "precio_total": "13800000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 80,
+      "precio_total": "13800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 80,
+      "precio_total": "14100000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 90,
+      "precio_total": "8100000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 90,
+      "precio_total": "8600000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 90,
+      "precio_total": "9000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 90,
+      "precio_total": "10500000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 90,
+      "precio_total": "11500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 90,
+      "precio_total": "14400000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 90,
+      "precio_total": "14400000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 90,
+      "precio_total": "14400000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 90,
+      "precio_total": "14400000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 90,
+      "precio_total": "14400000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 90,
+      "precio_total": "14400000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 90,
+      "precio_total": "14400000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 90,
+      "precio_total": "14800000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 100,
+      "precio_total": "8500000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 100,
+      "precio_total": "9000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 100,
+      "precio_total": "9500000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 100,
+      "precio_total": "11000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 100,
+      "precio_total": "12000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 100,
+      "precio_total": "13000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 100,
+      "precio_total": "13000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 100,
+      "precio_total": "15000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 100,
+      "precio_total": "15000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 100,
+      "precio_total": "15000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 100,
+      "precio_total": "15000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 100,
+      "precio_total": "15000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 100,
+      "precio_total": "15000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 100,
+      "precio_total": "15000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 100,
+      "precio_total": "15500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 110,
+      "precio_total": "9300000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 110,
+      "precio_total": "9800000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 110,
+      "precio_total": "10300000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 110,
+      "precio_total": "11800000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 110,
+      "precio_total": "13000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 110,
+      "precio_total": "14000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 110,
+      "precio_total": "14000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 110,
+      "precio_total": "16000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 110,
+      "precio_total": "16000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 110,
+      "precio_total": "16000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 110,
+      "precio_total": "16000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 110,
+      "precio_total": "16000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 110,
+      "precio_total": "16000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 110,
+      "precio_total": "16000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 110,
+      "precio_total": "16500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 120,
+      "precio_total": "10000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 120,
+      "precio_total": "10600000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 120,
+      "precio_total": "11100000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 120,
+      "precio_total": "12400000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 120,
+      "precio_total": "14000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 120,
+      "precio_total": "15000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 120,
+      "precio_total": "15000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 120,
+      "precio_total": "17000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 120,
+      "precio_total": "17000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 120,
+      "precio_total": "17000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 120,
+      "precio_total": "17000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 120,
+      "precio_total": "17000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 120,
+      "precio_total": "17000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 120,
+      "precio_total": "17000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 120,
+      "precio_total": "17500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 130,
+      "precio_total": "10800000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 130,
+      "precio_total": "11400000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 130,
+      "precio_total": "11900000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 130,
+      "precio_total": "13200000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 130,
+      "precio_total": "15000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 130,
+      "precio_total": "16000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 130,
+      "precio_total": "16000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 130,
+      "precio_total": "18000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 130,
+      "precio_total": "18000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 130,
+      "precio_total": "18000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 130,
+      "precio_total": "18000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 130,
+      "precio_total": "18000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 130,
+      "precio_total": "18000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 130,
+      "precio_total": "18000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 130,
+      "precio_total": "18500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 140,
+      "precio_total": "11500000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 140,
+      "precio_total": "12200000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 140,
+      "precio_total": "12400000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 140,
+      "precio_total": "14000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 140,
+      "precio_total": "16000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 140,
+      "precio_total": "17000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 140,
+      "precio_total": "17000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 140,
+      "precio_total": "19000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 140,
+      "precio_total": "19000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 140,
+      "precio_total": "19000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 140,
+      "precio_total": "19000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 140,
+      "precio_total": "19000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 140,
+      "precio_total": "19000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 140,
+      "precio_total": "19000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 140,
+      "precio_total": "19500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Sur 66 Mundo Foto",
+      "capacidad_invitados": 150,
+      "precio_total": "12000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sede Granada Gold",
+      "capacidad_invitados": 150,
+      "precio_total": "13000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Sede Norte",
+      "capacidad_invitados": 150,
+      "precio_total": "13000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 150,
+      "precio_total": "14800000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 150,
+      "precio_total": "17000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 150,
+      "precio_total": "18000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 150,
+      "precio_total": "18000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 150,
+      "precio_total": "20000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 74",
+      "capacidad_invitados": 150,
+      "precio_total": "20000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 150,
+      "precio_total": "20000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Mansión Vallano",
+      "capacidad_invitados": 150,
+      "precio_total": "20000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Marquez De Loyola",
+      "capacidad_invitados": 150,
+      "precio_total": "20000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 150,
+      "precio_total": "20000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 150,
+      "precio_total": "20000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 5",
+      "capacidad_invitados": 150,
+      "precio_total": "20500000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 160,
+      "precio_total": "15600000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 160,
+      "precio_total": "18000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 160,
+      "precio_total": "19000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 160,
+      "precio_total": "19000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 160,
+      "precio_total": "21000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 160,
+      "precio_total": "21000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 160,
+      "precio_total": "21000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 160,
+      "precio_total": "21000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 170,
+      "precio_total": "16400000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 170,
+      "precio_total": "19000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 170,
+      "precio_total": "20000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 170,
+      "precio_total": "20000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 170,
+      "precio_total": "22000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 170,
+      "precio_total": "22000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 170,
+      "precio_total": "22000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 170,
+      "precio_total": "22000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 180,
+      "precio_total": "17200000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 180,
+      "precio_total": "20000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 180,
+      "precio_total": "21000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 180,
+      "precio_total": "21000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 180,
+      "precio_total": "23000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 180,
+      "precio_total": "23000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 180,
+      "precio_total": "23000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 180,
+      "precio_total": "23000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 190,
+      "precio_total": "18000000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 190,
+      "precio_total": "21000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 190,
+      "precio_total": "22000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 190,
+      "precio_total": "22000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 190,
+      "precio_total": "24000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 190,
+      "precio_total": "24000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 190,
+      "precio_total": "24000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 190,
+      "precio_total": "24000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Pilas Premium",
+      "capacidad_invitados": 200,
+      "precio_total": "18800000",
+      "tipo_espacio": "cerrado",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa Christian's Ciudad Jardín",
+      "capacidad_invitados": 200,
+      "precio_total": "22000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": true
+    },
+    {
+      "nombre_sede": "Gran Salón",
+      "capacidad_invitados": 200,
+      "precio_total": "23000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Valdemoro",
+      "capacidad_invitados": 200,
+      "precio_total": "23000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Casa 4",
+      "capacidad_invitados": 200,
+      "precio_total": "25000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Hacienda El Talismán",
+      "capacidad_invitados": 200,
+      "precio_total": "25000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Orquideorama",
+      "capacidad_invitados": 200,
+      "precio_total": "25000000",
+      "tipo_espacio": null,
+      "incluye_pista_cristal": false
+    },
+    {
+      "nombre_sede": "Sawa",
+      "capacidad_invitados": 200,
+      "precio_total": "25000000",
+      "tipo_espacio": "campestre",
+      "incluye_pista_cristal": false
+    }
+  ]
+}
