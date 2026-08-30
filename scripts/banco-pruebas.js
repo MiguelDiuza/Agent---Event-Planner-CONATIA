@@ -159,6 +159,19 @@ const { DateTime } = cargarLuxon();
 // `probar-fragmentos.js`, para que las dos pruebas no puedan discrepar.
 const fragmentos = require('./simular-fragmentos.js');
 
+// Desde el 2026-08-30, `Calcular Ventana` y `Validar Datos` exigen que el
+// agente diga con que dia de la semana le nombro la fecha al cliente, y
+// rechazan la llamada si ese dia no es el de la fecha. Los casos de este banco
+// no van de eso -- van de la conversacion -- asi que salvo que un caso ponga
+// `dia_semana` a proposito, se le pasa el correcto y la comprobacion no
+// estorba. El dia equivocado se prueba con el reloj congelado en el bloque 10
+// de `probar-telefono.js`.
+const DIAS_ES = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const diaDeLaSemana = (fecha) => {
+  const d = DateTime.fromFormat(String(fecha ?? ''), 'yyyy-MM-dd', { zone: 'America/Bogota' });
+  return d.isValid ? DIAS_ES[d.weekday - 1] : '';   // fecha ilegible: que la rechace el nodo, no esto
+};
+
 function correrCodigo(wf, nombre, entrada) {
   const n = wf.nodes.find(x => x.name === nombre);
   if (!n) throw new Error('no existe el nodo ' + nombre);
@@ -303,7 +316,8 @@ const herramientas = {
   // Google Calendar.
   separar_fecha_evento: async (ctx, a) => {
     const v = correrCodigo(subSeparar, 'Validar Datos', {
-      nombre_sede: a.nombre_sede, fecha: a.fecha, nombre_cliente: a.nombre_cliente,
+      nombre_sede: a.nombre_sede, fecha: a.fecha, dia_semana: a.dia_semana ?? diaDeLaSemana(a.fecha),
+      nombre_cliente: a.nombre_cliente,
       telefono: ctx.telefono, telefono_contacto: a.telefono_contacto,
     });
     if (!v.valido) return [{ separada: false, estado_resultado: 'datos_invalidos', mensaje: v.mensaje }];
@@ -324,7 +338,8 @@ const herramientas = {
   // corra, que es justo lo que no queremos de una prueba de conversaciones.
   agendar_cita: (ctx, a) => {
     const v = correrCodigo(subCita, 'Calcular Ventana', {
-      tipo_cita: a.tipo_cita, fecha: a.fecha, hora: a.hora, detalle: a.detalle || '',
+      tipo_cita: a.tipo_cita, fecha: a.fecha, hora: a.hora,
+      dia_semana: a.dia_semana ?? diaDeLaSemana(a.fecha), detalle: a.detalle || '',
       telefono: ctx.telefono, nombre: a.nombre || ctx.perfil || '',
       telefono_contacto: a.telefono_contacto,
     });

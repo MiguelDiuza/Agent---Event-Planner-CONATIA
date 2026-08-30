@@ -69,9 +69,10 @@ function funcionesDe(rutaWorkflow, nombreNodo, queSacar) {
 }
 
 const cita = funcionesDe('n8n/workflow-agendar-cita.json', 'Calcular Ventana',
-  ['revisarTelefonoCo', 'pedirTelefonoOtraVez']);
+  ['revisarTelefonoCo', 'pedirTelefonoOtraVez', 'revisarDiaSemana', 'preguntarPorElDia']);
 const reserva = funcionesDe('n8n/workflow-separar-fecha.json', 'Validar Datos',
-  ['revisarTelefonoCo', 'pedirTelefonoOtraVez', 'revisarFechaEvento', 'preguntarPorLaFecha']);
+  ['revisarTelefonoCo', 'pedirTelefonoOtraVez', 'revisarFechaEvento', 'preguntarPorLaFecha',
+   'revisarDiaSemana', 'preguntarPorElDia']);
 
 // ---------------------------------------------------------------------------
 // Los casos. `e164` en null significa "tiene que rechazarlo".
@@ -230,7 +231,7 @@ function correrNodoEntero(ruta, nombre, entrada) {
 
 function correrCalcularVentana(cambios) {
   return correrNodoEntero('n8n/workflow-agendar-cita.json', 'Calcular Ventana', {
-    tipo_cita: 'visita_sede', fecha: '2026-08-28', hora: '15:00', detalle: 'prueba',
+    tipo_cita: 'visita_sede', fecha: '2026-08-28', hora: '15:00', dia_semana: 'viernes', detalle: 'prueba',
     telefono: 'test-telefono', nombre: 'Cliente Prueba', telefono_contacto: '3001234567',
     ...cambios,
   });
@@ -238,7 +239,7 @@ function correrCalcularVentana(cambios) {
 
 function correrValidarDatos(cambios) {
   return correrNodoEntero('n8n/workflow-separar-fecha.json', 'Validar Datos', {
-    nombre_sede: "Casa Christian's Ciudad Jardín", fecha: '2026-12-20',
+    nombre_sede: "Casa Christian's Ciudad Jardín", fecha: '2026-12-20', dia_semana: 'domingo',
     nombre_cliente: 'Cliente Prueba', telefono: 'test-telefono',
     telefono_contacto: '3001234567',
     ...cambios,
@@ -293,6 +294,125 @@ titulo('9. El número de WhatsApp: cuándo se CONFIRMA y cuándo se pide');
   ok(/EL NÚMERO NO SE PIDE: SE CONFIRMA/.test(sm),
      'y le prohíbe pedirlo cuando la ficha aún no lo tiene, que era el fallo');
 }
+
+// ---------------------------------------------------------------------------
+// El día de la semana
+// ---------------------------------------------------------------------------
+titulo('10. El día de la semana que dijo el agente tiene que ser el de la fecha');
+{
+  // EL CASO REAL, tal como salió en producción. Un domingo el cliente pidió
+  // "mañana a las 4". El agente ofreció "el lunes 1 de septiembre", el cliente
+  // dijo que sí, y le agendaron el MARTES 1 -- porque el 1 de septiembre de
+  // 2026 es martes y el lunes era el 31 de agosto. Confirmó bien y agendó bien:
+  // el que estaba mal era el día que le había prometido.
+  const r = cita.revisarDiaSemana('lunes', DateTime.fromISO('2026-09-01', { zone: ZONA }));
+  ok(r.ok === false && r.motivo === 'no_casa', 'lunes + 2026-09-01: no casa (el 1 es martes)', JSON.stringify(r));
+  ok(r.alterna_iso === '2026-08-31',
+     'y el lunes que estaba al lado es el 31 de agosto, que es el que pidió el cliente', String(r.alterna_iso));
+
+  const m = cita.preguntarPorElDia(r);
+  ok(/lunes 31 de agosto de 2026/.test(m) && /martes 1 de septiembre de 2026/.test(m),
+     'el texto para el agente lleva las DOS fechas, sin elegir por él');
+  ok(!/se equivoc|error|invalid/i.test(m), 'y en ningún momento culpa al cliente', m);
+
+  // El nodo entero: no se agenda nada y no se llega a consultar la agenda.
+  const salida = correrCalcularVentana({ fecha: '2026-09-01', hora: '16:00', dia_semana: 'lunes' });
+  ok(salida.valido === false, 'el nodo corta: no llega a Leer Agenda ni a Crear Cita');
+  ok(/NO HICE NADA CON ESA FECHA/.test(salida.mensaje), 'y se lo dice al agente con todas las letras', salida.mensaje);
+
+  // Y el día correcto pasa sin ruido.
+  const bien = correrCalcularVentana({ fecha: '2026-09-01', hora: '16:00', dia_semana: 'martes' });
+  ok(bien.valido === true, 'con el día correcto sí pasa');
+  ok(bien.fuera_horario === null, 'y sin marca de fuera de horario: martes 4 p.m. es horario de atención');
+}
+
+titulo('11. Cómo se escribe el día no es el error que se busca');
+{
+  const dia = (s, f) => cita.revisarDiaSemana(s, DateTime.fromISO(f, { zone: ZONA }));
+  const casos = [
+    ['miércoles', '2026-09-02', true,  'con tilde'],
+    ['miercoles', '2026-09-02', true,  'sin tilde'],
+    ['Miércoles', '2026-09-02', true,  'con mayúscula'],
+    ['el sábado', '2026-09-05', true,  'con artículo'],
+    [' martes, ', '2026-09-01', true,  'con espacios y coma'],
+    ['domingo',   '2026-09-06', true,  'domingo: que no se atienda lo dice otro chequeo, no este'],
+    ['jueves',    '2026-09-02', false, 'jueves cuando es miércoles'],
+    ['mañana',    '2026-09-02', false, 'no es un día de la semana'],
+    ['',          '2026-09-02', false, 'no lo mandó'],
+  ];
+  for (const [s, f, pasa, nota] of casos) {
+    const r = dia(s, f);
+    ok(r.ok === pasa,
+       JSON.stringify(s).padEnd(13) + ' + ' + f + ' -> ' + (pasa ? 'casa' : 'se rechaza') + '  ' + c.gris(nota),
+       JSON.stringify(r));
+  }
+  ok(dia('', '2026-09-02').motivo === 'no_dio', 'faltar y ser ilegible son motivos distintos');
+  ok(dia('mañana', '2026-09-02').motivo === 'ilegible', 'y el ilegible dice qué palabras acepta');
+  ok(/lunes, martes, miercoles/.test(cita.preguntarPorElDia(dia('mañana', '2026-09-02'))),
+     'listándolas en el mensaje');
+}
+
+titulo('12. Se ofrece el día nombrado que está MÁS CERCA, no el de la semana siguiente');
+{
+  // 2026-09-02 es miércoles. Si el agente dijo "lunes" hablaba del 31, no del 7:
+  // ofrecerle el de la semana siguiente sería mandar al cliente seis días lejos
+  // de lo que pidió.
+  const casos = [
+    ['jueves',  '2026-09-03', 'un día adelante'],
+    ['viernes', '2026-09-04', 'dos adelante'],
+    ['sabado',  '2026-09-05', 'tres adelante: todavía gana el de adelante'],
+    ['domingo', '2026-08-30', 'cuatro adelante son tres atrás: gana el de atrás'],
+    ['lunes',   '2026-08-31', 'dos atrás'],
+    ['martes',  '2026-09-01', 'un día atrás'],
+  ];
+  for (const [s, esperado, nota] of casos) {
+    const r = cita.revisarDiaSemana(s, DateTime.fromISO('2026-09-02', { zone: ZONA }));
+    ok(r.alterna_iso === esperado, s.padEnd(8) + ' del miércoles 2 -> ' + esperado + '  ' + c.gris(nota),
+       String(r.alterna_iso));
+  }
+}
+
+titulo('13. Las DOS copias del validador de día dicen exactamente lo mismo');
+{
+  const CASOS = [
+    ['lunes', '2026-09-01'], ['martes', '2026-09-01'], ['miércoles', '2026-09-02'],
+    ['jueves', '2026-09-02'], ['domingo', '2026-08-30'], ['sabado', '2026-09-05'],
+    ['mañana', '2026-09-02'], ['', '2026-09-02'], ['el viernes', '2026-09-04'],
+  ];
+  const veredicto = (mod, s, d) => {
+    const r = mod.revisarDiaSemana(s, d);
+    return JSON.stringify(r) + ' || ' + (r.ok ? '' : mod.preguntarPorElDia(r));
+  };
+  const distintos = [];
+  for (const [s, f] of CASOS) {
+    const d = DateTime.fromISO(f, { zone: ZONA });
+    const a = veredicto(cita, s, d), b = veredicto(reserva, s, d);
+    if (a !== b) distintos.push(JSON.stringify(s) + ' + ' + f + '\n      agendar_cita:  ' + a + '\n      separar_fecha: ' + b);
+  }
+  ok(distintos.length === 0,
+     'los ' + CASOS.length + ' casos dan el mismo veredicto y el mismo texto en agendar_cita y en separar_fecha_evento',
+     distintos.join('\n    '));
+}
+
+titulo('14. separar_fecha_evento tampoco aparta un día que no es el que oyó el cliente');
+{
+  // 2026-12-20 es domingo. Si el agente le dijo "sábado 20 de diciembre", el
+  // bloqueo caería en el día equivocado del calendario de la empresa y nadie lo
+  // vería hasta el día del evento.
+  const malo = correrValidarDatos({ fecha: '2026-12-20', dia_semana: 'sabado' });
+  ok(malo.valido === false, 'sábado + 2026-12-20 (que es domingo): no se aparta nada');
+  ok(/sábado 19 de diciembre de 2026/.test(malo.mensaje),
+     'y le ofrece el sábado 19, que es el que estaba al lado', malo.mensaje);
+
+  const bueno = correrValidarDatos({ fecha: '2026-12-20', dia_semana: 'domingo' });
+  ok(bueno.valido === true, 'con el día correcto sí aparta');
+
+  const falta = correrValidarDatos({ fecha: '2026-12-20', dia_semana: '' });
+  ok(falta.valido === false && /Falta .dia_semana./.test(falta.mensaje),
+     'y sin el dato tampoco: la comprobación no se puede saltar callando', falta.mensaje);
+}
+
+// ---------------------------------------------------------------------------
 
 console.log('\n' + (fallos ? c.rojo(`${fallos} fallo(s)`) : c.verde('sin fallos')) + '\n');
 process.exit(fallos ? 1 : 0);

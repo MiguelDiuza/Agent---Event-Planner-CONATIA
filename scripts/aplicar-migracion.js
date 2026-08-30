@@ -80,10 +80,11 @@ async function aplicar(archivo) {
   const arg = process.argv[2];
   if (!arg || arg === '--estado') {
     const limpio = await estado();
-    process.exit(limpio ? 0 : 1);
+    process.exitCode = limpio ? 0 : 1;
+    return;
   }
   await aplicar(arg);
 })().catch((e) => {
   console.error('FALLÓ: ' + e.message);
-  process.exit(1);
+  process.exitCode = 1;
 });

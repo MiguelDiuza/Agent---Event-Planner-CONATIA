@@ -71,10 +71,19 @@ const evento = (fecha, desde, minutos, titulo = 'ocupado') => {
            end: { dateTime: ini.plus({ minutes: minutos }).toISO() } };
 };
 
+// El día de la semana que le corresponde de verdad a una fecha. Desde el
+// 2026-08-30 `Calcular Ventana` exige que el agente diga con qué día nombró la
+// fecha, y lo rechaza si no casan. Los casos de ESTE archivo son de horarios y
+// de choques, no de esa comprobación -- así que por defecto se le pasa el día
+// correcto y la comprobación no estorba. El día equivocado se prueba aparte,
+// en el bloque 10 de `probar-telefono.js`, que es donde vive ese validador.
+const DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const diaDe = (fecha) => DIAS[DateTime.fromFormat(fecha, 'yyyy-MM-dd', { zone: ZONA }).weekday - 1];
+
 // Corre el par de nodos como los corre el workflow.
-function agendar({ tipo_cita = 'visita_sede', fecha, hora, agenda = [] }) {
+function agendar({ tipo_cita = 'visita_sede', fecha, hora, dia_semana, agenda = [] }) {
   const ventana = correrNodo(codigo('Calcular Ventana'), {
-    tipo_cita, fecha, hora, detalle: 'prueba',
+    tipo_cita, fecha, hora, dia_semana: dia_semana ?? diaDe(fecha), detalle: 'prueba',
     telefono: 'test-agenda', nombre: 'Cliente Prueba', telefono_contacto: '3001234567',
   })[0].json;
   if (!ventana.valido) return { ...ventana, ocupado: true, libres: [] };
@@ -198,19 +207,19 @@ titulo('7. Día lleno: pasa a los días siguientes en vez de inventar');
 titulo('8. Los rechazos que no son de tiempo siguen cortando sin consultar la agenda');
 {
   const sinNombre = correrNodo(codigo('Calcular Ventana'), {
-    tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:00',
+    tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:00', dia_semana: 'viernes',
     detalle: '', telefono: 't', nombre: '', telefono_contacto: '3001234567',
   })[0].json;
   ok(sinNombre.valido === false && /nombre/i.test(sinNombre.mensaje), 'sin nombre: rechazo directo');
 
   const sinTel = correrNodo(codigo('Calcular Ventana'), {
-    tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:00',
+    tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:00', dia_semana: 'viernes',
     detalle: '', telefono: 't', nombre: 'Ana', telefono_contacto: '',
   })[0].json;
   ok(sinTel.valido === false && /numero/i.test(sinTel.mensaje), 'sin número de contacto: rechazo directo');
 
   const tipoMalo = correrNodo(codigo('Calcular Ventana'), {
-    tipo_cita: 'cafecito', fecha: '2026-08-28', hora: '15:00',
+    tipo_cita: 'cafecito', fecha: '2026-08-28', hora: '15:00', dia_semana: 'viernes',
     detalle: '', telefono: 't', nombre: 'Ana', telefono_contacto: '3001234567',
   })[0].json;
   ok(tipoMalo.valido === false && /tipo_cita invalido/.test(tipoMalo.mensaje), 'tipo inválido: rechazo directo');
