@@ -42,6 +42,7 @@ const ARRANCAN = new Set([
 // Nodos que se enganchan al agente por un puerto que no es `main`.
 const DEL_AGENTE = new Set([
   '@n8n/n8n-nodes-langchain.lmChatGoogleGemini',
+  '@n8n/n8n-nodes-langchain.lmChatOpenAi',
   '@n8n/n8n-nodes-langchain.memoryPostgresChat',
   '@n8n/n8n-nodes-langchain.toolWorkflow',
   'n8n-nodes-base.postgresTool',
