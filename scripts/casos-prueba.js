@@ -175,7 +175,7 @@ module.exports = [
           revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llego: ' + r[0].resultado.slice(0, 60)); } }],
         globos: [
           '¡Excelente elección, Sofía! Casa Christian\'s Ciudad Jardín es espectacular ✨ Te confirmo que el 10 de diciembre está libre en esa sede 😁',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
@@ -235,7 +235,7 @@ module.exports = [
           args: { nombre_sede: 'Sede Sur 66 Mundo Foto', fecha: '2027-05-15' } }],
         globos: [
           '¡Excelente elección, Édgar! La Sede Sur 66 es preciosa ✨ Te confirmo que el 15 de mayo de 2027 está libre en esa sede 😁',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
@@ -274,9 +274,9 @@ module.exports = [
                   tipo_evento: 'graduacion', nombre_cliente: 'Katherine', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
 
-      { cliente: 'me encanto Pilas Premium',
+      { cliente: 'me encanto la Sede Sur 66',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Pilas Premium', fecha: enDias(3) },
+          args: { nombre_sede: 'Sede Sur 66 Mundo Foto', fecha: enDias(3) },
           revisar: (r, anota) => {
             const t = r[0].resultado || '';
             // La rama se llamaba FALTAN SOLO hasta el 2026-08-28.
@@ -289,7 +289,7 @@ module.exports = [
               anota('error', 'le está dejando confirmar una fecha a tres días');
           } }],
         globos: [
-          '¡Excelente elección, Katherine! Pilas Premium es hermosa ✨',
+          '¡Excelente elección, Katherine! Sede Sur 66 Mundo Foto es hermosa ✨',
           'Como esa fecha está a la vuelta de la esquina, prefiero que cuadremos juntos el montaje y el personal para que te quede perfecto 🤗',
           '¿Prefieres que un asesor te llame hoy, o te queda mejor pasar por la sede?',
         ] },
@@ -299,7 +299,7 @@ module.exports = [
 
       { cliente: '3201234567, a las 5 de la tarde',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-26', hora: '17:00',
-          nombre: 'Katherine', telefono_contacto: '3201234567', detalle: 'Llamada grado Pilas Premium, 60 invitados, evento el 29 de agosto' } }],
+          nombre: 'Katherine', telefono_contacto: '3201234567', detalle: 'Llamada grado Sede Sur 66, 60 invitados, evento el 29 de agosto' } }],
         globos: [
           'Quedó agendada tu llamada para hoy miércoles 26 de agosto a las 5:00 p.m., al 3201234567 ☎️',
           ...REDES,
@@ -343,26 +343,26 @@ module.exports = [
           '¿Alguno de los que te mandé te llamó la atención?',
         ] },
 
-      { cliente: 'el Salon Inti Raimi, ese me gusto',
+      { cliente: 'el de Casa Christian\'s, ese me gusto',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Sawa', fecha: '2027-02-20' } }],
+          args: { nombre_sede: 'Casa Christian\'s Ciudad Jardín', fecha: '2027-02-20' } }],
         globos: [
-          '¡Excelente elección, Marcela! Sawa es espectacular ✨ Te confirmo que el 20 de febrero de 2027 está libre en esa sede 😁',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¡Excelente elección, Marcela! Casa Christian\'s Ciudad Jardín es espectacular ✨ Te confirmo que el 20 de febrero de 2027 está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
       { cliente: 'si, sepamela. Marcela Ospina, 3009998877',
         tools: [{ t: 'separar_fecha_evento',
-          args: { nombre_sede: 'Sawa', fecha: '2027-02-20', nombre_cliente: 'Marcela Ospina', telefono_contacto: '3009998877' } }],
+          args: { nombre_sede: 'Casa Christian\'s Ciudad Jardín', fecha: '2027-02-20', nombre_cliente: 'Marcela Ospina', telefono_contacto: '3009998877' } }],
         globos: [
-          '¡Listo, Marcela! El 20 de febrero queda apartado para ti en Sawa ✨',
+          '¡Listo, Marcela! El 20 de febrero queda apartado para ti en Casa Christian\'s Ciudad Jardín ✨',
           '¿En qué horario tienes disponibilidad para que uno de nuestros asesores te llame? ☎️',
         ] },
 
       { cliente: 'el viernes a las 11',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '11:00',
-          nombre: 'Marcela Ospina', telefono_contacto: '3009998877', detalle: 'Llamada cumpleaños Sawa, 200 invitados' } }],
+          nombre: 'Marcela Ospina', telefono_contacto: '3009998877', detalle: 'Llamada cumpleaños Casa Christian\'s, 200 invitados' } }],
         globos: ['Quedó agendada tu llamada para el viernes 28 de agosto a las 11:00 a.m., al 3009998877 ☎️'] },
     ],
   },
@@ -407,7 +407,7 @@ module.exports = [
           revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llego: ' + r[0].resultado.slice(0, 60)); } }],
         globos: [
           '¡Buenísimo, Andrés! El sábado 21 de noviembre sí está libre en la Sede Norte ✨',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
@@ -473,13 +473,13 @@ module.exports = [
           'Cuéntame cuál te llamó más la atención para el matrimonio 🤗',
         ] },
 
-      { cliente: 'para el matrimonio nos gusta Casa 74',
+      { cliente: 'para el matrimonio nos gusta Casa Christian\'s',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Casa 74', fecha: '2027-03-14' },
+          args: { nombre_sede: 'Casa Christian\'s Ciudad Jardín', fecha: '2027-03-14' },
           revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llego: ' + r[0].resultado.slice(0, 60)); } }],
         globos: [
-          '¡Excelente elección, Julieta! Casa 74 es espectacular ✨ Te confirmo que el 14 de marzo de 2027 está libre en esa sede 😁',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¡Excelente elección, Julieta! Casa Christian\'s Ciudad Jardín es espectacular ✨ Te confirmo que el 14 de marzo de 2027 está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
@@ -530,32 +530,32 @@ module.exports = [
 
       // El reenvio de UNA pieza. Sin reenviar = true la herramienta no devuelve
       // nada, porque ese video ya figura en envios_medios.
-      { cliente: 'me reenvias el de Sawa? no lo encuentro',
+      { cliente: 'me reenvias el de la Sede Norte? no lo encuentro',
         tools: [{ t: 'enviar_medios', revisar: revisarReenvio(1),
-          args: { categoria: 'sede', referencia: 'Sawa', tipo_medio: 'video', reenviar: true } }],
-        globos: ['Ahí te va de nuevo el de Sawa, Ricardo ✨ Es de los campestres más grandes que tenemos.'] },
+          args: { categoria: 'sede', referencia: 'Sede Norte', tipo_medio: 'video', reenviar: true } }],
+        globos: ['Ahí te va de nuevo el de la Sede Norte, Ricardo ✨'] },
 
       { cliente: 'ese, ese nos gusta para los 15',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Sawa', fecha: '2027-04-17' } }],
+          args: { nombre_sede: 'Sede Norte', fecha: '2027-04-17' } }],
         globos: [
-          '¡Excelente elección, Ricardo! Sawa es espectacular ✨ Te confirmo que el 17 de abril de 2027 está libre en esa sede 😁',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¡Excelente elección, Ricardo! La Sede Norte es espectacular ✨ Te confirmo que el 17 de abril de 2027 está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
       { cliente: 'si porfa. Ricardo Peña, 3145556677',
         tools: [{ t: 'separar_fecha_evento',
-          args: { nombre_sede: 'Sawa', fecha: '2027-04-17', nombre_cliente: 'Ricardo Peña', telefono_contacto: '3145556677' },
+          args: { nombre_sede: 'Sede Norte', fecha: '2027-04-17', nombre_cliente: 'Ricardo Peña', telefono_contacto: '3145556677' },
           revisar: (r, anota) => { if (!r[0] || !r[0].id_reserva) anota('error', 'el separado no dejo reserva: ' + JSON.stringify(r[0]).slice(0, 200)); } }],
         globos: [
-          '¡Listo, Ricardo! El 17 de abril queda apartado para ti en Sawa ✨',
+          '¡Listo, Ricardo! El 17 de abril queda apartado para ti en la Sede Norte ✨',
           '¿En qué horario tienes disponibilidad para que uno de nuestros asesores te llame? ☎️',
         ] },
 
       { cliente: 'el sabado por la mañana',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-29', hora: '10:30',
-          nombre: 'Ricardo Peña', telefono_contacto: '3145556677', detalle: 'Llamada 15 años en Sawa el 17 de abril, 150 invitados, y grado de 80 el 12 de junio' } }],
+          nombre: 'Ricardo Peña', telefono_contacto: '3145556677', detalle: 'Llamada 15 años en Sede Norte el 17 de abril, 150 invitados, y grado de 80 el 12 de junio' } }],
         globos: [
           'Quedó agendada tu llamada para el sábado 29 de agosto a las 10:30 a.m., al 3145556677 ☎️',
           ...REDES,
@@ -599,18 +599,18 @@ module.exports = [
                   nombre_cliente: 'Diana', tipo_medio: 'ambos', reenviar: true } }],
         globos: ['Ahí van de nuevo todos, Diana ✨ Cuéntame cuál te llamó más la atención 🤗'] },
 
-      { cliente: 'la Mansion Vallano',
+      { cliente: 'la Sede Sur 66',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Mansión Vallano', fecha: '2026-11-07' } }],
+          args: { nombre_sede: 'Sede Sur 66 Mundo Foto', fecha: '2026-11-07' } }],
         globos: [
-          '¡Excelente elección, Diana! Mansión Vallano es espectacular ✨ Te confirmo que el 7 de noviembre está libre en esa sede 😁',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¡Excelente elección, Diana! Sede Sur 66 Mundo Foto es espectacular ✨ Te confirmo que el 7 de noviembre está libre en esa sede 😁',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
       { cliente: 'todavia no, primero quiero hablar con alguien. 3186667788, en la tarde',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:30',
-          nombre: 'Diana', telefono_contacto: '3186667788', detalle: 'Llamada matrimonio Mansión Vallano, 150 invitados, 7 de noviembre' } }],
+          nombre: 'Diana', telefono_contacto: '3186667788', detalle: 'Llamada matrimonio Sede Sur 66, 150 invitados, 7 de noviembre' } }],
         globos: [
           'Quedó agendada tu llamada para el viernes 28 de agosto a las 3:30 p.m., al 3186667788 ☎️',
           ...REDES,
@@ -661,7 +661,7 @@ module.exports = [
           revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llegó: ' + r[0].resultado.slice(0, 60)); } }],
         globos: [
           '¡Excelente elección, Camilo! La Sede Norte es espectacular ✨ Te confirmo que el 5 de diciembre está libre en esa sede 😁',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
@@ -734,20 +734,15 @@ module.exports = [
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
 
       // Aquí es donde antes se rompía: consulta con 2026-03-15, que ya pasó.
-      { cliente: 'Casa 74',
+      { cliente: 'Sede Granada Gold',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Casa 74', fecha: '2026-03-15' },
+          args: { nombre_sede: 'Sede Granada Gold', fecha: '2026-03-15' },
           revisar: (r, anota) => {
             const t = (r[0] || {}).resultado || '';
             if (!/YA PAS[OÓ]/.test(t)) anota('error', 'no detectó que la fecha ya pasó: ' + t.slice(0, 80));
             if (!/domingo 15 de marzo de 2026/.test(t)) anota('error', 'no nombra la fecha que dijo la clienta, con su día');
             if (!/NO la apartes/.test(t)) anota('error', 'no le prohíbe apartar esa fecha');
             if (/se equivoc|error/i.test(t)) anota('error', 'trata la fecha como un error de la clienta');
-            // El 2026-08-28 el diseño cambió: NO se adivina el año que viene.
-            // La clienta pudo querer decir marzo de 2027, pero también otra
-            // fecha cualquiera -- en el chat real del 2026-08-29 el cliente
-            // dijo "20 de agosto" y quería decir el 20 de SEPTIEMBRE. Lo que
-            // se le pide al agente es que pregunte, no que acierte.
             if (/2027/.test(t)) anota('error', 'volvió a adivinar el año que viene en vez de preguntar');
             if (!/preguntarle para qué fecha/.test(t)) anota('error', 'no le dice al agente que pregunte por la fecha buena');
           } }],
@@ -757,11 +752,11 @@ module.exports = [
 
       { cliente: 'si si, del otro año',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Casa 74', fecha: '2027-03-15' },
+          args: { nombre_sede: 'Sede Granada Gold', fecha: '2027-03-15' },
           revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llegó: ' + r[0].resultado.slice(0, 60)); } }],
         globos: [
-          '¡Perfecto, Ana! Te confirmo que el lunes 15 de marzo de 2027 está libre en Casa 74 ✨',
-          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones con cubierta cerrada se separan desde $1.000.000 y los campestres desde $2.000.000.',
+          '¡Perfecto, Ana! Te confirmo que el lunes 15 de marzo de 2027 está libre en Sede Granada Gold ✨',
+          'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. El valor de separación te lo confirmamos directamente en la cita.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
 
@@ -769,7 +764,7 @@ module.exports = [
       { cliente: 'si, sepáramela. Ana Lucía Gómez, 3012223344',
         tools: [
           { t: 'separar_fecha_evento',
-            args: { nombre_sede: 'Casa 74', fecha: '2026-03-15',
+            args: { nombre_sede: 'Sede Granada Gold', fecha: '2026-03-15',
                     nombre_cliente: 'Ana Lucía Gómez', telefono_contacto: '3012223344' },
             revisar: (r, anota) => {
               const m = r[0] || {};
@@ -777,7 +772,7 @@ module.exports = [
               if (!/lunes 15 de marzo de 2027/.test(m.mensaje || '')) anota('error', 'el rechazo no propone la fecha del año siguiente');
             } },
           { t: 'separar_fecha_evento',
-            args: { nombre_sede: 'Casa 74', fecha: '2027-03-15',
+            args: { nombre_sede: 'Sede Granada Gold', fecha: '2027-03-15',
                     nombre_cliente: 'Ana Lucía Gómez', telefono_contacto: '3012223344' },
             revisar: (r, anota) => {
               if ((r[0] || {}).estado_resultado !== 'separada')
@@ -785,13 +780,13 @@ module.exports = [
             } },
         ],
         globos: [
-          '¡Listo, Ana! El lunes 15 de marzo de 2027 queda apartado a tu nombre en Casa 74 ✨',
+          '¡Listo, Ana! El lunes 15 de marzo de 2027 queda apartado a tu nombre en Sede Granada Gold ✨',
           'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗',
         ] },
 
       { cliente: 'mañana en la mañana',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '10:00',
-          nombre: 'Ana Lucía Gómez', telefono_contacto: '3012223344', detalle: 'Llamada 15 años Casa 74, 100 invitados, 15 de marzo de 2027' } }],
+          nombre: 'Ana Lucía Gómez', telefono_contacto: '3012223344', detalle: 'Llamada 15 años Sede Granada Gold, 100 invitados, 15 de marzo de 2027' } }],
         globos: [
           'Quedó agendada tu llamada para el viernes 28 de agosto a las 10:00 a.m., al 3012223344 ☎️',
           ...REDES,
