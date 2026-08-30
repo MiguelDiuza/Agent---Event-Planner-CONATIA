@@ -245,5 +245,54 @@ function correrValidarDatos(cambios) {
   });
 }
 
+// --------------------------------------------------------------------------
+titulo('9. El número de WhatsApp: cuándo se CONFIRMA y cuándo se pide');
+// La regla que el negocio pidió: si el cliente escribe desde un número real, no
+// se le pregunta "me regalas tu número" -- se le muestra y se le pide que lo
+// confirme. Quien decide eso es una sola expresión del system message, la de
+// `NÚMERO DE WHATSAPP DE ESTE CLIENTE`, y de su rama cuelgan los globos
+// literales de los turnos 5 y 6.
+//
+// Se prueba AQUÍ, sin red, por un motivo que no es comodidad: por el chat de
+// prueba esta rama NO se puede ejercitar. `Normalizar Chat` arma el teléfono
+// como 'test-' + sesión, así que nunca empieza por '+' y `probar-conversacion`
+// siempre cae en la rama de pedirlo. La única forma de comprobar el camino que
+// ve un cliente de WhatsApp real es evaluar la expresión con su número.
+{
+  const wf = JSON.parse(fs.readFileSync(path.join('n8n', 'workflow-angie-otero.json'), 'utf8'));
+  const sm = wf.nodes.find(n => n.name === 'Angie Otero').parameters.options.systemMessage;
+
+  const m = /\{\{ \$\('Upsert Lead'\)\.item\.json\.telefono[\s\S]*?\}\}/.exec(sm);
+  ok(!!m, 'la expresión del número sigue en el prompt');
+  if (m) {
+    // Se evalúa como la evalúa n8n, sustituyendo la referencia al nodo.
+    const render = (tel) => {
+      const cuerpo = m[0].slice(2, -2)
+        .split("$('Upsert Lead').item.json.telefono").join(JSON.stringify(tel));
+      return String(eval(cuerpo));
+    };
+    // `NO es un número real` contiene `es un número real`, así que la rama se
+    // reconoce por la negación, no por la afirmación. Comprobarlo al revés da
+    // verde siempre -- me pasó al mirarlo a mano el 2026-08-29.
+    const pideConfirmar = (t) => !/NO es un número real/.test(render(t));
+
+    ok(pideConfirmar('+573145755349'),
+       'un número real de WhatsApp: se le muestra para que lo confirme');
+    ok(/muéstraselo/.test(render('+573145755349')) && render('+573145755349').includes('+573145755349'),
+       'y la instrucción lleva el número dentro, para que pueda enseñárselo');
+    ok(!pideConfirmar('CO.1748724682844706'),
+       'un BSUID de Meta (CO.17...) no es marcable: ese sí se pide');
+    ok(!pideConfirmar('test-conv-c1-1788045297757'),
+       'y el teléfono del chat de prueba tampoco, que es justo por lo que esto se prueba aquí');
+  }
+
+  // Y el otro extremo del contrato: los globos literales del turno 5 tienen que
+  // existir en el prompt. Sin ellos la rama decide bien y el agente improvisa.
+  ok(/¿te contactamos a este mismo número, \[número\]\?/.test(sm),
+     'el turno 5 trae el globo de confirmar el número');
+  ok(/EL NÚMERO NO SE PIDE: SE CONFIRMA/.test(sm),
+     'y le prohíbe pedirlo cuando la ficha aún no lo tiene, que era el fallo');
+}
+
 console.log('\n' + (fallos ? c.rojo(`${fallos} fallo(s)`) : c.verde('sin fallos')) + '\n');
 process.exit(fallos ? 1 : 0);
