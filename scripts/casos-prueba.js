@@ -35,7 +35,25 @@ const REDES = ['Y si quieres ver más de nuestros eventos, síguenos en redes �
 // manda los salones que tienen precio para esa cantidad de personas. Hoy son 15
 // para 100 personas, 13 para 60 y 8 para 200. Un solo numero para todos los
 // casos estaria mal en dos de cada tres.
-const catalogo = { nombresPorAforo: null };
+const catalogo = { nombresPorAforo: null, piezasPorEvento: null };
+
+// Las piezas que cuelgan del TIPO DE EVENTO -- hoy, el video de los vestidos de
+// 15 anos. Desde el 2026-08-30 la tanda las manda sola, detras de los salones y
+// del promocional, y solo la primera vez que ese cliente ve ese evento.
+//
+// Sale de la base, igual que los salones: si manana se cataloga un video de
+// vestidos de novia, el banco lo espera solo. `fn_resolver_tipo_evento` traduce
+// lo que escribe el agente ("15 Anos" sin tilde) al nombre del paquete.
+const piezasEventoDe = (args) => {
+  if (!catalogo.piezasPorEvento) return 0;
+  const pedido = String(args.tipo_evento || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  for (const [nombre, n] of Object.entries(catalogo.piezasPorEvento)) {
+    const limpio = nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    if (limpio === pedido) return n;
+  }
+  return 0;
+};
 
 // Cuantos salones le tocan a este caso, segun el aforo que pide. `args` es el
 // mismo objeto que el caso le pasa a la herramienta, asi que el aforo no se
@@ -78,14 +96,16 @@ const enDias = (n) => {
 // `conPromocional` en false para la segunda tanda del chat: el video
 // institucional de promocion sale UNA vez en la vida del cliente, la primera
 // que ve un salon, y no vuelve.
-const revisarTanda = (conPromocional = true) => (r, anota, args) => {
+const revisarTanda = (conPromocional = true, conEvento = true) => (r, anota, args) => {
   const salones = salonesDe(args, anota);
   if (salones == null) return;
-  const esperadas = salones + (conPromocional ? 1 : 0);
+  const evento = conEvento ? piezasEventoDe(args) : 0;
+  const esperadas = salones + (conPromocional ? 1 : 0) + evento;
   if (r.piezas == null) return anota('error', 'la tanda no envio nada: ' + JSON.stringify(r).slice(0, 200));
   if (r.piezas !== esperadas)
     anota('error', `la tanda mando ${r.piezas} piezas y se esperaban ${esperadas} (${salones} salones` +
-      (conPromocional ? ' + promocional)' : ', sin promocional: ese ya salio)'));
+      (conPromocional ? ' + promocional' : ', sin promocional: ese ya salio') +
+      (evento ? ` + ${evento} del evento` : '') + ')');
   if (r.globos_guion !== 5)
     anota('error', `el guion salio con ${r.globos_guion} globos y son 5: antesala + 3 partes + obsequios. ` +
       'Cero globos = el tipo_evento no resolvio y los videos salieron sin cotizacion.');

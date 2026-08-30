@@ -189,6 +189,63 @@ async function main() {
     }
   }
 
+  // ------------------------------------------------------------------------
+  titulo('6. La tanda lo manda SOLA (2026-08-30)');
+  {
+    // El bloque 3 comprueba que `fn_medios_sedes_cotizacion` NO lo arrastra, y
+    // eso sigue siendo cierto y querido: la tanda es la lista de salones, y una
+    // pieza que no es de ninguna sede no pertenece a esa lista -- metida ahi se
+    // ordenaria por precio entre los salones y se perderia.
+    //
+    // Quien lo cuelga es el NODO `Seleccionar Medios`, al final y en su propio
+    // mensaje. Esta es la mitad que faltaba: hasta hoy la pieza estaba
+    // catalogada y no la mandaba NADIE. Dependia de que el agente llamara la
+    // herramienta una segunda vez con categoria = tipo_evento, y en toda la
+    // vida de la base salio una sola vez, en una prueba.
+    const fs = require('fs');
+    const wf = JSON.parse(fs.readFileSync('n8n/workflow-enviar-medios.json', 'utf8'));
+    const q = wf.nodes.find(x => x.name === 'Seleccionar Medios').parameters.query;
+    // El nodo va parametrizado; la Management API no acepta $n.
+    const ligar = (sql, ps) => ps.reduce((a, v, i) => a.split('$' + (i + 1)).join(lit(String(v))), sql);
+    const sel = (tel, evento, ref) =>
+      consulta(ligar(q, ['sede', ref || 'todas', tel, 'ambos', '100', 'false', evento]));
+    const vestidos = (filas) => filas.filter(f => /vestidos/i.test(f.descripcion || ''));
+    const conLead = async () => {
+      const t = nuevoTel();
+      await consulta(`insert into leads (telefono) values (${lit(t)}) on conflict (telefono) do nothing`);
+      return t;
+    };
+
+    try {
+      const t = await sel(await conLead(), '15 Años');
+      ok(vestidos(t).length === 1,
+         `la tanda de 15 años arrastra el video de vestidos (${t.length} piezas)`,
+         t.map(f => f.descripcion).join(' | '));
+      ok(t.length > 0 && /vestidos/i.test(t[t.length - 1].descripcion || ''),
+         'y va el ÚLTIMO, detrás de los salones y del promocional',
+         'último: ' + ((t[t.length - 1] || {}).descripcion || '(vacío)'));
+
+      // Sin tilde, que es como lo escribe el modelo la mitad de las veces.
+      const sinTilde = await sel(await conLead(), '15 Anos');
+      ok(vestidos(sinTilde).length === 1, 'también con "15 Anos" sin tilde');
+
+      // Un salon suelto no es la tanda: pedir Casa 5 no arrastra los vestidos.
+      const suelto = await sel(await conLead(), '15 Años', 'Casa 5');
+      ok(vestidos(suelto).length === 0,
+         `pedir un salón suelto NO lo arrastra (${suelto.length} piezas)`);
+
+      // Y lo que protege el bloque 2, ahora desde el nodo: a un matrimonio no
+      // le llegan vestidos de quinceañera.
+      const boda = await sel(await conLead(), 'Matrimonio');
+      ok(vestidos(boda).length === 0,
+         `un matrimonio no recibe vestidos de quinceañera (${boda.length} piezas)`);
+    } finally {
+      await consulta(
+        `delete from envios_medios where lead_id in (select id from leads where telefono like 'test-medios-evento-%');` +
+        ` delete from leads where telefono like 'test-medios-evento-%';`);
+    }
+  }
+
   console.log('\n' + (fallos ? c.rojo(`${fallos} fallo(s)`) : c.verde('sin fallos')) + '\n');
   // `process.exitCode` y no `process.exit()`: matar el proceso con los sockets
   // keep-alive de fetch todavía abiertos hace que libuv aborte en Windows con

@@ -119,7 +119,12 @@ const guion = (a) => consulta(ligar(nodo('Guion Cotización'), [
 
 const medios = (a) => consulta(ligar(nodo('Seleccionar Medios'), [
   a.categoria, a.referencia || '', a.telefono, a.tipo_medio || 'ambos',
-  a.invitados == null ? '' : String(a.invitados), a.reenviar ? 'true' : 'false']));
+  a.invitados == null ? '' : String(a.invitados), a.reenviar ? 'true' : 'false',
+  // $7 desde el 2026-08-30: el tipo de evento, para colgar su material -- hoy
+  // el video de los vestidos de 15 anos. Si esta llamada se queda en seis
+  // parametros, `ligar` lo dice con nombre y apellido en vez de reventar con
+  // un 42P02 de Postgres cincuenta lineas mas abajo.
+  a.tipo_evento || '']));
 
 const diagnostico = (a, guionSalio) => consulta(ligar(nodo('Diagnóstico'), [
   a.categoria, a.referencia || '', a.tipo_medio || 'ambos', a.telefono,

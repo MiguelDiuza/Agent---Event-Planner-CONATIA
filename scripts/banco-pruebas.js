@@ -240,8 +240,11 @@ async function enviarMedios(ctx, a) {
       anota('error', `guion: un globo de ${g.mensaje.length} caracteres; WhatsApp le pone "Leer más"`);
   }
 
+  // Siete parametros desde el 2026-08-30: el nodo recibe el tipo de evento para
+  // poder colgar su material -- hoy, el video de los vestidos de 15 anos.
   const medios = await consulta(ligar(nodo(subMedios, 'Seleccionar Medios'),
-    [a.categoria, a.referencia || '', tel, a.tipo_medio || 'ambos', invitados, reenviar]));
+    [a.categoria, a.referencia || '', tel, a.tipo_medio || 'ambos', invitados, reenviar,
+     a.tipo_evento || '']));
 
   for (const m of medios) {
     if (!m.id) continue;
@@ -464,6 +467,17 @@ async function main() {
       group by 1 order by 1`
   );
   casos.catalogo.nombresPorAforo = Object.fromEntries(filas.map(f => [f.aforo, f.nombres]));
+
+  // Y el material que cuelga del TIPO DE EVENTO, no de una sede: desde el
+  // 2026-08-30 la tanda lo arrastra. Se cuenta desde la base y no a mano para
+  // que catalogar una pieza nueva -- vestidos de novia, por ejemplo -- no deje
+  // este banco en rojo pidiendo un numero viejo.
+  const porEvento = await consulta(
+    `select te.nombre_paquete as evento, count(*)::int as n
+       from medios m join tipos_evento te on te.id_evento = m.tipo_evento_id
+      where m.activo group by 1`
+  );
+  casos.catalogo.piezasPorEvento = Object.fromEntries(porEvento.map(f => [f.evento, f.n]));
   console.log(c.gris('  catalogo: ' + filas.map(f => `${f.aforo}→${f.nombres.length}`).join(' ')));
 
   const filtro = process.argv[2] ? [casos[Number(process.argv[2]) - 1]] : casos;
