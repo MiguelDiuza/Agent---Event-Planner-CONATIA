@@ -236,18 +236,6 @@ const pelar = (s) => String(s).toLowerCase()
   .replace(/[^\p{L}\p{N} ]/gu, ' ')
   .replace(/\s+/g, ' ').trim();
 
-// Cuánto se parecen dos respuestas, por palabras. Jaccard y no una distancia de
-// edición: lo que delata al agente repitiéndose es que dice LO MISMO, aunque
-// mueva las frases de sitio.
-function parecido(a, b) {
-  const A = new Set(pelar(a).split(' ').filter(w => w.length > 3));
-  const B = new Set(pelar(b).split(' ').filter(w => w.length > 3));
-  if (!A.size || !B.size) return 0;
-  let comunes = 0;
-  for (const w of A) if (B.has(w)) comunes++;
-  return comunes / (A.size + B.size - comunes);
-}
-
 // Las cosas que ningún mensaje de WhatsApp de una vendedora debería tener.
 // Se mira sobre TODO lo que dijo el agente en la conversación.
 function revisarNaturalidad(chat, nombreCaso) {
@@ -315,8 +303,19 @@ caso(1, 'Preguntar lo mismo dos veces seguidas', async () => {
   ok(b !== '', 'contestó la segunda vez');
   ok(pelar(a) !== pelar(b), 'no contesta idéntico a la segunda',
      'las dos respuestas son la misma: ' + b.slice(0, 140));
-  ok(parecido(a, b) < 0.75, 'ni casi idéntico: la reformula o se refiere a lo de arriba',
-     `parecido ${(parecido(a, b) * 100).toFixed(0)}% — ${b.slice(0, 160)}`);
+  // Lo que de verdad delata a una máquina es contestar COMO SI FUERA LA PRIMERA
+  // VEZ, no que se repita el contenido: a un cliente que pregunta dos veces qué
+  // incluye el paquete hay que volver a decírselo, y un vendedor humano lo
+  // haría — precedido de "como te decía". Así que lo que se exige es el acuse
+  // de recibo, que es la conducta concreta, y no un umbral de parecido.
+  //
+  // Aquí había un `parecido(a, b) < 0.75` puesto a ojo antes de ver un solo
+  // dato. Con el acuse ya puesto la segunda respuesta daba 81 % y salía en
+  // rojo: el número estaba midiendo "repitió el contenido", que no es un fallo.
+  // El copiar-pegar literal lo sigue cazando la línea de arriba y el lint de
+  // globos repetidos, los dos sobre el texto pelado.
+  ok(/(ya te (lo )?(hab[ií]a |)(cont|dij|coment|mencion)|como te (dec[ií]a|coment|dije|mencion)|te (lo )?(repito|resumo)|de nuevo|otra vez)/i.test(b),
+     'y acusa recibo de que ya se lo había contado', b.slice(0, 200));
   // Un humano acusa recibo de que se lo acaban de preguntar. No se exige una
   // frase concreta, solo que NO arranque como si fuera la primera vez.
   ok(!/^\s*(hola|buenas)/i.test(b), 'no vuelve a saludar como si fuera el primer mensaje', b.slice(0, 120));
