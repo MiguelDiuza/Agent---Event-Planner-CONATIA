@@ -90,7 +90,14 @@ node scripts/vaciar-calendario.js --borrar  # lo vacía
 
 Las tablas se vacían con un `delete` de `mensajes_fragmentos`, `envios_medios`,
 `citas`, `agenda_reservas`, `n8n_chat_histories` y `leads`, en ese orden. El
-catálogo (`sedes`, `precios_sedes`, `tipos_evento`, `medios`) no se toca nunca.
+catálogo (`sedes`, `precios_sedes`, `tipos_evento`, `medios`,
+`servicios_adicionales_upselling`) no se toca nunca.
+
+Con `leads` se van también, por CASCADE, `reservas` y `cotizaciones_aforos` —la
+ficha del cliente y los aforos que ya se le cotizaron—. No hace falta borrarlas
+a mano, pero sí **mirarlas al comprobar que el reseteo quedó en cero**: son las
+dos que hacen que el agente "recuerde" el evento y la cantidad de personas, así
+que si sobrevivieran, el chat no arrancaría de verdad desde el saludo.
 
 ## Estructura de datos
 
@@ -105,6 +112,8 @@ catálogo (`sedes`, `precios_sedes`, `tipos_evento`, `medios`) no se toca nunca.
 | `citas` | Citas con el asesor: llamadas, visitas, pruebas de traje |
 | `mensajes_fragmentos` | Mensajes de WhatsApp a la espera de que les llegue el resto |
 | `envios_medios` | Qué pieza se le mandó a quién — y con qué aforo, porque el precio va dentro del caption |
+| `reservas` | La ficha del cliente: un evento por fila. Es lo que el agente lee en cada turno |
+| `cotizaciones_aforos` | Qué aforos ya se le cotizaron a cada cliente, por tipo de evento |
 
 ## Credenciales pendientes de configurar en n8n
 
