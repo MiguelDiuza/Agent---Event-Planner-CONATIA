@@ -18,7 +18,7 @@ const SALUDO = [
   '¡Hola! Gracias por comunicarte con Christian Sierra Event Planner. Te habla Angie Otero ☺️ ¿Con quién tengo el gusto de hablar y en qué te puedo ayudar? 🤗',
 ];
 const promo = (nombre, cierre) => [
-  `¡Súper, ${nombre}! En estos momentos tenemos una súper promo de lujo TODO INCLUIDO ✨ Contamos con más de 10 salones, campestres y de cubierta cerrada, en la ciudad de Cali. ${cierre} 🤗`,
+  `¡Súper, ${nombre}! En estos momentos tenemos una súper promo de lujo TODO INCLUIDO ✨ Contamos con más de 10 salones, campestres y convencionales, en la ciudad de Cali. ${cierre} 🤗`,
 ];
 const REDES = ['Y si quieres ver más de nuestros eventos, síguenos en redes ✨', TIKTOK, INSTAGRAM];
 

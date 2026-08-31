@@ -37,15 +37,23 @@ const WORKFLOWS = [
 const publicar = process.argv.includes('--publicar');
 const RESPALDO = path.join('.respaldo-vps-' + new Date().toISOString().slice(0, 10));
 
-const api = async (ruta, opciones = {}) => {
-  const r = await fetch(`${N8N_VPS_URL}/api/v1${ruta}`, {
-    ...opciones,
-    headers: { 'X-N8N-API-KEY': N8N_VPS_API_KEY, 'Content-Type': 'application/json',
-               ...(opciones.headers || {}) },
-  });
-  const cuerpo = await r.text();
-  if (!r.ok) throw new Error(`HTTP ${r.status} en ${ruta}: ${cuerpo.slice(0, 400)}`);
-  return JSON.parse(cuerpo);
+const api = async (ruta, opciones = {}, reintentos = 4) => {
+  for (let i = 0; i < reintentos; i++) {
+    try {
+      const r = await fetch(`${N8N_VPS_URL}/api/v1${ruta}`, {
+        ...opciones,
+        headers: { 'X-N8N-API-KEY': N8N_VPS_API_KEY, 'Content-Type': 'application/json',
+                   ...(opciones.headers || {}) },
+      });
+      const cuerpo = await r.text();
+      if (!r.ok) throw new Error(`HTTP ${r.status} en ${ruta}: ${cuerpo.slice(0, 400)}`);
+      return JSON.parse(cuerpo);
+    } catch (e) {
+      if (i === reintentos - 1) throw e;
+      console.log(`  reintentando conexión al VPS (${i + 1}/${reintentos})...`);
+      await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1)));
+    }
+  }
 };
 
 // Lo que decide el comportamiento. La posición en el lienzo no entra: mover un

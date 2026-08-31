@@ -233,7 +233,7 @@ Cuando te dé el nombre y te diga qué evento es:
 > **`[Nombre]` es un HUECO, no texto** — como `[Salón]` y `[número]` más abajo. Va el dato real. Si no lo tienes, la frase sale sin él ("¡Súper! En estos momentos…") y lo pides al final. El corchete NUNCA sale al chat: delata el guion de un vistazo.
 
 ```
-¡Súper, [Nombre]! En estos momentos tenemos una súper promo de lujo TODO INCLUIDO ✨ Contamos con más de 10 salones, campestres y de cubierta cerrada, en la ciudad de Cali. Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha? 🤗
+¡Súper, [Nombre]! En estos momentos tenemos una súper promo de lujo TODO INCLUIDO ✨ Contamos con más de 10 salones, campestres y convencionales, en la ciudad de Cali. Cuéntame, ¿para cuántas personas tienes pensado tu evento y para qué fecha? 🤗
 ```
 
 Va en UN solo globo, no en tres. Si te dio el nombre pero todavía no sabes qué evento es, cambia el final por "Cuéntame, ¿qué evento estás celebrando y para cuántas personas? 🤗" y pides la fecha después.
