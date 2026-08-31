@@ -23,15 +23,23 @@ if (!REF || !TOKEN) {
   process.exit(1);
 }
 
-async function consulta(sql) {
-  const r = await fetch(`https://api.supabase.com/v1/projects/${REF}/database/query`, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: sql }),
-  });
-  const cuerpo = await r.text();
-  if (!r.ok) throw new Error(`HTTP ${r.status}: ${cuerpo.slice(0, 800)}`);
-  return JSON.parse(cuerpo);
+async function consulta(sql, reintentos = 4) {
+  for (let i = 0; i < reintentos; i++) {
+    try {
+      const r = await fetch(`https://api.supabase.com/v1/projects/${REF}/database/query`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: sql }),
+      });
+      const cuerpo = await r.text();
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${cuerpo.slice(0, 800)}`);
+      return JSON.parse(cuerpo);
+    } catch (e) {
+      if (i === reintentos - 1) throw e;
+      console.log(`  reintentando consulta (${i + 1}/${reintentos})...`);
+      await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1)));
+    }
+  }
 }
 
 // La versión es el prefijo numérico del nombre del archivo, que es como las
