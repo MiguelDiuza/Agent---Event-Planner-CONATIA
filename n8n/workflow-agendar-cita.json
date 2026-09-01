@@ -363,7 +363,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/PENDIENTE_ID_DEL_EXCEL/values/Citas!A:K:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA/values/Citas!A:K:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -381,12 +381,12 @@
       "name": "Anotar Cita en Excel",
       "credentials": {
         "googleApi": {
-          "id": "tTdVjIuSUurkaeZN",
-          "name": "Google Service Account - Calendar"
+          "id": "BKP31rWyOHmoLB2c",
+          "name": "Google Service Account - Sheets"
         }
       },
       "onError": "continueRegularOutput",
-      "notes": "Anota la fila en la pestana \"Citas\" del Excel del equipo. El ID de la hoja esta en la URL y hay que reemplazar PENDIENTE_ID_DEL_EXCEL. Requiere: (1) el Excel compartido como Editor con n8n-calendar@omega-dahlia-500617-g6.iam.gserviceaccount.com, (2) el scope https://www.googleapis.com/auth/spreadsheets en la credencial tTdVjIuSUurkaeZN, y (3) la Google Sheets API habilitada en el proyecto omega-dahlia-500617-g6.",
+      "notes": "Anota la fila en la pestana \"Citas\" del Excel del equipo (1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA). Escribe con la misma cuenta de servicio que Calendar, pero con una credencial aparte que solo lleva el scope de spreadsheets y solo puede hablar con sheets.googleapis.com. Si falla no pasa nada: onError=continueRegularOutput, y la fecha ya quedo en Postgres y en Calendar.",
       "disabled": true
     }
   ],
