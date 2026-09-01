@@ -152,7 +152,8 @@ module.exports = [
 
   // ------------------------------------------------------------------------
   // 1. El libreto tal cual lo escribio el negocio. Camino feliz de punta a
-  //    punta: quince anios, 100 personas, escalon exacto, separa y agenda.
+  //    punta: quince anios, 100 personas, escalon exacto, agenda la llamada
+  //    del asesor de una (2026-09-01: ya no pasa por separar por chat).
   // ------------------------------------------------------------------------
   {
     nombre: '1. Sofía — 15 años, 100 personas. El libreto exacto del negocio.',
@@ -176,25 +177,15 @@ module.exports = [
         globos: [
           '¡Excelente elección, Sofía! Casa Christian\'s Ciudad Jardín es espectacular ✨ Te confirmo que el 10 de diciembre está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
-        ] },
-
-      { cliente: 'Sí, sepárenmela por favor',
-        globos: [
-          'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗 ¿Me regalas tu nombre completo y un número de contacto?',
-        ] },
-
-      { cliente: 'Sofía Restrepo, 3105551234',
-        tools: [{ t: 'separar_fecha_evento',
-          args: { nombre_sede: "Casa Christian's Ciudad Jardín", fecha: '2026-12-10',
-                  nombre_cliente: 'Sofía Restrepo', telefono_contacto: '3105551234' },
-          revisar: (r, anota) => { if (!r[0] || !r[0].id_reserva) anota('error', 'el separado no dejo reserva: ' + JSON.stringify(r[0]).slice(0, 200)); } }],
-        globos: [
-          '¡Listo, Sofía! El 10 de diciembre queda apartado para ti en Casa Christian\'s ✨',
-          '¿En qué horario tienes disponibilidad para que uno de nuestros asesores te llame? ☎️',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
       { cliente: 'Mañana en la tarde, tipo 3',
+        globos: [
+          '¡Perfecto, Sofía! Me regalas por fa un número de contacto para que el asesor te llame ☎️',
+        ] },
+
+      { cliente: 'Sofía Restrepo, 3105551234',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-27', hora: '15:00',
           nombre: 'Sofía Restrepo', telefono_contacto: '3105551234', detalle: 'Llamada para 15 años en Casa Christian\'s, 100 invitados' } }],
         globos: [
@@ -236,15 +227,12 @@ module.exports = [
         globos: [
           '¡Excelente elección, Édgar! La Sede Sur 66 es preciosa ✨ Te confirmo que el 15 de mayo de 2027 está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
-      { cliente: 'no, todavia no quiero separar nada',
-        globos: [
-          '¡Sin problema, Édgar! Ahí queda la información 🤗',
-          'Me regalas por fa un número de contacto y en qué horario tienes disponibilidad, para agendarte una cita y que uno de nuestros asesores te llame y conozcas todos nuestros servicios ☎️',
-        ] },
-
+      // Édgar da número y horario juntos, sin que se los vuelvan a pedir por
+      // separado: el nombre completo ya está en la ficha (perfil), así que
+      // con esto solo le falta usar agendar_cita.
       { cliente: '3157778899, en las mañanas',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-27', hora: '10:00',
           nombre: 'Edgar Ospina', telefono_contacto: '3157778899', detalle: 'Llamada matrimonio Sede Sur 66, 180 invitados' } }],
@@ -349,18 +337,15 @@ module.exports = [
         globos: [
           '¡Excelente elección, Marcela! Casa Christian\'s Ciudad Jardín es espectacular ✨ Te confirmo que el 20 de febrero de 2027 está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
-        ] },
-
-      { cliente: 'si, sepamela. Marcela Ospina, 3009998877',
-        tools: [{ t: 'separar_fecha_evento',
-          args: { nombre_sede: 'Casa Christian\'s Ciudad Jardín', fecha: '2027-02-20', nombre_cliente: 'Marcela Ospina', telefono_contacto: '3009998877' } }],
-        globos: [
-          '¡Listo, Marcela! El 20 de febrero queda apartado para ti en Casa Christian\'s Ciudad Jardín ✨',
-          '¿En qué horario tienes disponibilidad para que uno de nuestros asesores te llame? ☎️',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
       { cliente: 'el viernes a las 11',
+        globos: [
+          '¡Perfecto, Marcela! Me regalas por fa un número de contacto para que el asesor te llame ☎️',
+        ] },
+
+      { cliente: 'Marcela Ospina, 3009998877',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '11:00',
           nombre: 'Marcela Ospina', telefono_contacto: '3009998877', detalle: 'Llamada cumpleaños Casa Christian\'s, 200 invitados' } }],
         globos: ['Quedó agendada tu llamada para el viernes 28 de agosto a las 11:00 a.m., al 3009998877 ☎️'] },
@@ -408,7 +393,7 @@ module.exports = [
         globos: [
           '¡Buenísimo, Andrés! El sábado 21 de noviembre sí está libre en la Sede Norte ✨',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
       { cliente: 'esta muy caro, nos hacen un descuento?',
@@ -480,7 +465,7 @@ module.exports = [
         globos: [
           '¡Excelente elección, Julieta! Casa Christian\'s Ciudad Jardín es espectacular ✨ Te confirmo que el 14 de marzo de 2027 está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
       { cliente: 'lo hablo con ellos y te digo. Mi numero es el 3112223344, llamenme en la tarde',
@@ -541,19 +526,15 @@ module.exports = [
         globos: [
           '¡Excelente elección, Ricardo! La Sede Norte es espectacular ✨ Te confirmo que el 17 de abril de 2027 está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
-        ] },
-
-      { cliente: 'si porfa. Ricardo Peña, 3145556677',
-        tools: [{ t: 'separar_fecha_evento',
-          args: { nombre_sede: 'Sede Norte', fecha: '2027-04-17', nombre_cliente: 'Ricardo Peña', telefono_contacto: '3145556677' },
-          revisar: (r, anota) => { if (!r[0] || !r[0].id_reserva) anota('error', 'el separado no dejo reserva: ' + JSON.stringify(r[0]).slice(0, 200)); } }],
-        globos: [
-          '¡Listo, Ricardo! El 17 de abril queda apartado para ti en la Sede Norte ✨',
-          '¿En qué horario tienes disponibilidad para que uno de nuestros asesores te llame? ☎️',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
       { cliente: 'el sabado por la mañana',
+        globos: [
+          '¡Perfecto, Ricardo! Me regalas por fa un número de contacto para que el asesor te llame ☎️',
+        ] },
+
+      { cliente: 'Ricardo Peña, 3145556677',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-29', hora: '10:30',
           nombre: 'Ricardo Peña', telefono_contacto: '3145556677', detalle: 'Llamada 15 años en Sede Norte el 17 de abril, 150 invitados, y grado de 80 el 12 de junio' } }],
         globos: [
@@ -605,10 +586,10 @@ module.exports = [
         globos: [
           '¡Excelente elección, Diana! Sede Sur 66 Mundo Foto es espectacular ✨ Te confirmo que el 7 de noviembre está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
-      { cliente: 'todavia no, primero quiero hablar con alguien. 3186667788, en la tarde',
+      { cliente: 'listo, que me llamen en la tarde. 3186667788',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-28', hora: '15:30',
           nombre: 'Diana', telefono_contacto: '3186667788', detalle: 'Llamada matrimonio Sede Sur 66, 150 invitados, 7 de noviembre' } }],
         globos: [
@@ -662,12 +643,15 @@ module.exports = [
         globos: [
           '¡Excelente elección, Camilo! La Sede Norte es espectacular ✨ Te confirmo que el 5 de diciembre está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
-          '¿Te la separamos para que quede asegurada? 🤗',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
-      // El número a medias. La herramienta lo rechaza y el agente lo vuelve a
+      // Camilo no contesta lo que se le preguntó: pide apartar la fecha de una
+      // vez (turno 5, ahora opcional y a pedido del cliente, ya no la
+      // respuesta automática a una pregunta de sí/no). Y de paso trae el
+      // número a medias. La herramienta lo rechaza y el agente lo vuelve a
       // pedir sin decirle al cliente que se equivocó.
-      { cliente: 'si listo, Camilo Restrepo, 31502909',
+      { cliente: 'de una vez sepárenmela porfa, soy Camilo Restrepo, mi número es el 31502909',
         tools: [{ t: 'separar_fecha_evento',
           args: { nombre_sede: 'Sede Norte', fecha: '2026-12-05',
                   nombre_cliente: 'Camilo Restrepo', telefono_contacto: '31502909' },
@@ -689,7 +673,7 @@ module.exports = [
           } }],
         globos: [
           '¡Listo, Camilo! El 5 de diciembre queda apartado a tu nombre en la Sede Norte ✨',
-          'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗',
+          'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗 ¿En qué horario tienes disponibilidad para que un asesor te llame? ☎️',
         ] },
 
       { cliente: 'en la tarde me queda bien',
@@ -757,11 +741,13 @@ module.exports = [
         globos: [
           '¡Perfecto, Ana! Te confirmo que el lunes 15 de marzo de 2027 está libre en Sede Granada Gold ✨',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. El valor de separación te lo confirmamos directamente en la cita.',
-          '¿Te la separamos para que quede asegurada? 🤗',
+          'Dime qué día y hora tienes disponibilidad, para que un asesor te llame y conozcas los salones y servicios personalmente 🤗',
         ] },
 
-      // Y si el agente insistiera con la fecha vieja, tampoco se aparta.
-      { cliente: 'si, sepáramela. Ana Lucía Gómez, 3012223344',
+      // Ana tampoco contesta lo que se le preguntó: pide apartar de una vez
+      // (turno 5, opcional, a pedido de ella). Y si el agente insistiera con
+      // la fecha vieja, tampoco se aparta.
+      { cliente: 'si, sepáramela ya. Ana Lucía Gómez, 3012223344',
         tools: [
           { t: 'separar_fecha_evento',
             args: { nombre_sede: 'Sede Granada Gold', fecha: '2026-03-15',
@@ -781,7 +767,7 @@ module.exports = [
         ],
         globos: [
           '¡Listo, Ana! El lunes 15 de marzo de 2027 queda apartado a tu nombre en Sede Granada Gold ✨',
-          'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗',
+          'Manejamos sistema de separado para que puedas ir abonando con comodidad 🤗 ¿En qué horario tienes disponibilidad para que un asesor te llame? ☎️',
         ] },
 
       { cliente: 'mañana en la mañana',

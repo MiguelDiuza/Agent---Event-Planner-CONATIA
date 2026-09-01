@@ -116,6 +116,49 @@ Rama de trabajo: **`main`** — `gestorVideos` se mergeó (fast-forward) el 2026
 
 ---
 
+## 0 QUINQUIES. CASO A YA NO OFRECE SEPARAR POR CHAT: PASA DIRECTO A AGENDAR LA LLAMADA (2026-09-01)
+
+**El pedido del negocio.** Cuando el cliente elegía una sede propia disponible
+(Casa Christian's, Sede Sur 66, Sede Norte, Sede Granada Gold), el bot
+preguntaba directamente *"¿Te la separamos para que quede asegurada?"* y, si
+decía que sí, apartaba la fecha con abono ahí mismo por chat
+(`separar_fecha_evento`). Ahora, antes de eso, el negocio quiere que un
+asesor llame al cliente para que conozca los salones y servicios
+personalmente — igual que ya pasaba con las sedes aliadas (CASO B), que nunca
+ofrecían separar por chat.
+
+**Qué cambió en el prompt** (`n8n/system-prompt-angie-otero.md`, volcado ya al
+nodo `Angie Otero` con `sincronizar-prompt.js --escribir`):
+
+- El tercer globo del CASO A (Turno 4, sede propia disponible) pasó de
+  *"¿Te la separamos para que quede asegurada?"* a *"Dime qué día y hora
+  tienes disponibilidad, para que un asesor te llame y conozcas los salones y
+  servicios personalmente"*. El resto del turno (disponibilidad real,
+  condiciones de separación) no se tocó.
+- Ese turno ahora pasa directo al Turno 6 (agendar la llamada), igual que el
+  CASO B. El mensaje del CASO B no se tocó — el negocio pidió el cambio solo
+  para sedes propias.
+- El Turno 5 (SEPARADO) deja de ser la respuesta automática a esa pregunta:
+  ahora es **opcional**, y solo se activa si el cliente pide explícitamente
+  apartar la fecha con abono en cualquier punto de la conversación. La
+  herramienta `separar_fecha_evento` sigue existiendo tal cual — sigue
+  pidiendo nombre y número, y sigue siendo la única forma de bloquear la
+  fecha —, solo cambió cuándo se ofrece.
+- El número de contacto se resuelve con el mecanismo que ya existía
+  (`CONFIRMAR NÚMERO DE CONTACTO`): si el cliente escribe desde un número real
+  de WhatsApp se le muestra y se confirma: no se vuelve a pedir de cero.
+
+**`scripts/casos-prueba.js`** se actualizó para que las 7 conversaciones que
+tenían el guion viejo (casos 1, 2, 4, 5, 6, 7, 8, 9 y 10) reflejen el nuevo
+cierre. Los casos 9 y 10 conservan la prueba de `separar_fecha_evento` (número
+a medias de 8 dígitos, y fecha que ya pasó), pero reencuadrada como un pedido
+explícito del cliente en vez de un "sí" a la pregunta vieja — para no perder
+esa cobertura.
+
+**Pendiente:** publicar el cambio en el VPS (el nodo del repo ya está
+sincronizado, pero no se ha vuelto a desplegar) y probar por WhatsApp con un
+número real antes de darlo por bueno en producción.
+
 ## 0 QUATER. TRES DETALLES QUE SE VEÍAN EN EL CHAT (2026-08-27, noche)
 
 Lo último que se hizo. **Publicado en el VPS y verificado en vivo.** Los tres
