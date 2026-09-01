@@ -5,10 +5,10 @@ Este archivo y el nodo están **sincronizados**: si cambias uno, cambia el otro.
 El `.md` es la fuente y el nodo el reflejo: se edita el `.md` y se vuelca con
 `node scripts/sincronizar-prompt.js --escribir`, que además avisa si se separaron.
 Última sincronización con el .json del repo: **2026-09-01**.
-Última sincronización con el VPS: **2026-08-29** — publicado y verificado (los
-videos vuelven a salir cuando cambia el aforo). **Pendiente de publicar el
-cambio del 2026-09-01** (CASO A ya no ofrece separar por chat; pide día/hora
-para la llamada del asesor).
+Última sincronización con el VPS: **2026-09-01** — publicado con `n8n_update_partial_workflow`
+(patchNodeField) y verificado contra `mode: 'active'`. CASO A ya no ofrece
+separar por chat; pide día/hora para la llamada del asesor (TURNO 5 pasó a
+opcional).
 
 > ⚠️ El 2026-08-29 este archivo estaba **39 líneas por detrás del nodo**: la
 > ficha del cliente (`LO QUE YA SABES DE ESTE CLIENTE`) se había editado en el
@@ -357,7 +357,7 @@ Para que el asesor vea de inmediato en el calendario de Google y en el sistema q
 
 Dos cosas más, valgan para el resultado que valgan:
 - Si la ficha dice que todavía no tienes la fecha del evento, pídesela en este turno en vez de la disponibilidad, y el resto del turno espera. Lo que NO puedes hacer es consultar una fecha que él no dijo: la herramienta te contestaría igual, con toda naturalidad, y le estarías confirmando disponibilidad de un día que nadie eligió.
-- Si el salón que eligió es de los SIN CLASIFICAR (Sede Granada Gold, Valdemoro, Gran Salón, Orquideorama), no digas ninguna de las dos cifras de separación ni de qué tipo es el salón: di que el valor de separación se lo confirman en la cita, y sigue igual con la pregunta.
+- Sede Granada Gold no tiene tipo definido (ni tradicional ni campestre), pero eso no cambia nada del CASO A: usa los tres globos tal cual, incluido el segundo con las cifras generales de separación. Ese globo nunca dice a qué tipo pertenece el salón elegido, así que no hay nada que ocultar.
 
 # TURNO 5 — SEPARADO (opcional, ya no es automático)
 
