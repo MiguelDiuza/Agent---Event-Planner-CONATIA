@@ -181,7 +181,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        912,
+        1152,
         192
       ]
     },
@@ -295,6 +295,35 @@
         328,
         504
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/PENDIENTE_ID_DEL_EXCEL/values/Reservas!A:H:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: [[ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm'), $('Separar Fecha').item.json.fecha, $('Validar Datos').item.json.fecha_legible, $('Separar Fecha').item.json.sede, $('Separar Fecha').item.json.cliente, $('Validar Datos').item.json.telefono_contacto, 'Bot', $('Bloquear en Calendar').item.json.id ]] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        192
+      ],
+      "id": "a1e7c3d5-9b42-4f18-8c26-7d0e5f3a9b14",
+      "name": "Anotar en Excel",
+      "credentials": {
+        "googleApi": {
+          "id": "tTdVjIuSUurkaeZN",
+          "name": "Google Service Account - Calendar"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "Anota la fila en la pestana \"Reservas\" del Excel del equipo. El ID de la hoja esta en la URL y hay que reemplazar PENDIENTE_ID_DEL_EXCEL. Requiere: (1) el Excel compartido como Editor con n8n-calendar@omega-dahlia-500617-g6.iam.gserviceaccount.com, (2) el scope https://www.googleapis.com/auth/spreadsheets en la credencial tTdVjIuSUurkaeZN, y (3) la Google Sheets API habilitada en el proyecto omega-dahlia-500617-g6.",
+      "disabled": true
     }
   ],
   "connections": {
@@ -353,7 +382,7 @@
       "main": [
         [
           {
-            "node": "Reserva Confirmada",
+            "node": "Anotar en Excel",
             "type": "main",
             "index": 0
           }
@@ -383,6 +412,17 @@
         [
           {
             "node": "Datos Inválidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anotar en Excel": {
+      "main": [
+        [
+          {
+            "node": "Reserva Confirmada",
             "type": "main",
             "index": 0
           }
