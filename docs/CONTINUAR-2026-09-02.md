@@ -84,13 +84,29 @@ Conviene que alguien del equipo lo confirme.
 
 El resto cuadra: las 49 filas vendidas de los maestros estaban las 49 en la base.
 
+**Granada Premium: fuera.** Preguntado a propósito, el cliente contestó que ese
+salón es de **otra administración** y que hay que ignorarlo por completo. Se
+borró de raíz (migración `20260902000003`): la sede, sus 32 fechas, sus 32
+eventos de Calendar y sus 32 filas de la pestaña `Reservas`. Dejarla sin precios
+no bastaba — si un cliente la nombraba, el agente le contestaba si estaba libre.
+De paso desapareció una ambigüedad: **"Granada" a secas ya resuelve al Gold**,
+que es el único que trabajan.
+
+Dos de las tres fechas recuperadas arriba eran de Premium, así que se fueron con
+ella. **Solo sobrevive `Casa 4 2026-12-27` (DIEGO MONTOYA)** — y es justo la que
+convendría confirmar, porque salió de la hoja de Granada, que ahora sabemos que
+es del vecino. Se deja bloqueada: el precio dice que el evento es en Casa 4, y
+bloquear de más cuesta una consulta; bloquear de menos, un evento doble.
+
+Hoy la agenda tiene **84 fechas**, y la hoja, la base y Calendar cuadran las tres.
+
 **Traspaso al asesor — CONSTRUIDO, APAGADO.**
 Después de la cita, el bot le dice al cliente que el asesor retoma, le avisa al
 asesor y se calla (`requiere_humano`). Migración `20260902000000` aplicada en
 producción. Los 6 nodos están en el VPS pero `Caso del Asesor` está
 **deshabilitado**, y es el interruptor de toda la rama.
 
-**Datos en producción.** 113 reservas (todas `origen='humano'`, del Excel), 0
+**Datos en producción.** 84 reservas (todas `origen='humano'`, del Excel), 0
 citas, leads reales. Sin deriva: repo, base y VPS coinciden.
 
 ## Lo que falta
@@ -111,8 +127,9 @@ hay que decirles, y no está escrito en ningún sitio que ellos lean:
 
 - Una fila por fecha vendida: basta con **la fecha y el nombre del salón** (el
   cliente ayuda, pero no hace falta).
-- El salón, con el nombre del catálogo. "Granada" a secas no vale: son dos
-  salones distintos, Gold y Premium, con precios distintos.
+- El salón, con el nombre del catálogo. No hace falta clavarlo: `casa christians
+  ciudad jardin`, en minúsculas y sin tildes, resuelve solo. Y desde que Granada
+  Premium salió del catálogo, "Granada" a secas también vale — es el Gold.
 - La fecha, **escrita como fecha**, no como texto. Así no hay que adivinar si
   3/5/2027 es mayo o marzo.
 - Para soltar una fecha: `sí` en la columna `cancelada`. **Borrar la fila no

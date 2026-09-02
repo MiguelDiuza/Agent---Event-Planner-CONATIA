@@ -212,8 +212,14 @@ async function main() {
       fila({ fecha: '23/06/2029', sede: 'Sede Norte', cliente: 'LUIS TORO' }),
       // 6  una sede que no existe
       fila({ fecha: `${ANO}-06-30`, sede: 'Sede Nortte', cliente: 'DEDAZO' }),
-      // 7  "Granada" son dos salones distintos, con precios distintos
-      fila({ fecha: `${ANO}-07-07`, sede: 'Granada', cliente: 'AMBIGUA' }),
+      // 7  "Casa" no basta: hay cuatro. Hasta el 2026-09-02 este caso usaba
+      //    "Granada", que entonces casaba con Gold y con Premium; el cliente
+      //    dijo que Premium es de otra administración, se borró del catálogo
+      //    (20260902000003) y "Granada" pasó a ser único. La garantía que se
+      //    prueba no cambió -- una sede ambigua NO se adivina -- así que apunta
+      //    a un nombre que siga siéndolo, y este además es de los que una
+      //    persona escribe de verdad.
+      fila({ fecha: `${ANO}-07-07`, sede: 'Casa', cliente: 'AMBIGUA' }),
       // 8  la fecha ilegible
       fila({ fecha: 'el otro sabado', sede: 'Sede Norte', cliente: 'SIN FECHA' }),
       // 9  una fila que ya escribió el bot: no se vuelve a mirar
@@ -242,9 +248,9 @@ async function main() {
       'si se leyera mes primero, junio 23 sería el 6 de... nada, y la fila se perdería');
     chequeo(por(6).resultado === 'rechazada' && /no existe la sede/.test(por(6).detalle),
       `la sede inventada se rechaza: "${por(6).detalle}"`);
-    chequeo(por(7).resultado === 'rechazada' && /2 sedes/.test(por(7).detalle),
-      `"Granada" no se adivina: "${por(7).detalle}"`,
-      'Gold y Premium son dos calendarios y dos listas de precios distintas');
+    chequeo(por(7).resultado === 'rechazada' && /4 sedes/.test(por(7).detalle),
+      `"Casa" no se adivina: "${por(7).detalle}"`,
+      'Casa 4, Casa 5, Casa 74 y la de Ciudad Jardín son cuatro salones distintos');
     chequeo(por(8).resultado === 'rechazada' && /no entiendo la fecha/.test(por(8).detalle),
       `la fecha ilegible se rechaza: "${por(8).detalle}"`);
     chequeo(uno.resultados.every(r => Number(r.fila) !== 9),

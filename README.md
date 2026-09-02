@@ -268,6 +268,31 @@ CAMPOS), `Sede Granada Premium 2027-08-14` (YESENIA MORENO) y `Casa 4
 17.100.000 para 120 personas es la tarifa de Casa 4 en la propia hoja `VALORES`
 (Granada Premium para 120 son 11.300.000).
 
+De esas tres **solo sobrevive la de Casa 4**: las dos de Granada Premium se
+fueron ese mismo día con la sede entera, ver abajo.
+
+### Granada Premium no existe (2026-09-02)
+
+Preguntado a propósito, el cliente respondió: «el salón premium debes ignorarlo
+completamente, para nosotros es como si no existiera porque es de una
+administración diferente». El que trabajan es el Gold.
+
+Se borró de raíz — migración `20260902000003`, sus 32 fechas de
+`agenda_reservas`, sus 32 eventos de Calendar y sus 32 filas de la pestaña
+`Reservas`. Dejarla sin precios y sin video **no la escondía del todo**: si un
+cliente la nombraba, `fn_verificar_disponibilidad_evento` la resolvía y le
+contestaba si estaba libre, como si fuera de la casa. Y ponerle
+`es_propia = false` habría sido peor: pasaría a ser sede aliada, y esas el
+agente sí las ofrece.
+
+Borrarla arregló además una molestia vieja: mientras existían las dos,
+**"Granada" a secas era ambiguo** y el agente respondía "sé más específico"
+en vez de contestar. Con una sola Granada en el catálogo, se resuelve solo.
+
+Lo que se copió del libro viejo **no se tocó**: las hojas `GRANADA 2026`,
+`GRANADA 2027` y `GRANADA` siguen ahí como archivo, porque son copia fiel del
+documento del equipo. Lo que se quitó es la sede del catálogo del agente.
+
 `volcar-agenda-a-calendar.js` es el arranque, no un guion de todos los días: de
 aquí en adelante el propio workflow crea el evento de cada fecha nueva. Se usó
 el 2026-09-02 para meter en Calendar las 113 fechas que el equipo ya tenía
