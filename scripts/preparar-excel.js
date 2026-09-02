@@ -48,12 +48,25 @@ const PESTANAS = {
   Reservas: {
     workflow: 'workflow-separar-fecha.json',
     nodo: 'Anotar en Excel',
-    rango: 'A:H',
+    rango: 'A:J',
+    // Las dos últimas nacieron el 2026-09-02, con la sincronización de vuelta
+    // (`workflow-sincronizar-hoja.json`). Son las columnas que hacen que la
+    // hoja no sea solo un reflejo:
+    //
+    //   `cancelada`     la escribe una PERSONA. Es la única forma de liberar
+    //                   una fecha desde aquí. Borrar la fila no libera nada:
+    //                   un borrado accidental pondría a la venta un sábado ya
+    //                   vendido y el bot lo vendería dos veces.
+    //   `sincronizado`  la escribe el WORKFLOW. Es el único sitio donde se ven
+    //                   los rechazos -- una sede mal escrita, una fecha que no
+    //                   se entiende, un choque con una fila del bot. Sin ella
+    //                   esas filas se perderían en silencio.
     columnas: ['anotado_en', 'fecha_evento', 'fecha_legible', 'sede', 'cliente',
-               'telefono_contacto', 'origen', 'google_event_id'],
+               'telefono_contacto', 'origen', 'google_event_id',
+               'cancelada', 'sincronizado'],
     // Una fila de mentira con la forma de una de verdad, para --probar.
     ejemplo: ['2026-01-01 00:00', '2026-01-01', "'PRUEBA - borrar", "'PRUEBA", "'PRUEBA",
-              "'+573000000000", 'Prueba', "'prueba"],
+              "'+573000000000", 'Prueba', "'prueba", "'no", "'prueba"],
   },
   Citas: {
     workflow: 'workflow-agendar-cita.json',
@@ -228,6 +241,22 @@ async function sheets(ruta, metodo = 'GET', cuerpo = null) {
 
     for (const nombre of porEncabezar) {
       const def = PESTANAS[nombre];
+
+      // Una pestaña que ya existe tiene su ancho fijo, el que se le dio al
+      // crearla, y escribir fuera de él NO devuelve un error claro: la API
+      // contesta "exceeds grid limits" y ahí se acaba. Pasó el 2026-09-02 al
+      // añadirle a `Reservas` las columnas `cancelada` y `sincronizado`: la
+      // pestaña tenía ocho columnas y el encabezado nuevo traía diez.
+      const ancho = (existentes.get(nombre).gridProperties || {}).columnCount || 0;
+      if (ancho && ancho < def.columnas.length) {
+        await sheets(':batchUpdate', 'POST', {
+          requests: [{ appendDimension: {
+            sheetId: existentes.get(nombre).sheetId, dimension: 'COLUMNS',
+            length: def.columnas.length - ancho } }],
+        });
+        console.log(`  ${c.verde('+')} ${c.neg(nombre)} pasa de ${ancho} a ${def.columnas.length} columnas`);
+      }
+
       await sheets('/values/' + encodeURIComponent(`${nombre}!A1`) +
                    '?valueInputOption=RAW', 'PUT', { values: [def.columnas] });
       // Negrita y fila congelada: la hoja la lee gente, no solo el bot.

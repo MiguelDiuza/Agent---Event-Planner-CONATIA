@@ -29,6 +29,7 @@ const ARCHIVOS = [
   'n8n/workflow-enviar-medios.json',
   'n8n/workflow-separar-fecha.json',
   'n8n/workflow-seguimiento.json',
+  'n8n/workflow-sincronizar-hoja.json',
 ];
 
 // Nodos que arrancan un flujo: no necesitan que nadie les entre.

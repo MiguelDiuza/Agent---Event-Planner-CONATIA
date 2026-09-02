@@ -112,7 +112,14 @@ for (const [pestana, def] of Object.entries(PESTANAS)) {
     if (!escapada && /^[=+\-@]/.test(s)) {
       nota = c.rojo(' ← Sheets la guardaría como FÓRMULA');
       fallos++;
-    } else if (!escapada && !COLUMNAS_DE_FECHA.has(def.columnas[i]) && def.columnas[i] !== 'origen') {
+    } else if (!escapada && s !== '' &&
+               !COLUMNAS_DE_FECHA.has(def.columnas[i]) && def.columnas[i] !== 'origen') {
+      // La celda VACÍA no lleva escape y no le hace falta: no hay nada que
+      // Sheets pueda leer como fórmula. Es el caso de `cancelada` y
+      // `sincronizado` (2026-09-02): el nodo las manda vacías porque las
+      // escriben otros -- una persona la primera, `sincronizar_hoja` la
+      // segunda -- pero las manda, para que el array del nodo y los
+      // encabezados de la hoja no se puedan desfasar sin que esto lo vea.
       nota = c.rojo(' ← columna de texto sin escapar');
       fallos++;
     }

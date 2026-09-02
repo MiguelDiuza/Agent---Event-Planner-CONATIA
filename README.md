@@ -57,10 +57,12 @@ node scripts/probar-ramas.js       # las ramas del turno 3 que los chats no toca
 node scripts/probar-fragmentos.js  # los mensajes que llegan por partes
 node scripts/probar-aforos.js      # cuántos salones salen para cada aforo, y con qué precio
 node scripts/probar-caso-asesor.js # el traspaso al asesor después de la cita
+node scripts/probar-sincronizacion.js # la vuelta del Excel a la agenda, workflow entero sin n8n ni Google
 ```
 
-`probar-caso-asesor.js` acepta `--local` para correr contra el Supabase local
-por el contenedor de Docker, en vez de contra producción.
+`probar-caso-asesor.js` y `probar-sincronizacion.js` aceptan `--local` para
+correr contra el Supabase local por el contenedor de Docker, en vez de contra
+producción.
 
 Lo único simulado es el transporte: en vez de hacer POST a YCloud, imprimen.
 
@@ -175,6 +177,60 @@ que quedar fuera de ella. Conviene tenerlo presente el día que haya que rotar
 esa llave: el acceso cuelga de esa cuenta personal, no de la empresa.
 
 Los dos nodos están **encendidos y corriendo en el VPS** desde el 2026-09-02.
+
+### La vuelta: del Excel a la agenda
+
+Lo de arriba es de una sola dirección: la base escribe en la hoja. Falta el
+otro sentido, y no es una comodidad — es un agujero. **El agente consulta la
+disponibilidad en `agenda_reservas`, no en Calendar.** La línea exacta, dentro
+de `fn_verificar_disponibilidad_evento`:
+
+```sql
+select bool_or(r.estado in ('separado','bloqueado_temporal'))
+from agenda_reservas r
+where r.sede_id = v_sede_id and r.fecha_solicitada = p_fecha;
+```
+
+Así que una fecha que una persona del equipo vende y anota a mano en el Sheets,
+para el agente sigue **libre**: se la puede confirmar a otro cliente, y eso no
+se descubre hasta que el asesor llama.
+
+`workflow-sincronizar-hoja.json` cierra esa vuelta. Cada **15 minutos** lee la
+pestaña `Reservas`, mete en `agenda_reservas` lo que falte con
+`origen='humano'` y `estado='separado'`, y crea el evento de Calendar de cada
+fecha nueva. Nueve nodos, pero toda la decisión vive en una sola función de
+Postgres —`fn_sincronizar_agenda_desde_hoja`, migración `20260902000001`—, que
+es lo que permite probarla sin n8n y sin Google.
+
+Las cuatro decisiones que había que tomar, y cómo quedaron:
+
+| | |
+|---|---|
+| **Choques con el bot** | Gana la base. Una fila del Excel no pisa una fecha que apartó Angie: esa tiene `lead_id` y `google_event_id`, y sobrescribirla dejaría un evento huérfano en Calendar y un cliente con una fecha que ya no es suya. Se reporta y lo resuelve una persona. |
+| **Filas mal escritas** | Ninguna tumba la corrida. Cada fila se resuelve sola y la que no se entiende sale rechazada **con el motivo escrito en la hoja**, en la columna `sincronizado`. Nadie mira los logs de n8n: si el rechazo no está ahí, no está en ninguna parte. |
+| **Borrados** | Borrar la fila **no** libera la fecha — un borrado accidental pondría a la venta un sábado ya vendido. Se libera escribiendo `sí` en la columna `cancelada`, y solo si la apartó una persona. Liberar tampoco es borrar: la fila se queda en `disponible`, con el rastro de quién la tenía. |
+| **Frecuencia** | Cada 15 minutos. Una lectura de la hoja y una consulta; acota a un cuarto de hora la ventana en la que el agente podría vender una fecha recién apuntada a mano. |
+
+Por eso la pestaña `Reservas` pasó de ocho columnas a diez: `cancelada`, que
+escribe una persona, y `sincronizado`, que escribe el workflow. Una fila que se
+queda **sin nota** es la señal de que la sincronización no la está viendo.
+
+Las notas se calculan solo a partir del estado de ahora, sin fechas ni horas
+dentro, y solo se manda a Google lo que cambia: en régimen la pasada de cada
+cuarto de hora no escribe ni una celda.
+
+```bash
+node --env-file=.env scripts/probar-sincronizacion.js --local  # el workflow entero, sin n8n ni Google
+node --env-file=.env scripts/volcar-agenda-a-calendar.js       # fechas ocupadas sin evento en Calendar
+```
+
+`volcar-agenda-a-calendar.js` es el arranque, no un guion de todos los días: de
+aquí en adelante el propio workflow crea el evento de cada fecha nueva. Se usó
+el 2026-09-02 para meter en Calendar las 113 fechas que el equipo ya tenía
+vendidas y que solo vivían en la base. Es idempotente por dos vías —se salta lo
+que ya tiene `google_event_id` y además lee el calendario y se salta lo que ya
+está allá—, porque sin la segunda un evento creado cuyo `update` de vuelta se
+perdió acabaría duplicado en cada corrida.
 
 ## Después de la cita, el caso es del asesor
 

@@ -1,0 +1,303 @@
+{
+  "name": "Christian Sierra — Sincronizar Excel → agenda",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "c5000000-0000-4000-8000-000000000001",
+      "name": "Cada 15 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -560,
+        300
+      ],
+      "notes": "Cada quince minutos. Es barato -- una lectura de la hoja y una consulta -- y acota a un cuarto de hora la ventana en la que el agente podria vender una fecha que el equipo acaba de apuntar a mano. Bajarlo mas no compra gran cosa: quien escribe en la hoja tarda mas que eso en volver al chat."
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA/values/Reservas!A2:J",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "valueRenderOption",
+              "value": "UNFORMATTED_VALUE"
+            },
+            {
+              "name": "majorDimension",
+              "value": "ROWS"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c5000000-0000-4000-8000-000000000002",
+      "name": "Leer la Hoja",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -340,
+        300
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "ZzY1Zt2j9JaKlujB",
+          "name": "Google Service Account - Sheets"
+        }
+      },
+      "notes": "Trae la pestana Reservas desde A2 (la 1 son los encabezados) hasta la columna J.\n\nUNFORMATTED_VALUE a proposito: asi una fecha de verdad llega como el numero de serie de Sheets y no como el texto que se ve en pantalla. Leyendola formateada habria que adivinar el formato de la hoja, y 3/5/2027 puede ser el 3 de mayo o el 5 de marzo.\n\nMisma cuenta de servicio propia que `Anotar en Excel` (chris-164@rising-precinct-507407-c3), con el unico scope de spreadsheets."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Lee la pestana `Reservas` tal como esta escrita y la deja lista para la base.\n//\n// Las columnas, en el orden en que las creo `scripts/preparar-excel.js`:\n//   A anotado_en  B fecha_evento  C fecha_legible  D sede  E cliente\n//   F telefono_contacto  G origen  H google_event_id  I cancelada  J sincronizado\n//\n// Aqui NO se decide nada de la agenda: de eso se encarga\n// `fn_sincronizar_agenda_desde_hoja`. Aqui solo se leen las celdas, se\n// normaliza la fecha y se apartan las filas que no hay ni que intentar. Lo que\n// no se entiende viaja con un `motivo` en vez de tirarse: asi el rechazo sale\n// por el mismo sitio que los demas y acaba escrito al lado de su fila, que es\n// la unica forma de que alguien lo vea.\n\nconst FECHA = 1, SEDE = 3, CLIENTE = 4, TELEFONO = 5, ORIGEN = 6, CANCELADA = 8, SINCRONIZADO = 9;\n\n// Lo que cuenta como \"libera esta fecha\". Cualquier otra cosa se rechaza en\n// vez de interpretarse: una celda que diga \"ojo, preguntar a Diana\" no puede\n// acabar poniendo a la venta un sabado ya vendido.\nconst CANCELA = new Set(['si', 'sí', 'x', 'cancelada', 'cancelado',\n                         'anulada', 'anulado', 'liberar', 'libre']);\n\nconst dosDigitos = (n) => String(n).padStart(2, '0');\n\n// La fecha, venga como venga.\n//\n// Con valueRenderOption=UNFORMATTED_VALUE una fecha DE VERDAD llega como el\n// numero de serie de Sheets -- dias desde el 30/12/1899 -- y ahi no hay\n// ambiguedad posible. Si llega como texto es que se tecleo con la celda en\n// formato texto, y entonces si hay que adivinar: 3/5/2027 se lee como 3 de\n// mayo, que es como se escribe la fecha en Colombia. Por eso lo sano es\n// escribirla como fecha y dejar que la hoja la formatee.\nfunction fechaDe(v) {\n  if (typeof v === 'number' && Number.isFinite(v)) {\n    const ms = Date.UTC(1899, 11, 30) + Math.round(v) * 86400000;\n    return new Date(ms).toISOString().slice(0, 10);\n  }\n  const s = String(v === null || v === undefined ? '' : v).trim();\n  let m;\n  if ((m = s.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})$/))) return `${m[1]}-${dosDigitos(m[2])}-${dosDigitos(m[3])}`;\n  if ((m = s.match(/^(\\d{4})\\/(\\d{1,2})\\/(\\d{1,2})$/))) return `${m[1]}-${dosDigitos(m[2])}-${dosDigitos(m[3])}`;\n  if ((m = s.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})$/))) return `${m[3]}-${dosDigitos(m[2])}-${dosDigitos(m[1])}`;\n  return null;\n}\n\nconst valores = ($input.first().json.values) || [];\nconst filas = [];\nlet saltadas = 0;\n\nfor (let i = 0; i < valores.length; i++) {\n  const f = valores[i] || [];\n  const fila = i + 2;                    // se leyo desde A2: la 1 es el encabezado\n  const cel = (n) => (f[n] === undefined || f[n] === null) ? '' : String(f[n]).trim();\n\n  const sede = cel(SEDE);\n  const marca = cel(CANCELADA).toLowerCase();\n\n  // Filas sin nada que sincronizar: las vacias y las que solo llevan una nota\n  // suelta en alguna columna.\n  if (!sede && !cel(FECHA)) { saltadas++; continue; }\n\n  // Las del bot ya estan en la base por definicion: las escribio el nodo\n  // `Anotar en Excel` DESPUES de insertarlas. Volver a mirarlas cada quince\n  // minutos no arregla nada y llenaria la columna de la derecha de ruido. La\n  // excepcion es una marcada como cancelada: eso si hay que mirarlo, aunque\n  // sea para decir que desde aqui no se toca.\n  if (cel(ORIGEN).toLowerCase().startsWith('bot') && !marca) { saltadas++; continue; }\n\n  const item = {\n    fila,\n    sede,\n    cliente: cel(CLIENTE),\n    telefono: cel(TELEFONO),\n    cancelar: false,\n    motivo: null,\n    fecha: null,\n    // Lo que las columnas `origen` y `sincronizado` dicen AHORA. Viajan para\n    // poder escribir de vuelta solo las celdas que de verdad cambian.\n    origen_actual: cel(ORIGEN),\n    nota_actual: cel(SINCRONIZADO),\n  };\n\n  if (marca) {\n    if (CANCELA.has(marca)) item.cancelar = true;\n    else item.motivo = `no entiendo \"${cel(CANCELADA)}\" en la columna cancelada: escribe \"sí\" o déjala vacía`;\n  }\n\n  item.fecha = fechaDe(f[FECHA]);\n  if (!item.motivo && !item.fecha) item.motivo = `no entiendo la fecha \"${cel(FECHA)}\"`;\n\n  filas.push(item);\n}\n\n// Sin filas que mirar no hay nada que preguntarle a la base, y devolver cero\n// items corta el resto del workflow sin tocar nada.\nif (!filas.length) return [];\n\nreturn [{ json: { filas, leidas: valores.length, saltadas, procesadas: filas.length } }];\n"
+      },
+      "id": "c5000000-0000-4000-8000-000000000003",
+      "name": "Leer Filas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        300
+      ],
+      "notes": "Normaliza las celdas y aparta lo que no hay que mirar (filas vacias y filas del bot). Lo que no entiende NO lo tira: lo manda con un `motivo` para que el rechazo acabe escrito en la hoja."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from fn_sincronizar_agenda_desde_hoja($1::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json.filas)] }}"
+        }
+      },
+      "id": "c5000000-0000-4000-8000-000000000004",
+      "name": "Sincronizar",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        100,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "notes": "Toda la decision vive en la funcion, no aqui: que hacer con un choque, con una fila mal escrita, con una cancelacion. Esta en la migracion 20260902000001 y se puede probar sola con `scripts/probar-sincronizacion.js --local`.\n\nDevuelve UNA FILA POR CADA UNA que entro, con lo que hizo con ella. De ahi salen las dos ramas: la nota que se escribe en la hoja y los eventos nuevos de Calendar."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La columna `sincronizado` de la hoja: que paso con cada fila, escrito al\n// lado de la fila que lo provoco.\n//\n// Es el UNICO sitio donde se ven los rechazos -- no hay nadie mirando los logs\n// de n8n -- asi que el texto tiene que aguantar leerse sin contexto.\n//\n// Y tiene que ser ESTABLE: se calcula solo a partir del estado de ahora, sin\n// fechas ni horas dentro, para que dos corridas seguidas sin novedad escriban\n// exactamente lo mismo. Abajo solo se manda lo que cambia, asi que en regimen\n// esta rama no escribe ni una celda y la hoja no se llena de versiones.\n//\n// Una fila que se queda SIN nota es la senal de que la sincronizacion no la\n// esta viendo: o esta vacia, o es del bot, o el workflow no llego hasta ella.\n\nconst filas = $('Leer Filas').first().json.filas;\nconst porFila = new Map(filas.map(f => [f.fila, f]));\n\nconst nota = (r) => {\n  if (r.resultado === 'liberada') return '✓ liberada';\n  if (r.resultado === 'omitida' && r.detalle === 'ya estaba liberada') return '✓ liberada';\n  if (r.resultado === 'nueva' || r.resultado === 'reactivada' || r.resultado === 'ya estaba') {\n    return '✓ en la agenda';\n  }\n  if (r.resultado === 'omitida') return '· ' + r.detalle;\n  if (r.resultado === 'choque')  return '⚠ ' + r.detalle;\n  return '✗ ' + r.detalle;\n};\n\n// Las que acabaron dentro de la agenda. Son las que pueden rellenar `origen`.\nconst ACEPTADAS = new Set(['nueva', 'reactivada', 'ya estaba']);\n\nconst data = [];\nfor (const item of $('Sincronizar').all()) {\n  const r = item.json;\n  const f = porFila.get(r.fila);\n  if (!f) continue;                      // la fila viaja de ida y vuelta: no deberia faltar\n\n  const texto = nota(r);\n  if (texto !== f.nota_actual) data.push({ range: `Reservas!J${r.fila}`, values: [[texto]] });\n\n  // Una fila escrita a mano llega sin `origen`. Se rellena una sola vez, para\n  // que la hoja pueda decir quien agendo cada evento sin adivinarlo -- y para\n  // que se distinga de un vistazo de las que aparto el bot.\n  if (!f.origen_actual && ACEPTADAS.has(r.resultado)) {\n    data.push({ range: `Reservas!G${r.fila}`, values: [['Confirmación humana']] });\n  }\n}\n\nif (!data.length) return [];\nreturn [{ json: { data, celdas: data.length } }];\n"
+      },
+      "id": "c5000000-0000-4000-8000-000000000005",
+      "name": "Armar Nota",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        200
+      ],
+      "notes": "Arma el batchUpdate de la columna `sincronizado`, y solo con las celdas que cambian. Si no cambia ninguna devuelve cero items y la llamada a Google ni se hace."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ valueInputOption: 'RAW', data: $json.data }) }}",
+        "options": {}
+      },
+      "id": "c5000000-0000-4000-8000-000000000006",
+      "name": "Anotar en la Hoja",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        200
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "ZzY1Zt2j9JaKlujB",
+          "name": "Google Service Account - Sheets"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "Escribe las notas de vuelta en la hoja.\n\nvalueInputOption=RAW, no USER_ENTERED: las notas empiezan por ✓, ⚠ o ✗ y van con el texto del rechazo dentro, que puede empezar por cualquier cosa. RAW mete la celda tal cual y no hay forma de que entre como formula.\n\nSi falla no se pierde nada: la agenda ya quedo bien en la base, que es lo que lee el agente. La proxima corrida vuelve a intentar la nota."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Las fechas que ACABAN de entrar en la agenda, para bloquearlas tambien en el\n// Google Calendar que abre el asesor.\n//\n// Solo las nuevas: una que ya estaba no tiene por que crear el evento otra\n// vez. En la corrida normal esto devuelve cero items y la rama entera no se\n// ejecuta, que es justo lo que se quiere -- ni una llamada a Google cada\n// quince minutos por unas fechas que no han cambiado.\n//\n// El `pairedItem` va a mano y no es adorno: un nodo Code en modo\n// runOnceForAllItems no puede saber de que item de entrada sale cada uno de\n// salida, asi que n8n no lo rellena solo. Sin el, la expresion de aguas abajo\n// que mira a este nodo se queda sin de donde agarrarse y el\n// id del evento no vuelve a la base -- callado, porque ese nodo continua en\n// error a proposito. El nodo que lo necesita es `Guardar Event ID`.\nconst salida = [];\n$('Sincronizar').all().forEach((item, i) => {\n  if (item.json.resultado === 'nueva') salida.push({ json: item.json, pairedItem: { item: i } });\n});\nreturn salida;\n"
+      },
+      "id": "c5000000-0000-4000-8000-000000000007",
+      "name": "Nuevas en Calendar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        420
+      ],
+      "notes": "Rama independiente de la de la nota: ninguna de las dos depende de que la otra tenga trabajo. Cero fechas nuevas = cero items = esta rama no corre."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('christianeventos.bot@gmail.com') }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ summary: `RESERVA - ${$json.sede} - ${$json.cliente || 'sin nombre'}`, description: `Fecha vendida por el equipo, anotada a mano en el Excel y cargada por la sincronizacion automatica.\\nSede: ${$json.sede}\\nCliente: ${$json.cliente || 'sin nombre'}\\nEstado: separado`, start: { date: $json.fecha }, end: { date: DateTime.fromISO($json.fecha).plus({ days: 1 }).toFormat('yyyy-MM-dd') }, transparency: 'transparent' }) }}",
+        "options": {}
+      },
+      "id": "c5000000-0000-4000-8000-000000000008",
+      "name": "Bloquear en Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        420
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "tTdVjIuSUurkaeZN",
+          "name": "Google Service Account - Calendar"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "Mismo evento que crea `separar_fecha_evento`: de DIA COMPLETO y transparency=transparent, para que `Buscar Choques` de agendar_cita lo ignore y la fecha vendida no bloquee las citas de 30 minutos de ese dia. end.date es exclusivo en Google: por eso fecha+1.\n\nEl calendario NO manda: la disponibilidad se lee de `agenda_reservas`. Esto existe para que el asesor que abre el Calendar vea lo mismo que ve el bot. Por eso onError continua: si Google falla, la fecha ya quedo protegida donde importa."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update agenda_reservas set google_event_id = $2\n where id_reserva = $1::uuid and google_event_id is null\n returning id_reserva",
+        "options": {
+          "queryReplacement": "={{ [$('Nuevas en Calendar').item.json.reserva, $json.id || null] }}"
+        }
+      },
+      "id": "c5000000-0000-4000-8000-000000000009",
+      "name": "Guardar Event ID",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        760,
+        420
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Cierra el vinculo entre la fila y el evento, que es lo que permite borrar el bloqueo del calendario si la fecha se libera.\n\n`and google_event_id is null` para no pisar el evento de una fila que ya tenia el suyo, y `$json.id || null` porque si Google fallo el nodo de arriba sigue igual y no trae id."
+    }
+  ],
+  "connections": {
+    "Cada 15 minutos": {
+      "main": [
+        [
+          {
+            "node": "Leer la Hoja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer la Hoja": {
+      "main": [
+        [
+          {
+            "node": "Leer Filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Filas": {
+      "main": [
+        [
+          {
+            "node": "Sincronizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sincronizar": {
+      "main": [
+        [
+          {
+            "node": "Armar Nota",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Nuevas en Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Nota": {
+      "main": [
+        [
+          {
+            "node": "Anotar en la Hoja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nuevas en Calendar": {
+      "main": [
+        [
+          {
+            "node": "Bloquear en Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bloquear en Calendar": {
+      "main": [
+        [
+          {
+            "node": "Guardar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {}
+}

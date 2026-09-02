@@ -40,6 +40,7 @@ const WORKFLOWS = [
   ['workflow-enviar-medios.json', process.env.N8N_VPS_WORKFLOW_ENVIAR_MEDIOS],
   ['workflow-seguimiento.json', process.env.N8N_VPS_WORKFLOW_SEGUIMIENTO],
   ['workflow-separar-fecha.json', process.env.N8N_VPS_WORKFLOW_SEPARAR_FECHA],
+  ['workflow-sincronizar-hoja.json', process.env.N8N_VPS_WORKFLOW_SINCRONIZAR_HOJA],
 ];
 
 // `Seguimiento automático` está desactivado a propósito desde el 2026-08-24, así

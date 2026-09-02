@@ -10,6 +10,14 @@
 // para comprobar que al agente le llega UNO. Ver el caso 9.
 //
 // Hoy es jueves 27 de agosto de 2026. Las fechas estan calculadas contra eso.
+//
+// UNA REGLA SOBRE LAS FECHAS, que costo tres casos en rojo el 2026-09-02. La
+// base tiene desde el 2026-09-01 las 113 fechas que el equipo ya tenia
+// vendidas (migracion 20260901000000), y siguen entrando mas por la
+// sincronizacion del Excel. Una fecha de prueba que se quiera LIBRE tiene que
+// ser una que nadie pueda vender: de 2028 en adelante, que es mas alla de
+// donde llega el calendario real de la empresa. Las de 2026 y 2027 valen solo
+// cuando lo que se quiere probar es justamente una fecha ocupada.
 
 const TIKTOK = 'https://www.tiktok.com/@christian.sierra.e?_r=1&_t=ZS-999l6N2zPM4';
 const INSTAGRAM = 'https://www.instagram.com/christiansierra_planner?igsi=MWcyMmE1Z3lraHA2ZQ%3D%3D&utm_source=qr';
@@ -274,9 +282,17 @@ module.exports = [
                   tipo_evento: 'graduacion', nombre_cliente: 'Katherine', tipo_medio: 'ambos' } }],
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
 
-      { cliente: 'me encanto la Sede Sur 66',
+      // La sede es Granada Gold y no Sede Sur 66 desde el 2026-09-02. Esta rama
+      // necesita una fecha LIBRE y a menos de cinco dias, y `enDias(3)` cae
+      // donde caiga: con Sede Sur 66 -- 21 fechas vendidas, tres de ellas en
+      // los proximos diez dias -- el caso se puso rojo por un dato real. Gold
+      // es la unica sede propia sin ventas cerca. Sigue sin ser una garantia:
+      // si algun dia enDias(3) cae en un sabado que Gold tenga vendido, esto
+      // vuelve a ponerse rojo sin que nadie haya roto nada. La salida de
+      // verdad seria que el banco se sembrara su propia fecha libre.
+      { cliente: 'me encanto la Granada Gold',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Sede Sur 66 Mundo Foto', fecha: enDias(3) },
+          args: { nombre_sede: 'Sede Granada Gold', fecha: enDias(3) },
           revisar: (r, anota) => {
             const t = r[0].resultado || '';
             // La rama se llamaba FALTAN SOLO hasta el 2026-08-28.
@@ -289,7 +305,7 @@ module.exports = [
               anota('error', 'le está dejando confirmar una fecha a tres días');
           } }],
         globos: [
-          '¡Excelente elección, Katherine! Sede Sur 66 Mundo Foto es hermosa ✨',
+          '¡Excelente elección, Katherine! La Sede Granada Gold es hermosa ✨',
           'Como esa fecha está a la vuelta de la esquina, prefiero que cuadremos juntos el montaje y el personal para que te quede perfecto 🤗',
           '¿Prefieres que un asesor te llame hoy, o te queda mejor pasar por la sede?',
         ] },
@@ -299,7 +315,7 @@ module.exports = [
 
       { cliente: '3201234567, a las 5 de la tarde',
         tools: [{ t: 'agendar_cita', args: { tipo_cita: 'llamada', fecha: '2026-08-26', hora: '17:00',
-          nombre: 'Katherine', telefono_contacto: '3201234567', detalle: 'Llamada grado Sede Sur 66, 60 invitados, evento el 29 de agosto' } }],
+          nombre: 'Katherine', telefono_contacto: '3201234567', detalle: 'Llamada grado Sede Granada Gold, 60 invitados, evento el 29 de agosto' } }],
         globos: [
           'Quedó agendada tu llamada para hoy miércoles 26 de agosto a las 5:00 p.m., al 3201234567 ☎️',
           ...REDES,
@@ -393,6 +409,10 @@ module.exports = [
         globos: ['Cuéntame cuál de estos salones te llamó más la atención 🤗'] },
 
       { cliente: 'nos gusto la Sede Norte',
+        // Esta SI tiene que estar ocupada, y lo esta por un dato real: es una
+        // de las 113 que el equipo tenia vendidas (LUZ MARIANA VIERA). Si algun
+        // dia se cancela, este caso se pone rojo sin que nada se haya roto:
+        // entonces hay que apuntarlo a otra fecha vendida, o sembrarla.
         tools: [{ t: 'verificar_disponibilidad_evento',
           args: { nombre_sede: 'Sede Norte', fecha: '2026-11-14' },
           revisar: (r, anota) => { if (!/^OCUPADA/.test(r[0].resultado)) anota('error', 'se esperaba OCUPADA y llego: ' + r[0].resultado.slice(0, 60)); } }],
@@ -401,12 +421,15 @@ module.exports = [
           '¿Miramos el fin de semana siguiente, o la misma fecha en otra sede? No quiero que se queden sin su evento 🤗',
         ] },
 
-      { cliente: 'listo, el 21 de noviembre entonces',
+      // 2028 y no 2026: el 21 de noviembre de 2026 en Sede Norte tambien esta
+      // vendido (LINA FERNANDA ORDONEZ), asi que el caso pedia una fecha libre
+      // y le llegaba OCUPADA.
+      { cliente: 'listo, el 18 de noviembre de 2028 entonces',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Sede Norte', fecha: '2026-11-21' },
+          args: { nombre_sede: 'Sede Norte', fecha: '2028-11-18' },
           revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llego: ' + r[0].resultado.slice(0, 60)); } }],
         globos: [
-          '¡Buenísimo, Andrés! El sábado 21 de noviembre sí está libre en la Sede Norte ✨',
+          '¡Buenísimo, Andrés! El sábado 18 de noviembre sí está libre en la Sede Norte ✨',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
           '¿Te la separamos para que quede asegurada? 🤗',
         ] },
@@ -601,7 +624,11 @@ module.exports = [
 
       { cliente: 'la Sede Sur 66',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Sede Sur 66 Mundo Foto', fecha: '2026-11-07' } }],
+          // 2028: el 7 de noviembre de 2026 en esta sede esta vendido (William
+          // Cadavid). Este turno no comprueba nada, asi que no daba error --
+          // pero el globo de abajo decia "esta libre" de una fecha que no lo
+          // esta, y un caso que miente se acaba copiando.
+          args: { nombre_sede: 'Sede Sur 66 Mundo Foto', fecha: '2028-11-07' } }],
         globos: [
           '¡Excelente elección, Diana! Sede Sur 66 Mundo Foto es espectacular ✨ Te confirmo que el 7 de noviembre está libre en esa sede 😁',
           'Recuerda que nuestra promoción está sujeta a disponibilidad de cada salón. Los salones tradicionales se separan desde $1.000.000 y los campestres desde $2.000.000.',
@@ -649,6 +676,11 @@ module.exports = [
         cliente: 'quiero que sea para 150 personas',
         globos: ['¿Y para qué fecha lo tienes pensado, Camilo? 🤗'] },
 
+      // El AÑO va lejos (2028) a proposito. Con 2026 este caso se puso rojo el
+      // 2026-09-02: el 5 de diciembre de 2026 en Sede Norte es una de las 113
+      // fechas que el equipo ya tenia vendidas y que entraron por la migracion
+      // 20260901000000. Una fecha de prueba tiene que ser una que nadie pueda
+      // vender, y el calendario real de la empresa no pasa de 2027.
       { cliente: 'el 5 de diciembre',
         tools: [{ t: 'enviar_medios', revisar: revisarTanda(),
           args: { categoria: 'sede', referencia: 'todas', invitados: 150,
@@ -657,7 +689,7 @@ module.exports = [
 
       { cliente: 'me gusto la Sede Norte',
         tools: [{ t: 'verificar_disponibilidad_evento',
-          args: { nombre_sede: 'Sede Norte', fecha: '2026-12-05' },
+          args: { nombre_sede: 'Sede Norte', fecha: '2028-12-05' },
           revisar: (r, anota) => { if (!/^DISPONIBLE\./.test(r[0].resultado)) anota('error', 'se esperaba DISPONIBLE y llegó: ' + r[0].resultado.slice(0, 60)); } }],
         globos: [
           '¡Excelente elección, Camilo! La Sede Norte es espectacular ✨ Te confirmo que el 5 de diciembre está libre en esa sede 😁',
@@ -669,7 +701,7 @@ module.exports = [
       // pedir sin decirle al cliente que se equivocó.
       { cliente: 'si listo, Camilo Restrepo, 31502909',
         tools: [{ t: 'separar_fecha_evento',
-          args: { nombre_sede: 'Sede Norte', fecha: '2026-12-05',
+          args: { nombre_sede: 'Sede Norte', fecha: '2028-12-05',
                   nombre_cliente: 'Camilo Restrepo', telefono_contacto: '31502909' },
           revisar: (r, anota) => {
             const m = r[0] || {};
@@ -681,7 +713,7 @@ module.exports = [
 
       { cliente: 'ah si perdon, 3150290928',
         tools: [{ t: 'separar_fecha_evento',
-          args: { nombre_sede: 'Sede Norte', fecha: '2026-12-05',
+          args: { nombre_sede: 'Sede Norte', fecha: '2028-12-05',
                   nombre_cliente: 'Camilo Restrepo', telefono_contacto: '3150290928' },
           revisar: (r, anota) => {
             if ((r[0] || {}).estado_resultado !== 'separada')

@@ -107,7 +107,7 @@ const t = (v) => (v === null || v === undefined || v === '') ? '' : "'" + v;
      order by r.fecha_solicitada`);
 
   const tok = await token();
-  const hay = await sheets(tok, '/values/' + encodeURIComponent('Reservas!A:H'));
+  const hay = await sheets(tok, '/values/' + encodeURIComponent('Reservas!A:J'));
   const existentes = new Set(((hay.values || []).slice(1))
     .map(f => `${(f[3] || '').trim()}||${(f[1] || '').trim()}`));
 
@@ -126,14 +126,15 @@ const t = (v) => (v === null || v === undefined || v === '') ? '' : "'" + v;
 
   const values = faltan.map(f => [
     f.anotado, f.fecha, t(f.legible), t(f.sede), t(f.cliente), t(f.telefono), f.origen, t(f.evento),
+    '', '',   // cancelada y sincronizado: las escriben una persona y el workflow de vuelta
   ]);
-  const r = await sheets(tok, '/values/' + encodeURIComponent('Reservas!A:H') +
+  const r = await sheets(tok, '/values/' + encodeURIComponent('Reservas!A:J') +
     ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', 'POST', { values });
   console.log(`\n  ${c.verde('+')} ${r.updates.updatedRows} fila(s) escritas en ${r.updates.updatedRange}`);
 
   // Se relee y se cuenta: si la hoja no tiene ahora tantas filas como fechas
   // ocupadas hay en la base, algo se quedó por el camino y hay que verlo ahora.
-  const fin = await sheets(tok, '/values/' + encodeURIComponent('Reservas!A:H'));
+  const fin = await sheets(tok, '/values/' + encodeURIComponent('Reservas!A:J'));
   const total = (fin.values || []).length - 1;
   console.log(total === filas.length
     ? c.verde(`\n  la hoja y la base cuadran: ${total} fecha(s) en las dos.\n`)
