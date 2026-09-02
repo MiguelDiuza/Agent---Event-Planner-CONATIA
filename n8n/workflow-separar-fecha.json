@@ -304,7 +304,7 @@
         "nodeCredentialType": "googleApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ values: [[ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm'), $('Separar Fecha').item.json.fecha, $('Validar Datos').item.json.fecha_legible, $('Separar Fecha').item.json.sede, $('Separar Fecha').item.json.cliente, $('Validar Datos').item.json.telefono_contacto, 'Bot', $('Bloquear en Calendar').item.json.id ]] }) }}",
+        "jsonBody": "={{ (() => { const t = x => (x === null || x === undefined || x === '') ? '' : \"'\" + x; const r = $('Separar Fecha').item.json, d = $('Validar Datos').item.json; return JSON.stringify({ values: [[ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm'), r.fecha, t(d.fecha_legible), t(r.sede), t(r.cliente), t(d.telefono_contacto), 'Bot', t($('Bloquear en Calendar').item.json.id) ]] }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",

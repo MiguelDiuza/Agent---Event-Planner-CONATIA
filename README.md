@@ -45,6 +45,7 @@ desincronizadas del nodo.
 node scripts/revisar-workflows.js  # los 5 workflows nodo por nodo: conexiones, referencias, credenciales
 node scripts/probar-agenda.js      # horario de atención y horas libres, con el reloj congelado
 node scripts/probar-telefono.js    # el número de contacto y la fecha del evento
+node scripts/probar-excel.js       # las filas que los nodos escriben en el Excel del equipo
 ```
 
 **Contra la base real.** Necesitan `SUPABASE_PROJECT_REF` y
@@ -98,6 +99,49 @@ ficha del cliente y los aforos que ya se le cotizaron—. No hace falta borrarla
 a mano, pero sí **mirarlas al comprobar que el reseteo quedó en cero**: son las
 dos que hacen que el agente "recuerde" el evento y la cantidad de personas, así
 que si sobrevivieran, el chat no arrancaría de verdad desde el saludo.
+
+## El Excel del equipo
+
+El calendario y el Excel del equipo eran dos verdades distintas. Los dos flujos
+que escriben en Google Calendar escriben ahora también una fila en la hoja:
+`separar_fecha_evento` en la pestaña **Reservas**, `agendar_cita` en **Citas**.
+
+Cada fila lleva una columna `origen`. El nodo la escribe fija en `Bot`, porque
+solo corre cuando fue Angie quien agendó; las filas que carga o escribe una
+persona quedan en `Confirmación humana`. Es la misma distinción que
+`agenda_reservas.origen` guarda en Postgres.
+
+El nodo va **después** del insert en Postgres y **antes** del `Set` que le
+contesta al agente, con `onError: continueRegularOutput`. Si Google Sheets
+falla, la venta no se cae: la fecha ya quedó en Postgres y en Calendar, que son
+la fuente de verdad, y la hoja es el reflejo. Un reflejo que falla no vale una
+reserva perdida.
+
+```bash
+node --env-file=.env scripts/preparar-excel.js           # mira cómo está la hoja
+node --env-file=.env scripts/preparar-excel.js --crear   # crea las pestañas y los encabezados
+node --env-file=.env scripts/preparar-excel.js --probar  # escribe una fila real, la relee y la borra
+```
+
+`--probar` **relee** la fila que acaba de escribir en vez de fiarse de lo que
+mandó. Los nodos escriben con `valueInputOption=USER_ENTERED`, que interpreta
+la celda igual que si la tecleara una persona: lo que empieza por `+`, `-`, `=`
+o `@` entra como fórmula. El teléfono de contacto sale normalizado a E.164
+(`+573001234567`), así que sin escapar se guardaría como el número
+`573001234567` — sin el `+57` y sin poder marcarse. Por eso las columnas de
+texto van con un apóstrofo delante, que Sheets se come; `probar-excel.js`
+comprueba que a ninguna se le olvide.
+
+Los encabezados viven en `PESTANAS`, dentro de `preparar-excel.js`, y son la
+única fuente de verdad del orden de las columnas: `probar-excel.js` los importa
+de ahí y compara celda por celda contra la fila que arma cada nodo, para que
+nadie pueda mover una columna sin mover el nodo.
+
+**Pendiente:** los dos nodos están **deshabilitados** porque la Google Sheets
+API está apagada en el proyecto `omega-dahlia-500617-g6`. La cuenta de servicio
+no puede encenderla sola (le falta `serviceusage.services.enable`, comprobado
+contra la API: 403 `PERMISSION_DENIED`); es un clic de una persona con acceso a
+la consola de Google Cloud. `preparar-excel.js` imprime el enlace exacto.
 
 ## Estructura de datos
 

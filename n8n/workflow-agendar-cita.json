@@ -368,7 +368,7 @@
         "nodeCredentialType": "googleApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ values: [[ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm'), $('Calcular Ventana').item.json.inicio_legible, $('Calcular Ventana').item.json.inicio, $('Calcular Ventana').item.json.fin, $('Calcular Ventana').item.json.tipo_cita, $('Calcular Ventana').item.json.nombre, $('Calcular Ventana').item.json.telefono_contacto, $('Calcular Ventana').item.json.telefono, $('Calcular Ventana').item.json.detalle, 'Bot', $('Crear Cita').item.json.id ]] }) }}",
+        "jsonBody": "={{ (() => { const t = x => (x === null || x === undefined || x === '') ? '' : \"'\" + x; const v = $('Calcular Ventana').item.json; return JSON.stringify({ values: [[ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm'), t(v.inicio_legible), v.inicio, v.fin, t(v.tipo_cita), t(v.nombre), t(v.telefono_contacto), t(v.telefono), t(v.detalle), 'Bot', t($('Crear Cita').item.json.id) ]] }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
