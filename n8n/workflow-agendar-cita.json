@@ -381,13 +381,12 @@
       "name": "Anotar Cita en Excel",
       "credentials": {
         "googleApi": {
-          "id": "BKP31rWyOHmoLB2c",
+          "id": "ZzY1Zt2j9JaKlujB",
           "name": "Google Service Account - Sheets"
         }
       },
       "onError": "continueRegularOutput",
-      "notes": "Anota la fila en la pestana \"Citas\" del Excel del equipo (1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA). Escribe con la misma cuenta de servicio que Calendar, pero con una credencial aparte que solo lleva el scope de spreadsheets y solo puede hablar con sheets.googleapis.com. Si falla no pasa nada: onError=continueRegularOutput, y la fecha ya quedo en Postgres y en Calendar.",
-      "disabled": true
+      "notes": "Anota la fila en la pestana \"Citas\" del Excel del equipo (1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA).\n\nEscribe con una cuenta de servicio PROPIA (chris-164@rising-precinct-507407-c3.iam.gserviceaccount.com), no con la de Calendar. El motivo: la Google Sheets API se habilita en el proyecto dueno de la CREDENCIAL que hace la llamada, no donde vive la hoja, y el proyecto del cliente la tiene apagada sin forma de encenderla desde fuera. La hoja solo tiene que estar compartida con esta cuenta. La credencial solo lleva el scope de spreadsheets y solo puede hablar con sheets.googleapis.com.\n\nLas columnas de TEXTO van con un apostrofo delante a proposito: el nodo escribe con valueInputOption=USER_ENTERED, que interpreta la celda como si la teclearan, y lo que empieza por + - = @ entra como formula. El telefono de contacto sale en E.164 (+573001234567) y sin el apostrofo se guardaba como el numero 573001234567, sin el +57 y sin poder marcarse. Las de fecha van sin escapar, para que la hoja las ordene como fechas. `scripts/probar-excel.js` no deja que a ninguna se le olvide.\n\nSi falla no pasa nada: onError=continueRegularOutput, y la fecha ya quedo en Postgres y en Calendar, que son la fuente de verdad."
     }
   ],
   "connections": {

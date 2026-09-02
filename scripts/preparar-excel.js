@@ -258,15 +258,44 @@ async function sheets(ruta, metodo = 'GET', cuerpo = null) {
 
       // Se relee para ver qué GUARDÓ Sheets, no qué se le mandó: es la única
       // forma de cazar la celda que entró como fórmula o como número.
+      //
+      // Dos veces, y no una, porque hay dos preguntas distintas. La lectura
+      // FORMATEADA devuelve lo que ve una persona en la celda; la SIN FORMATO
+      // devuelve el valor de dentro, y ahí una fecha de verdad sale como
+      // número de serie. Sin la segunda no se puede distinguir "Sheets entendió
+      // la fecha" de "Sheets se comió el dato".
       const leida = await sheets('/values/' + encodeURIComponent(`${nombre}!A${fila}:${fila}`));
+      const cruda = await sheets('/values/' + encodeURIComponent(`${nombre}!A${fila}:${fila}`) +
+                                 '?valueRenderOption=UNFORMATTED_VALUE');
       const celdas = (leida.values && leida.values[0]) || [];
+      const crudas = (cruda.values && cruda.values[0]) || [];
       let mal = 0;
       celdas.forEach((v, i) => {
-        const mandado = String(def.ejemplo[i]).replace(/^'/, '');
-        if (String(v) !== mandado) {
-          console.log(`    ${c.rojo('✗')} ${def.columnas[i]}: se mandó ${JSON.stringify(mandado)} y quedó ${JSON.stringify(v)}`);
+        const enviado = String(def.ejemplo[i]);
+        const escapada = enviado.startsWith("'");
+        const esperado = enviado.replace(/^'/, '');
+        if (String(v) === esperado) return;
+
+        // Las columnas de texto llevan el apóstrofo justo para que vuelvan
+        // IGUALES. Si una de esas cambió, el dato se corrompió: es el caso del
+        // teléfono que entra como número y pierde el +57.
+        if (escapada) {
+          console.log(`    ${c.rojo('✗')} ${def.columnas[i]}: se mandó ${JSON.stringify(esperado)} y quedó ${JSON.stringify(v)}`);
           mal++;
+          return;
         }
+        // Las de fecha van sin escapar a propósito, para que la hoja las pueda
+        // ordenar y filtrar. Que Sheets las reescriba está BIEN mientras las
+        // haya entendido como fecha -- y eso se sabe porque por dentro quedó un
+        // número, no un texto.
+        if (typeof crudas[i] === 'number') {
+          console.log(`    ${c.gris('·')} ${def.columnas[i]}: ${JSON.stringify(esperado)} → ${JSON.stringify(v)} ` +
+                      c.gris(`(fecha de verdad, serie ${crudas[i]})`));
+          return;
+        }
+        console.log(`    ${c.rojo('✗')} ${def.columnas[i]}: se mandó ${JSON.stringify(esperado)} y quedó ${JSON.stringify(v)}` +
+                    c.gris(` (por dentro: ${JSON.stringify(crudas[i])})`));
+        mal++;
       });
       console.log(`  ${mal ? c.rojo('✗') : c.verde('✓')} ${nombre}: fila ${fila} escrita y releída, ` +
                   `${celdas.length}/${def.columnas.length} celdas${mal ? `, ${mal} distinta(s)` : ' iguales'}`);

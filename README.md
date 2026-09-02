@@ -166,9 +166,15 @@ La llave va en `.gcp-sa-sheets.json` (el `.gitignore` ya cubre
 scope `.../auth/spreadsheets` y al dominio `sheets.googleapis.com`, y apunta los
 dos nodos a ella.
 
-**Pendiente:** los dos nodos están **deshabilitados** hasta que exista esa
-cuenta de servicio, la hoja esté compartida con ella y
-`preparar-excel.js --crear --probar` salga en verde.
+La cuenta que escribe hoy es
+`chris-164@rising-precinct-507407-c3.iam.gserviceaccount.com`, en un proyecto
+**sin organización** creado con una cuenta de Gmail personal. No fue un capricho:
+la organización de Workspace bloquea la descarga de llaves JSON
+(`constraints/iam.disableServiceAccountKeyCreation`), así que el proyecto tuvo
+que quedar fuera de ella. Conviene tenerlo presente el día que haya que rotar
+esa llave: el acceso cuelga de esa cuenta personal, no de la empresa.
+
+Los dos nodos están **encendidos y corriendo en el VPS** desde el 2026-09-02.
 
 ## Después de la cita, el caso es del asesor
 
