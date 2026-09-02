@@ -60,6 +60,30 @@ nueva. Lo que sí sigue sirviendo es su otra mitad, `--huerfanos --escribir`, qu
 borra los eventos de RESERVA que ya no respalda ninguna fila de la agenda — los
 que dejan las pruebas al limpiarse por SQL.
 
+**El libro viejo entero, dentro del nuevo.** Las 21 pestañas de `2025.xlsx`
+—`VALORES`, los maestros `2026` y `2027`, un calendario por sede, y tres ocultas
+que son plantillas vacías— están copiadas tal cual, con su orden y con las
+ocultas ocultas, y comprobadas celda por celda. Los calendarios por sede llevan
+teléfono, valor, abonos y saldo: cosas que la base no tiene ni necesita.
+
+Se hace con `scripts/leer-excel-viejo.py` (el .xlsx a un .json por pestaña) y
+`scripts/replicar-hojas-excel-viejo.js`. Ojo: **son pestañas para las personas,
+no para el agente** — escribir una venta en `CIUDAD JARDIN` no aparta nada. La
+única puerta a la base sigue siendo `Reservas`.
+
+**Faltaban tres fechas vendidas, y ya están.** La carga del 2026-09-01 tomó el
+año literal de la celda y las descartó por pasadas, pero el libro se llama
+`2025.xlsx` y se reutilizó para 2026: el año de verdad lo dice la columna del
+día de la semana. Eran `Sede Granada Premium 2027-08-07` (MARTHA CAMPOS),
+`Sede Granada Premium 2027-08-14` (YESENIA MORENO) y `Casa 4 2026-12-27`
+(DIEGO MONTOYA). Se metieron por la pestaña `Reservas`, como cualquier venta del
+equipo. **La sede de la de DIEGO MONTOYA es una deducción**: venía en la hoja de
+Granada con "CASA 4" escrito donde va el día, y 17.100.000 para 120 personas es
+la tarifa de Casa 4 en `VALORES` (Granada Premium para 120 son 11.300.000).
+Conviene que alguien del equipo lo confirme.
+
+El resto cuadra: las 49 filas vendidas de los maestros estaban las 49 en la base.
+
 **Traspaso al asesor — CONSTRUIDO, APAGADO.**
 Después de la cita, el bot le dice al cliente que el asesor retoma, le avisa al
 asesor y se calla (`requiere_humano`). Migración `20260902000000` aplicada en

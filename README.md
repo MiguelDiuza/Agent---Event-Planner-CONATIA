@@ -224,6 +224,50 @@ node --env-file=.env scripts/probar-sincronizacion.js --local  # el workflow ent
 node --env-file=.env scripts/volcar-agenda-a-calendar.js       # fechas ocupadas sin evento en Calendar
 ```
 
+### El libro viejo, dentro del nuevo
+
+El archivo nuevo empezó siendo un recorte: de todo lo que el equipo tenía en
+`2025.xlsx` (WPS), a la base solo llegó `sede + fecha + cliente`, y solo de hoy
+en adelante. El 2026-09-02 se copió el resto, para que el archivo nuevo no sea
+un recorte del viejo sino que lo contenga:
+
+```bash
+python scripts/leer-excel-viejo.py ~/Downloads/2025.xlsx /tmp/hojas   # .xlsx -> un .json por pestaña
+node --env-file=.env scripts/replicar-hojas-excel-viejo.js /tmp/hojas            # en seco
+node --env-file=.env scripts/replicar-hojas-excel-viejo.js /tmp/hojas --escribir
+```
+
+Son **21 pestañas**: la tabla de precios `VALORES`, los dos maestros (`2026`,
+`2027`), un calendario por sede, y tres ocultas que son plantillas vacías
+(`CASA` = Alférez Sur, `ORQUIDEORAMA`, `7 DE AGOSTO`). Se copian **como están**,
+con su orden y con las ocultas ocultas. Los calendarios por sede llevan lo que
+la base no tiene ni necesita: teléfono, valor, los cuatro abonos y el saldo.
+
+Se escribe en crudo (`RAW`), no interpretado, y al terminar se relee y se
+compara **celda por celda** contra el origen. Contar filas no basta: un `PUT`
+que se come una celda del medio devuelve 200 y el mismo número de filas, y el
+desfase no se vería hasta que alguien buscara un teléfono y encontrara un abono.
+
+**Estas pestañas son para las personas, no para el agente.** El agente lee
+`agenda_reservas`, y a la base solo llega lo que está en `Reservas`. Copiar una
+venta en `CIUDAD JARDIN` **no aparta la fecha**. Por eso `Reservas` y `Citas`
+están protegidas en el guion: si un `.json` viniera con uno de esos nombres, se
+niega antes de tocar nada.
+
+**El año de las fechas del libro viejo no es de fiar.** El archivo se llama
+`2025.xlsx` y se reutilizó para 2026: muchas celdas conservan el año viejo, y lo
+que dice la verdad es la columna del día de la semana. `2025-09-05 SABADO` es el
+5 de septiembre de **2026**, que es el que cae en sábado. Así se cargaron las
+113, y así hay que leer cualquier fecha de esas hojas.
+
+De ahí salieron tres que la carga del 2026-09-01 se dejó — tomó el año literal,
+las vio pasadas y las descartó: `Sede Granada Premium 2027-08-07` (MARTHA
+CAMPOS), `Sede Granada Premium 2027-08-14` (YESENIA MORENO) y `Casa 4
+2026-12-27` (DIEGO MONTOYA). Esta última venía en la hoja de Granada con
+"CASA 4" escrito en la columna del día; **la sede se resolvió por el precio**:
+17.100.000 para 120 personas es la tarifa de Casa 4 en la propia hoja `VALORES`
+(Granada Premium para 120 son 11.300.000).
+
 `volcar-agenda-a-calendar.js` es el arranque, no un guion de todos los días: de
 aquí en adelante el propio workflow crea el evento de cada fecha nueva. Se usó
 el 2026-09-02 para meter en Calendar las 113 fechas que el equipo ya tenía
