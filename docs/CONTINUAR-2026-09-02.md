@@ -42,6 +42,15 @@ Por eso `Reservas` pasó de 8 a 10 columnas: `cancelada` (la escribe una persona
 y `sincronizado` (la escribe el workflow). **Una fila sin nota en `sincronizado`
 es una fila que la sincronización no está viendo.**
 
+Probado en producción, no solo en el banco. La ejecución `7060` (09:15Z) anotó
+las 113 filas de la hoja y no insertó nada; la `7061` (09:30Z) no escribió ni
+una celda. Entre las dos se metió a mano una fila con la sede en minúsculas
+—`sede granada gold`, sin tildes ni mayúsculas— y salió entera por el otro
+lado: fila en `agenda_reservas` con `origen='humano'` y `estado='separado'`,
+evento creado en Calendar, su `google_event_id` guardado de vuelta, y la hoja
+con `origen` relleno y `✓ en la agenda` al lado. Se borró después: hoja, base y
+Calendar quedaron en 113.
+
 **Las 113 fechas ya están en Google Calendar.** Se volcaron el 2026-09-02 con
 `scripts/volcar-agenda-a-calendar.js --escribir`: eventos de día completo y
 `transparency=transparent`, idénticos a los que crea `separar_fecha_evento`, así
