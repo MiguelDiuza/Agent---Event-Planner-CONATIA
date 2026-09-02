@@ -55,10 +55,17 @@ comment on column agenda_reservas.origen is
 -- SIN PRECIOS, A PROPOSITO. `consultar_precios_sedes` hace inner join contra
 -- `precios_sedes`, asi que una sede sin precios no se cotiza ni se le ofrece a
 -- nadie -- que es justo lo que se quiere hoy: la sede existe para poder
--- bloquearle las fechas, y nada mas. Darle precios sin cargarle antes sus
--- videos la meteria en la cotizacion como un salon del que el cliente no puede
--- ver ni una foto: las otras catorce sedes tienen entre 11 y 32 medios, esta
--- tendria cero. Los precios estan listos aqui abajo, comentados.
+-- bloquearle las fechas, y nada mas. Darle precios sin cargarle antes su video
+-- la meteria en la cotizacion como un salon del que el cliente no puede ver ni
+-- una foto. Los precios estan listos aqui abajo, comentados.
+--
+-- CORRECCION DEL 2026-09-02. Este comentario decia que las otras catorce sedes
+-- "tienen entre 11 y 32 medios" y que por eso faltaba mucho para poder ofrecer
+-- esta. Es falso, y comprobado contra la base: `medios` tiene 20 filas en
+-- total, UN video por sede (Pilas Premium tiene dos). Los numeros 11 y 32 son
+-- de `precios_sedes`, que es otra tabla. Lo que falta para que el agente pueda
+-- vender Granada Premium es, entonces, mucho menos de lo que decia esta nota:
+-- UN video del salon, y descomentar los once precios de aqui abajo.
 insert into sedes (nombre_sede, es_propia, incluye_pista_cristal)
 values ('Sede Granada Premium', true, false)
 on conflict (nombre_sede) do nothing;
