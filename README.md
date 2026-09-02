@@ -56,7 +56,11 @@ node scripts/banco-pruebas.js      # 10 conversaciones completas, mensaje por me
 node scripts/probar-ramas.js       # las ramas del turno 3 que los chats no tocan
 node scripts/probar-fragmentos.js  # los mensajes que llegan por partes
 node scripts/probar-aforos.js      # cuántos salones salen para cada aforo, y con qué precio
+node scripts/probar-caso-asesor.js # el traspaso al asesor después de la cita
 ```
+
+`probar-caso-asesor.js` acepta `--local` para correr contra el Supabase local
+por el contenedor de Docker, en vez de contra producción.
 
 Lo único simulado es el transporte: en vez de hacer POST a YCloud, imprimen.
 
@@ -142,6 +146,49 @@ API está apagada en el proyecto `omega-dahlia-500617-g6`. La cuenta de servicio
 no puede encenderla sola (le falta `serviceusage.services.enable`, comprobado
 contra la API: 403 `PERMISSION_DENIED`); es un clic de una persona con acceso a
 la consola de Google Cloud. `preparar-excel.js` imprime el enlace exacto.
+
+## Después de la cita, el caso es del asesor
+
+Cuando un cliente ya tuvo su llamada o su visita y vuelve a escribir, lo que
+pregunta casi siempre es sobre algo que ajustó **en** esa reunión: un descuento
+de palabra, una fecha que movieron, un abono. Angie no estuvo ahí y no tiene
+cómo saberlo, así que si contesta, contesta mal — y con la misma seguridad con
+la que contesta todo lo demás, que es lo que lo vuelve caro.
+
+El flujo entonces: le dice al cliente que el asesor retoma su caso, le avisa al
+asesor por WhatsApp y se calla en ese chat (`requiere_humano`, el mismo
+interruptor que usa `Pausar Bot` cuando el dueño contesta a mano).
+
+La detección es **determinista** y no pasa por el modelo: `fn_caso_asesor` mira
+si hay una cita con `fin` en el pasado que todavía no se le haya avisado a
+nadie. Salta con **cualquier** mensaje posterior a la cita, no solo con los que
+preguntan algo: distinguir una pregunta de un "gracias" exige criterio y el
+modelo se equivoca, y después de una reunión el caso ya es del asesor de todos
+modos. Un "gracias" que le llega al asesor no cuesta nada; una pregunta que el
+bot contesta mal cuesta la venta.
+
+**El aviso va como plantilla de WhatsApp, no como texto libre.** WhatsApp solo
+deja mandar texto libre a quien te haya escrito en las últimas 24 horas. Al
+cliente sí se le puede contestar de corrido —acaba de escribir—, pero el asesor
+casi nunca le habrá escrito al número del bot, así que ese aviso saldría
+rechazado. Por eso existe `aviso_caso_asesor`:
+
+```bash
+node --env-file=.env scripts/plantilla-asesor.js          # cómo va la aprobación
+node --env-file=.env scripts/plantilla-asesor.js --crear  # la manda a revisión de Meta
+```
+
+Si el aviso **no** sale (plantilla sin aprobar, YCloud caído, el número mal), la
+cita queda **sin** marcar como avisada y el lead va igual a la cola de
+`requiere_humano`: al cliente ya se le dijo que lo contactan, así que el bot no
+puede seguir como si nada, pero la tabla tampoco puede decir que el asesor sabe
+algo que no sabe.
+
+**Pendiente:** el nodo `Caso del Asesor` está **deshabilitado**, y es el
+interruptor de toda la rama —apagado, `hay_caso` no existe, el `IF` se va por el
+`false` y el flujo sigue exactamente como antes—. Se enciende cuando estén las
+dos cosas que faltan: el **número real del asesor** en `Avisar al Asesor` (hoy
+hay un marcador, `+570000000000`) y la plantilla en `APPROVED`.
 
 ## Estructura de datos
 

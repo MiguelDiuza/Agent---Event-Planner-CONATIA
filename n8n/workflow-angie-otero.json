@@ -1691,6 +1691,169 @@
       ],
       "id": "a7e9cbf1-6184-425a-d527-3e108b6d0c29",
       "name": "Saludo Reinicio"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Despues de la cita, el caso es del asesor (2026-09-02).\n--\n-- Devuelve siempre UNA fila. `hay_caso` es lo que lee el IF de abajo.\n-- La deteccion es determinista y no se le pregunta al modelo: o hay una\n-- cita con `fin` en el pasado sin avisar, o no la hay.\nselect * from fn_caso_asesor($1)",
+        "options": {
+          "queryReplacement": "={{ [$('Upsert Lead').item.json.telefono] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2848,
+        608
+      ],
+      "id": "c7a1d4e8-2b93-4f57-9e16-5d0a8c3b7f41",
+      "name": "Caso del Asesor",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "disabled": true,
+      "notes": "EL INTERRUPTOR DE TODA LA RAMA. Deshabilitado deja pasar los datos tal cual, `hay_caso` no existe, el IF de al lado se va por el false y el flujo sigue exactamente como antes. Se enciende cuando esten las dos cosas que faltan: el numero real del asesor en `Avisar al Asesor` (hoy hay un marcador) y la plantilla `aviso_caso_asesor` en APPROVED (hoy en revision de Meta; `scripts/plantilla-asesor.js` dice como va)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-caso-asesor",
+              "leftValue": "={{ $json.hay_caso }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3040,
+        608
+      ],
+      "id": "d8b2e5f9-3ca4-4068-af27-6e1b9d4c8052",
+      "name": "¿Ya tuvo la cita?",
+      "notes": "`typeValidation: loose` a proposito: con `Caso del Asesor` deshabilitado `hay_caso` llega undefined, y en estricto eso revienta en vez de irse por el false. La rama apagada no puede tumbar la conversacion."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const limpiar = (v, tope) => { const s = String(v ?? '').replace(/\\s+/g, ' ').trim(); return s === '' ? '(sin texto)' : s.slice(0, tope); }; const caso = $('Caso del Asesor').item.json; return JSON.stringify({ from: '+573150290928', to: '+570000000000', type: 'template', template: { name: 'aviso_caso_asesor', language: { code: 'es', policy: 'deterministic' }, components: [ { type: 'body', parameters: [ { type: 'text', text: limpiar(caso.nombre_cliente, 60) }, { type: 'text', text: limpiar(caso.cuando_legible, 60) }, { type: 'text', text: limpiar($('Upsert Lead').item.json.telefono, 20) }, { type: 'text', text: limpiar($('Reclamar Fragmentos').item.json.texto, 300) } ] } ] } }); })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3232,
+        608
+      ],
+      "id": "e9c3f6a0-4db5-4179-b038-7f2cae5d9163",
+      "name": "Avisar al Asesor",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "FuwQeM17hSh07Wal",
+          "name": "YCloud - Sierra Planner"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "FALTA EL NUMERO DEL ASESOR: hoy dice +570000000000, que es un marcador. Va como PLANTILLA (`aviso_caso_asesor`) y no como texto libre porque WhatsApp no deja iniciar conversacion fuera de la ventana de 24 h, y el asesor no le escribe al numero del bot. Si el envio falla NO se marca la cita como avisada: la salida de error va a `Escalar Caso Sin Aviso`, que deja el caso en la cola de `requiere_humano` para que no muera en silencio."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- El asesor ya recibio el aviso: se marca la cita y se calla al bot.\n--\n-- Las dos cosas van en UNA sentencia (ver 20260902000000): separarlas deja\n-- una ventana en la que el asesor ya sabe pero el bot sigue contestando, o\n-- al reves.\nselect fn_caso_asesor_cerrar($1::uuid, $2) as resultado",
+        "options": {
+          "queryReplacement": "={{ [$('Caso del Asesor').item.json.id_cita, $('Upsert Lead').item.json.telefono] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3424,
+        528
+      ],
+      "id": "f0d4a7b1-5ec6-428a-c149-802dbf6ea274",
+      "name": "Cerrar Caso",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "notes": "Marca `citas.notificado_asesor_en` y pone `requiere_humano` en el lead, de una."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- El aviso al asesor NO salio (plantilla sin aprobar, YCloud caido, el\n-- numero mal). Se pausa el bot igual, pero la cita se deja SIN marcar.\n--\n-- Sin marcar a proposito: `notificado_asesor_en` significa \"al asesor se le\n-- dijo\", y aqui no se le dijo. Dejarla en null es lo que permite que el\n-- aviso se reintente cuando alguien despause el chat, y que la tabla no\n-- mienta sobre quien sabe que.\n--\n-- Pausar igual es deliberado: al cliente ya se le dijo que el asesor lo\n-- retoma, asi que el bot no puede seguir contestando como si nada. El caso\n-- queda en la cola de `requiere_humano`, que es la misma que ya miran para\n-- los mensajes que no se entregaron.\nupdate leads\n   set requiere_humano = true,\n       updated_at = now()\n where telefono = $1\nreturning id, telefono, requiere_humano",
+        "options": {
+          "queryReplacement": "={{ [$('Upsert Lead').item.json.telefono] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3424,
+        704
+      ],
+      "id": "a1e5b8c2-6fd7-439b-d250-913ecf7fb385",
+      "name": "Escalar Caso Sin Aviso",
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "notes": "La salida de error de `Avisar al Asesor`. El caso queda marcado para una persona aunque el aviso no haya salido."
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "traspaso-1",
+              "name": "output",
+              "value": "={{ (() => { const n = String($('Caso del Asesor').item.json.nombre_cliente ?? '').trim().split(/\\s+/)[0]; const hola = n ? '¡Hola, ' + n + '!' : '¡Hola!'; return hola + ' ☺️ Déjame un momentico que le paso tu caso al asesor que te llamó, que fue con quien ajustaste los detalles y es el que mejor te puede responder eso 🤗||| Ya le estoy avisando y en un ratico te escribe por aquí ✨'; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3616,
+        608
+      ],
+      "id": "b2f6c9d3-70e8-44ac-e361-a24fda8ac496",
+      "name": "Respuesta Traspaso",
+      "notes": "Sale por el mismo camino que cualquier respuesta (`Canal de prueba?` -> `Dividir Mensajes` -> `Enviar WhatsApp`), igual que `Saludo Reinicio`. El ||| es el separador de globos que ya entiende `Dividir Mensajes`. El nombre se recorta al primero: el de la cita suele venir completo y \"Hola, Maria Fernanda Ruiz\" no lo dice nadie."
     }
   ],
   "connections": {
@@ -2229,7 +2392,7 @@
       "main": [
         [
           {
-            "node": "Catálogo de Medios",
+            "node": "Caso del Asesor",
             "type": "main",
             "index": 0
           }
@@ -2315,6 +2478,86 @@
           {
             "node": "Angie Otero",
             "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Caso del Asesor": {
+      "main": [
+        [
+          {
+            "node": "¿Ya tuvo la cita?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya tuvo la cita?": {
+      "main": [
+        [
+          {
+            "node": "Avisar al Asesor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catálogo de Medios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar al Asesor": {
+      "main": [
+        [
+          {
+            "node": "Cerrar Caso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Escalar Caso Sin Aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerrar Caso": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Traspaso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalar Caso Sin Aviso": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Traspaso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Traspaso": {
+      "main": [
+        [
+          {
+            "node": "Canal de prueba?",
+            "type": "main",
             "index": 0
           }
         ]
