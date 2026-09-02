@@ -158,6 +158,15 @@ async function main() {
 
   chequeo(cuerpo.type === 'template',
     'va como plantilla y no como texto libre: fuera de la ventana de 24 h es lo único que sale');
+
+  // El número del asesor. Estuvo en +570000000000 -- un marcador -- desde que se
+  // construyó la rama hasta el 2026-09-02, y con ese número el aviso se va a un
+  // teléfono que no existe: YCloud lo acepta, nadie lo recibe, y el cliente se
+  // queda esperando una llamada que nadie sabe que tiene que hacer. Es el fallo
+  // más caro de esta rama y no hace ruido, así que se comprueba aquí.
+  chequeo(/^\+\d{10,15}$/.test(cuerpo.to) && !/^\+570{6,}/.test(cuerpo.to),
+    `el aviso va a un número de verdad, en E.164: ${cuerpo.to}`,
+    'si dice +570000000000 es que volvió el marcador y el asesor no se entera de nada');
   chequeo(cuerpo.template.name === 'aviso_caso_asesor',
     `manda la plantilla ${cuerpo.template.name}`,
     'tiene que ser la misma que crea scripts/plantilla-asesor.js');

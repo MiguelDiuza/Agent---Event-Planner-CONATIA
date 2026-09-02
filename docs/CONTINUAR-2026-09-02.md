@@ -100,25 +100,54 @@ bloquear de más cuesta una consulta; bloquear de menos, un evento doble.
 
 Hoy la agenda tiene **84 fechas**, y la hoja, la base y Calendar cuadran las tres.
 
-**Traspaso al asesor — CONSTRUIDO, APAGADO.**
+**Traspaso al asesor — LISTO Y PUBLICADO, PERO APAGADO.**
 Después de la cita, el bot le dice al cliente que el asesor retoma, le avisa al
 asesor y se calla (`requiere_humano`). Migración `20260902000000` aplicada en
-producción. Los 6 nodos están en el VPS pero `Caso del Asesor` está
-**deshabilitado**, y es el interruptor de toda la rama.
+producción, los 6 nodos en el VPS.
+
+**El número del asesor ya está: `+573006174717`** (2026-09-02), en el nodo
+`Avisar al Asesor` y publicado. `probar-caso-asesor.js` comprueba que sea uno de
+verdad, para que el marcador `+570000000000` no pueda volver sin que nadie lo
+note.
+
+Pero `Caso del Asesor` sigue **deshabilitado** a propósito, y es el interruptor
+de toda la rama. Falta lo único que no depende de nosotros: **la plantilla
+`aviso_caso_asesor` sigue en PENDING** en Meta.
+
+Encenderla antes de la aprobación deja el peor de los escenarios, y está
+comprobado en el banco: el envío falla, la salida de error va a `Escalar Caso
+Sin Aviso`, **el bot se calla igual** en ese chat (`requiere_humano`) y el
+asesor **no se entera**. O sea: al cliente se le promete una llamada, el bot
+deja de contestarle, y nadie sabe que tiene que llamarlo. Hoy, con la rama
+apagada, el bot simplemente sigue atendiendo — que es mucho mejor.
+
+Lo bueno es que la cita queda **sin marcar** como avisada, así que el aviso se
+reintenta solo la próxima vez que ese cliente escriba.
+
+Cuando Meta apruebe:
+
+```bash
+node --env-file=.env scripts/plantilla-asesor.js       # confirmar APPROVED
+# habilitar `Caso del Asesor` en n8n/workflow-angie-otero.json (quitar disabled)
+node --env-file=.env scripts/probar-caso-asesor.js --local
+node --env-file=.env scripts/desplegar-vps.js --publicar
+node --env-file=.env scripts/verificar-despliegue.js
+```
 
 **Datos en producción.** 84 reservas (todas `origen='humano'`, del Excel), 0
 citas, leads reales. Sin deriva: repo, base y VPS coinciden.
 
 ## Lo que falta
 
-### 1. Traspaso al asesor: dos cosas de fuera
+### 1. Traspaso al asesor: solo falta Meta
 
-- **El número de WhatsApp del asesor.** Hoy el nodo `Avisar al Asesor` lleva el
-  marcador `+570000000000`.
-- **La plantilla `aviso_caso_asesor`**, en revisión de Meta.
-  `node --env-file=.env scripts/plantilla-asesor.js` dice cómo va.
+El número del asesor ya está puesto y publicado (`+573006174717`). Lo único que
+falta es que Meta apruebe la plantilla **`aviso_caso_asesor`**, hoy en PENDING:
+`node --env-file=.env scripts/plantilla-asesor.js` dice cómo va.
 
-Con las dos, se enciende `Caso del Asesor` y se sube.
+En cuanto pase a APPROVED se enciende `Caso del Asesor` y se sube — los pasos
+exactos están arriba. **Antes no**, por lo que se explica ahí: el bot se
+callaría sin que el asesor se entere.
 
 ### 2. Enseñarle al equipo la hoja nueva
 

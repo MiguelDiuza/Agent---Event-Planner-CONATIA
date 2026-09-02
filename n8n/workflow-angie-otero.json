@@ -1761,7 +1761,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const limpiar = (v, tope) => { const s = String(v ?? '').replace(/\\s+/g, ' ').trim(); return s === '' ? '(sin texto)' : s.slice(0, tope); }; const caso = $('Caso del Asesor').item.json; return JSON.stringify({ from: '+573150290928', to: '+570000000000', type: 'template', template: { name: 'aviso_caso_asesor', language: { code: 'es', policy: 'deterministic' }, components: [ { type: 'body', parameters: [ { type: 'text', text: limpiar(caso.nombre_cliente, 60) }, { type: 'text', text: limpiar(caso.cuando_legible, 60) }, { type: 'text', text: limpiar($('Upsert Lead').item.json.telefono, 20) }, { type: 'text', text: limpiar($('Reclamar Fragmentos').item.json.texto, 300) } ] } ] } }); })() }}",
+        "jsonBody": "={{ (() => { const limpiar = (v, tope) => { const s = String(v ?? '').replace(/\\s+/g, ' ').trim(); return s === '' ? '(sin texto)' : s.slice(0, tope); }; const caso = $('Caso del Asesor').item.json; return JSON.stringify({ from: '+573150290928', to: '+573006174717', type: 'template', template: { name: 'aviso_caso_asesor', language: { code: 'es', policy: 'deterministic' }, components: [ { type: 'body', parameters: [ { type: 'text', text: limpiar(caso.nombre_cliente, 60) }, { type: 'text', text: limpiar(caso.cuando_legible, 60) }, { type: 'text', text: limpiar($('Upsert Lead').item.json.telefono, 20) }, { type: 'text', text: limpiar($('Reclamar Fragmentos').item.json.texto, 300) } ] } ] } }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -1779,7 +1779,7 @@
         }
       },
       "onError": "continueErrorOutput",
-      "notes": "FALTA EL NUMERO DEL ASESOR: hoy dice +570000000000, que es un marcador. Va como PLANTILLA (`aviso_caso_asesor`) y no como texto libre porque WhatsApp no deja iniciar conversacion fuera de la ventana de 24 h, y el asesor no le escribe al numero del bot. Si el envio falla NO se marca la cita como avisada: la salida de error va a `Escalar Caso Sin Aviso`, que deja el caso en la cola de `requiere_humano` para que no muera en silencio."
+      "notes": "Le avisa al asesor por WhatsApp cuando un cliente escribe DESPUES de su cita.\n\nEl numero del asesor es +573006174717 (2026-09-02). Va en E.164 y sin espacios: YCloud rechaza el envio si el `to` no viene asi.\n\nVa como PLANTILLA (`aviso_caso_asesor`) y no como texto libre porque WhatsApp no deja iniciar conversacion fuera de la ventana de 24 h, y el asesor casi nunca le habra escrito al numero del bot.\n\nSi el envio falla NO se marca la cita como avisada: la salida de error va a `Escalar Caso Sin Aviso`, que deja el caso en la cola de `requiere_humano` para que no muera en silencio, y el aviso se puede reintentar cuando el cliente vuelva a escribir."
     },
     {
       "parameters": {

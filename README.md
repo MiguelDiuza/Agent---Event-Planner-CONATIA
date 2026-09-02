@@ -338,11 +338,24 @@ cita queda **sin** marcar como avisada y el lead va igual a la cola de
 puede seguir como si nada, pero la tabla tampoco puede decir que el asesor sabe
 algo que no sabe.
 
+El **número del asesor** es `+573006174717`, puesto el 2026-09-02 en
+`Avisar al Asesor`. Va en E.164 y sin espacios: YCloud rechaza el envío si el
+`to` no viene así. `probar-caso-asesor.js` comprueba que sea un número de verdad
+y no el marcador `+570000000000` que estuvo ahí hasta entonces — es el fallo más
+caro de esta rama y el que menos ruido hace: el aviso sale hacia un teléfono que
+no existe, YCloud lo acepta, y el cliente espera una llamada que nadie sabe que
+debe hacer.
+
 **Pendiente:** el nodo `Caso del Asesor` está **deshabilitado**, y es el
 interruptor de toda la rama —apagado, `hay_caso` no existe, el `IF` se va por el
-`false` y el flujo sigue exactamente como antes—. Se enciende cuando estén las
-dos cosas que faltan: el **número real del asesor** en `Avisar al Asesor` (hoy
-hay un marcador, `+570000000000`) y la plantilla en `APPROVED`.
+`false` y el flujo sigue exactamente como antes—. Se enciende cuando la
+plantilla `aviso_caso_asesor` pase a **APPROVED**, y no antes.
+
+El "no antes" importa: con la plantilla en PENDING el envío falla, y el camino
+de error hace lo que debe —dejar el caso en `requiere_humano`— pero eso significa
+que **el bot se calla en ese chat y el asesor no se entera**. Al cliente se le
+prometió una llamada, el bot deja de contestarle, y nadie sabe que tiene que
+llamarlo. Con la rama apagada el bot sigue atendiendo, que es mucho mejor.
 
 ## Estructura de datos
 
