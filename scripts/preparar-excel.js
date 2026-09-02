@@ -26,7 +26,20 @@ const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
 
-const SA = '.gcp-sa-n8n-calendar.json';
+// La cuenta de servicio de las HOJAS, que ya no es la de Calendar (2026-09-02).
+//
+// La Sheets API se habilita en el proyecto dueño de la CREDENCIAL, no donde
+// vive la hoja; y el proyecto del cliente la tiene apagada sin forma de
+// encenderla desde aquí (a su consola no se entra: pide verificación en dos
+// pasos y la cuenta es suya). Así que las hojas las escribe una cuenta de
+// servicio de un proyecto nuestro, y la hoja solo tiene que estar compartida
+// con ella. Ver `scripts/credencial-sheets.js`.
+//
+// Se cae a la de Calendar si la otra no está, para que el diagnóstico siga
+// diciendo algo útil en vez de reventar por un archivo que falta.
+const SA = fs.existsSync('.gcp-sa-sheets.json')
+  ? '.gcp-sa-sheets.json'
+  : '.gcp-sa-n8n-calendar.json';
 const HOJA = process.env.EXCEL_AGENDA_SHEET_ID;
 
 // El orden de estas columnas es el orden del array `values` del nodo.

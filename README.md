@@ -141,11 +141,34 @@ Los encabezados viven en `PESTANAS`, dentro de `preparar-excel.js`, y son la
 de ahí y compara celda por celda contra la fila que arma cada nodo, para que
 nadie pueda mover una columna sin mover el nodo.
 
-**Pendiente:** los dos nodos están **deshabilitados** porque la Google Sheets
-API está apagada en el proyecto `omega-dahlia-500617-g6`. La cuenta de servicio
-no puede encenderla sola (le falta `serviceusage.services.enable`, comprobado
-contra la API: 403 `PERMISSION_DENIED`); es un clic de una persona con acceso a
-la consola de Google Cloud. `preparar-excel.js` imprime el enlace exacto.
+**La cuenta de servicio de las hojas no es la de Calendar**, y eso tiene una
+razón que conviene entender antes de tocar nada: la Google Sheets API se
+habilita en el proyecto dueño de la **credencial que hace la llamada**, no donde
+vive la hoja. Son dos cosas distintas.
+
+El proyecto del cliente (`omega-dahlia-500617-g6`) la tiene apagada y no hay
+forma de encenderla desde aquí: la cuenta de servicio no tiene
+`serviceusage.services.enable` —ni permiso para consultar siquiera el estado del
+servicio, comprobado contra la API— y a la consola de ese Google no se entra
+porque pide verificación en dos pasos y la cuenta es del cliente.
+
+La salida es que la llamada la haga una cuenta de servicio de **nuestro**
+proyecto. La hoja se queda donde está; solo hay que compartirla como Editor con
+el correo de esa cuenta. La de Calendar no se toca: sigue en el proyecto del
+cliente y sigue sin poder tocar hojas de cálculo.
+
+```bash
+node --env-file=.env scripts/credencial-sheets.js .gcp-sa-sheets.json --crear --repuntar
+```
+
+La llave va en `.gcp-sa-sheets.json` (el `.gitignore` ya cubre
+`.gcp-sa-*.json`). El guion da de alta la credencial en n8n, restringida al
+scope `.../auth/spreadsheets` y al dominio `sheets.googleapis.com`, y apunta los
+dos nodos a ella.
+
+**Pendiente:** los dos nodos están **deshabilitados** hasta que exista esa
+cuenta de servicio, la hoja esté compartida con ella y
+`preparar-excel.js --crear --probar` salga en verde.
 
 ## Después de la cita, el caso es del asesor
 
