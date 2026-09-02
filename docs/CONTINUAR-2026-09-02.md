@@ -100,6 +100,42 @@ bloquear de más cuesta una consulta; bloquear de menos, un evento doble.
 
 Hoy la agenda tiene **84 fechas**, y la hoja, la base y Calendar cuadran las tres.
 
+**Auditoría completa del libro contra la base (2026-09-02, al cerrar).** Se
+leyeron las 21 pestañas y se cruzaron las dos direcciones: de las fechas
+vendidas de hoy en adelante que deberían estar en la base, **no falta ninguna**.
+
+Ojo con un detalle que costó una lectura mala: los maestros escriben el día en
+**dos órdenes distintos** — la hoja `2026` pone `1 SABADO` y la de `2027`
+`SABADO 02`, y la fila 22 de 2027 mezcla las dos. Una auditoría que solo
+entienda un formato se deja 21 fechas fuera sin avisar. Ya está contemplado.
+
+### Una fecha vendida sin sede — PENDIENTE DE PREGUNTAR
+
+En el maestro `2027`, fila 54: **sábado 18 de septiembre de 2027, LILIBETH
+RAMIREZ, 3178922422, 15 años, 150 personas, $18.200.000** — y la **columna de la
+sede está vacía**. No aparece en ninguna otra pestaña del libro.
+
+No se cargó porque no se puede saber dónde es, y el precio **no lo resuelve**:
+
+- $18.200.000 para 150 es casi la tarifa de **Valdemoro / Gran Salón** ($18M).
+  Las dos son sedes **aliadas**, y para esas el agente nunca confirma
+  disponibilidad: deriva al asesor. Si es una de ellas, **no hay riesgo**.
+- Pero **Ciudad Jardín** para 150 son $17M, y la pista de cristal —o una hora
+  adicional— cuesta exactamente **$1.200.000**: 17 + 1,2 = **18,2 exacto**.
+  Ciudad Jardín **sí** es sede propia, y ahí el agente **sí** confirma.
+
+Hoy, si un cliente pide el 18 de septiembre de 2027, el agente le dice
+**DISPONIBLE en las cuatro sedes propias**. Si el evento de LILIBETH es en
+Ciudad Jardín, esa fecha se puede vender dos veces.
+
+No se bloqueó por cuenta propia porque habría que elegir una sede a ojo, y
+bloquear la equivocada quita un sábado vendible sin arreglar nada. **Lo que hay
+que hacer es preguntarle al equipo en qué salón es ese evento**, y meter la fila
+en la pestaña `Reservas`. Es una sola fecha y está a más de un año.
+
+La otra fila sin sede —`2027-04-11`, que solo dice "separado", sin cliente, sin
+teléfono y sin valor— es una nota, no una venta. Y además cae en domingo.
+
 **Traspaso al asesor — LISTO Y PUBLICADO, PERO APAGADO.**
 Después de la cita, el bot le dice al cliente que el asesor retoma, le avisa al
 asesor y se calla (`requiere_humano`). Migración `20260902000000` aplicada en
@@ -166,7 +202,22 @@ hay que decirles, y no está escrito en ningún sitio que ellos lean:
 - La última columna dice qué pasó con cada fila. Si una se queda en blanco, esa
   fila no la está viendo nadie.
 
-### 3. Vigilar la primera semana
+### 3. Preguntarle al equipo dos cosas del libro viejo
+
+Las dos están explicadas arriba, y las dos son de la misma naturaleza: una fecha
+vendida cuya sede no se puede deducir del papel.
+
+1. **¿En qué salón es el evento de LILIBETH RAMIREZ del 18 de septiembre de
+   2027?** Es el único agujero real que queda: hoy el agente da esa fecha por
+   libre en las cuatro sedes propias.
+2. **¿La fecha de DIEGO MONTOYA del 27 de diciembre de 2026 es en Casa 4?** Está
+   cargada como tal —deducida del precio— pero venía escrita en la hoja de
+   Granada, que es del vecino.
+
+Las dos se arreglan escribiendo la fila en la pestaña `Reservas`; la segunda,
+si estuviera mal, se suelta con `sí` en la columna `cancelada`.
+
+### 4. Vigilar la primera semana
 
 Lo que conviene mirar un par de veces:
 
