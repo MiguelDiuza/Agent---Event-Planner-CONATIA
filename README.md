@@ -78,7 +78,24 @@ Una prueba que no puede fallar no sirve, y esa es la forma de saberlo.
 ```bash
 node scripts/probar-en-vivo.js       # humo: una ráfaga de cuatro mensajes contra el VPS
 node scripts/probar-conversacion.js  # 10 conversaciones: que no se repita, no olvide ni suene a máquina
+node --env-file=.env scripts/probar-reserva-completa.js  # el embudo entero, hasta apartar la fecha
 ```
+
+`probar-reserva-completa.js` es la única que sigue una venta de punta a punta:
+dos clientes distintos —uno que escribe entero, otro corto y con errores— desde
+el "hola" hasta que la fecha queda apartada, y después comprueba el rastro en
+**los cuatro sitios**: `agenda_reservas`, el evento de Google Calendar (que
+exista, que sea de día completo y transparente), la fila del Excel con su
+`origen` y su id de evento, y la ficha del cliente. El aserto que importa es que
+después `fn_verificar_disponibilidad_evento` diga **OCUPADA**: lo demás son
+reflejos. Limpia lo que creó —Calendar primero, que es lo que deja huérfanos si
+se hace al revés— y **relee cada tabla** para probar que no quedó rastro.
+
+Sus fechas son sábados libres de 2027, y no más lejos a propósito: el prompt
+trata una fecha a **más de tres años** como un año tecleado mal y pregunta en
+vez de apartar. La primera versión usaba 2029, caía justo en esa regla y las dos
+reservas se quedaban sin cerrar — el agente hacía lo correcto y la prueba lo
+contaba como fallo.
 
 `probar-conversacion.js` imprime al final cuántos **turnos se perdieron**:
 Gemini devuelve 0 tokens, la herramienta no corre y el cliente se queda sin
