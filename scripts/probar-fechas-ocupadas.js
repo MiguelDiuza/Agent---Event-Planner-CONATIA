@@ -96,15 +96,27 @@ function decir(sesion, texto) {
 const DICE_OCUPADA = new RegExp([
   'ocupad',
   'no (est[áa]|se encuentra) disponible',
-  'ya (est[áa]|fue|la ten[eé]|tiene|tenemos) (tomad|apartad|reservad|vendid|ocupad|comprometid)',
+  // "ya está tomada", "ya tiene tomada esa fecha", "también está tomado".
+  // El "ya" NO es obligatorio: el agente encadena "también está tomado" a
+  // partir de la segunda fecha seguida.
+  '(ya |tambi[ée]n |igual )?(est[áa]|estaba|fue|la ten[eé]|tiene|tenemos) (tomad|apartad|reservad|vendid|ocupad|comprometid)',
   'no (la )?tenemos disponible',
   'ya no (est[áa]|la tenemos)',
   'no hay disponibilidad',
   'no me aparece disponible',
   'no puedo (dejarte|apartarte|darte) esa fecha',
-  'esa fecha (ya )?(no )?(est[áa] )?(tomad|apartad|ocupad)',
 ].join('|'), 'i');
-const DICE_LIBRE = /(s[íi][,\s]+(est[áa]|se encuentra)|(est[áa]|sigue|se encuentra) (libre|disponible)|tenemos disponible|s[íi] hay disponibilidad)/i;
+
+// El "sí". Ojo con el plural: "te muestro las opciones que tenemos DISPONIBLES"
+// es una oferta, no una confirmación, y con `disponible` a secas contaba como
+// un sí -- la prueba daba rojo mientras el agente decía que no, tres veces
+// seguidas y bien. Por eso `disponible\b`, que no casa con "disponibles".
+const DICE_LIBRE = new RegExp([
+  '(est[áa]|sigue|se encuentra) (libre|disponible)\\b',
+  's[íi],? (la |esa )?fecha (est[áa]|sigue)',
+  'tenemos (esa fecha )?disponible\\b',
+  's[íi] hay disponibilidad',
+].join('|'), 'i');
 
 const limpio = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const corto = (s, n = 150) => limpio(s).slice(0, n);
@@ -186,8 +198,20 @@ async function main() {
       'Camila Restrepo, mi numero es 3115550001',
     ]);
     const ultima = d2[d2.length - 1].salida;
-    ok(!/(qued[óo] apartad|ya (est[áa]|quedó) (apartad|separad|reservad)|apartamos la fecha)/i.test(ultima),
-       'y por insistir NO le dice que se la apartó', ultima);
+    // Lo que se busca es que se la aparte A ELLA, no que mencione que está
+    // apartada. La primera versión de esto reventaba con la frase correcta --
+    // "la Sede Granada Gold ya está apartada POR OTRA PERSONA, así que no puedo
+    // separarla para ti" -- que es justo la que se quiere oír. Un "apartada" a
+    // secas no dice de quién.
+    const SE_LA_APARTO = new RegExp([
+      'te la (apart|separ|reserv)',
+      'qued[óo] (apartad|separad|reservad)[ao] (a tu nombre|para ti|para vos|para tus)',
+      'tu fecha qued[óo]',
+      '(ya )?(te )?la (apart|separ|reserv)[ée]',
+      'listo,? (ya )?(la )?(apartamos|separamos|reservamos|qued[óo])',
+      '(apartamos|separamos|reservamos) (la fecha )?(para ti|a tu nombre)',
+    ].join('|'), 'i');
+    ok(!SE_LA_APARTO.test(ultima), 'y por insistir NO le dice que se la apartó A ELLA', ultima);
     ok(/(otra fecha|otro sal[óo]n|alternativ|te propongo|puedo ofrecerte|fin de semana)/i.test(ultima + respuesta),
        'le ofrece una salida en vez de dejarlo tirado', ultima);
   }
