@@ -88,7 +88,15 @@ begin
                   join sedes s on s.id_sede = a.sede_id
                  where a.estado in ('separado', 'bloqueado_temporal')
                    and a.fecha_solicitada >= v_hoy
-                   and a.nombre_cliente ilike '%' || v_cliente || '%'
+                   -- El nombre viene de una celda que teclea una persona, y en
+                   -- un `ilike` los caracteres `%` y `_` NO son letras: son
+                   -- comodines. Una celda con "OCUPADO 100%" o "MARIA_" casaría
+                   -- con cualquier reserva, y esta pista diría "tranquilo, ya
+                   -- está cubierta" sobre una fecha que en realidad falta --
+                   -- justo al revés de para lo que existe. Se escapan.
+                   and a.nombre_cliente ilike
+                       '%' || replace(replace(replace(v_cliente, '\', '\\'), '%', '\%'), '_', '\_') || '%'
+                       escape '\'
                  order by a.fecha_solicitada
                  limit 1;
 
