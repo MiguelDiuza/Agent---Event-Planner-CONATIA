@@ -349,7 +349,9 @@
         "options": {
           "waitForSubWorkflow": true
         }
-      }
+      },
+      "alwaysOutputData": true,
+      "notes": "alwaysOutputData: si la sincronizacion devuelve 0 items, sin esto `Separar Fecha` NO corre y el agente le dice al cliente que su fecha quedo apartada. Paso el 2026-09-03."
     },
     {
       "name": "Volver a los Datos",

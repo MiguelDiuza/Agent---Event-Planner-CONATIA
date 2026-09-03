@@ -57,10 +57,22 @@ const api = async (ruta, opciones = {}, reintentos = 4) => {
   }
 };
 
-// Lo que decide el comportamiento. La posición en el lienzo no entra: mover un
-// nodo no es un cambio que merezca una versión nueva.
+// Lo que decide el comportamiento. La posicion en el lienzo no entra: mover un
+// nodo no es un cambio que merezca una version nueva.
+//
+// `onError` y `alwaysOutputData` entraron el 2026-09-03, y no por gusto: los
+// dos cambian lo que hace el flujo y ninguno estaba aqui. Un nodo al que se le
+// pone `alwaysOutputData` --lo que evita que una rama entera se corte en
+// silencio-- se subia como 'sin cambios', y `verificar-despliegue.js` decia
+// despues que no habia deriva. Las dos cosas mintiendo a la vez, y en la
+// direccion que menos se nota.
 const huella = (n) => JSON.stringify({
-  type: n.type, disabled: !!n.disabled, parameters: n.parameters, credentials: n.credentials ?? null,
+  type: n.type,
+  disabled: !!n.disabled,
+  parameters: n.parameters,
+  credentials: n.credentials ?? null,
+  onError: n.onError ?? null,
+  alwaysOutputData: !!n.alwaysOutputData,
 });
 
 (async () => {

@@ -179,6 +179,30 @@ for (const archivo of ARCHIVOS) {
   }
   if (sinParams.length) ojo('parámetros de SQL', sinParams.join('\n      '));
   else bien('los parámetros de las queries cuadran con sus reemplazos');
+
+  // --- un sub-workflow que no devuelve nada corta la rama -------------------
+  // En n8n, un nodo que sale con CERO items no ejecuta lo que tiene detrás. Con
+  // un `executeWorkflow` eso es una trampa: lo que devuelve no lo decide este
+  // workflow, sino el último nodo del otro -- y ese puede acabar sin items sin
+  // que nada falle. Entonces el resto de la rama no corre, la ejecución sale
+  // marcada como `success`, y no hay ni un error que mirar.
+  //
+  // Pasó el 2026-09-03 con `Sincronizar Antes de Apartar`, y costó una reserva:
+  // la sincronización devolvió cero items, `Separar Fecha` no llegó a correr, y
+  // el agente le dijo al cliente que su fecha había quedado apartada. La
+  // encontró `probar-reserva-completa.js`, en la segunda de dos ventas -- la
+  // primera había pasado, porque ahí el otro workflow sí devolvió algo.
+  //
+  // `alwaysOutputData` lo cierra: el nodo saca un item vacío y la rama sigue.
+  const subSinSalida = nodos.filter(n => !n.disabled &&
+    n.type === 'n8n-nodes-base.executeWorkflow' && n.alwaysOutputData !== true);
+  if (subSinSalida.length) {
+    mal('sub-workflows sin alwaysOutputData (si el otro devuelve 0 items, la rama se corta en silencio)',
+        subSinSalida.map(n => n.name).join(', '));
+  } else {
+    const n = nodos.filter(x => x.type === 'n8n-nodes-base.executeWorkflow').length;
+    if (n) bien(`los ${n} nodos que llaman a otro workflow siguen aunque este no devuelva nada`);
+  }
 }
 
 console.log('\n' + (errores ? c.rojo(`${errores} error(es)`) : c.verde('sin errores'))

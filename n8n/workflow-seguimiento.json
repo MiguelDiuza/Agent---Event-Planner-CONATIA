@@ -136,7 +136,8 @@
         432,
         432
       ],
-      "notes": "OJO: este envio ocurre ~28h despues del ultimo mensaje del cliente, FUERA de la ventana de 24h de Meta. Sin una plantilla de video aprobada, YCloud lo rechazara. Hoy no hay ninguna plantilla creada."
+      "notes": "alwaysOutputData: si enviar_medios devuelve 0 items, sin esto `Marcar Enviado` no corre y la siguiente pasada le manda el mismo video otra vez al mismo cliente.",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
