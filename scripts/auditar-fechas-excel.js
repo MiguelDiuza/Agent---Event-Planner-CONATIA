@@ -63,10 +63,18 @@ const nodo = (n) => {
 // Los rangos que pide el workflow, tal cual. Si mañana alguien le quita uno,
 // esta auditoría deja de mirarlo también -- y por eso más abajo se compara la
 // lista contra las pestañas que de verdad tiene el libro.
+//
+// Van pegados a la URL y no en `queryParameters` por algo que costó una pasada
+// entera: n8n COLAPSA los parámetros repetidos con el mismo nombre, así que de
+// los catorce `ranges` mandaba uno. Aquí se leen de donde están.
 const nodoLeer = nodo('Leer Calendarios');
-const PARAMS = nodoLeer.parameters.queryParameters.parameters;
+const [BASE, QUERY] = nodoLeer.parameters.url.split('?');
+const HOJA = (BASE.match(/spreadsheets\/([^/]+)\//) || [])[1];
+const PARAMS = (QUERY || '').split('&').filter(Boolean).map(p => {
+  const i = p.indexOf('=');
+  return { name: decodeURIComponent(p.slice(0, i)), value: decodeURIComponent(p.slice(i + 1)) };
+});
 const RANGOS = PARAMS.filter(p => p.name === 'ranges').map(p => p.value);
-const HOJA = (nodoLeer.parameters.url.match(/spreadsheets\/([^/]+)\//) || [])[1];
 const PESTANAS_QUE_LEE = RANGOS.map(r => r.split('!')[0].replace(/^'|'$/g, ''));
 
 function peticion(op, cuerpo) {

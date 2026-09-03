@@ -549,6 +549,32 @@ async function main() {
     ]);
     chequeo(falta.revision.data[0].values.some(f => /no pude leer esta pestaña/.test(f[5])),
       'si falta una pestaña, lo dice arriba del todo en Revisar');
+
+    // Y el caso que de verdad muerde: NO llegó ninguna. Pasó el 2026-09-03 --
+    // n8n colapsó los `ranges` repetidos y solo pidió una pestaña -- y la rama
+    // devolvió cero items, así que la alarma se la tragó el propio fallo que
+    // venía a avisar. Se descubrió mirando la ejecución a mano.
+    const ninguna = await corridaCalendarios([{ range: 'Revisar!A2:F1000', values: [] }]);
+    chequeo(ninguna.filas.length === 0 && ninguna.revision !== null,
+      'sin una sola fila leída, la alarma se escribe igual: es cuando más falta hace');
+    chequeo((ninguna.revision.data[0].values || []).length >= 11,
+      'y sale una línea por cada calendario que no llegó',
+      `salieron ${(ninguna.revision.data[0].values || []).length}`);
+    // Lo de arriba se prueba aquí corriendo el nodo Code a mano, pero en n8n de
+    // verdad hay un paso más: un nodo que devuelve cero filas NO ejecuta lo que
+    // tiene detrás, y la alarma se quedaría otra vez sin escribir. De eso se
+    // encarga `alwaysOutputData`, que no se ve en ninguna prueba de las otras.
+    chequeo(nodo('Sincronizar Calendarios').alwaysOutputData === true,
+      'y `Sincronizar Calendarios` devuelve item aunque no haya filas: si no, en n8n la rama de Revisar ni corre');
+
+    // Los rangos van pegados a la URL, no en queryParameters: n8n colapsa los
+    // parámetros repetidos con el mismo nombre y de los catorce mandaba UNO.
+    // Costó una pasada en producción leyendo solo la pestaña `Revisar`.
+    const urlCal = nodo('Leer Calendarios').parameters.url;
+    chequeo((urlCal.match(/ranges=/g) || []).length >= 13 &&
+            !nodo('Leer Calendarios').parameters.sendQuery,
+      'los rangos van en la URL: n8n colapsa los parámetros repetidos',
+      `${(urlCal.match(/ranges=/g) || []).length} en la URL, sendQuery=${nodo('Leer Calendarios').parameters.sendQuery}`);
   } finally {
     await limpiar();
   }

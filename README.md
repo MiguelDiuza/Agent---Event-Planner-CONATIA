@@ -297,6 +297,27 @@ al lado. Ver el apartado de Granada, abajo.
 node --env-file=.env scripts/auditar-fechas-excel.js   # ¿alguna fecha vendida que el agente vea libre?
 ```
 
+**Y una tercera verificación, justo antes de apartar.** Cada quince minutos deja
+una ventana: entre que una persona vende un sábado y que la agenda se entera
+pueden pasar quince minutos, y en ese rato el agente ve esa fecha libre.
+Apartar una fecha es raro —unas cuantas al día— y es lo irreversible, así que
+ahí sí se puede pagar una lectura de la hoja: `separar_fecha_evento` **llama a
+la sincronización y la espera** antes de insertar. No duplica nada, llama al
+mismo workflow; en el otro extremo hay un `executeWorkflowTrigger` al lado del
+de cada quince minutos.
+
+Si esa llamada falla —Google caído, la hoja renombrada— la venta **no** se cae:
+sigue con lo que la agenda ya sabía, que es lo que habría pasado sin esto. Un
+candado que se rompe no puede cerrar la puerta con el cliente fuera.
+
+Quedan entonces tres cierres, de fuera adentro:
+
+| | |
+|---|---|
+| **Cada 15 minutos** | La agenda se pone al día con el libro entero, sin que nadie haga nada. |
+| **Al apartar** | Se vuelve a leer la hoja y se espera, para que la ventana de quince minutos no exista en el único momento que importa. |
+| **En el insert** | `on conflict (sede_id, fecha_solicitada) do nothing`. Es una restricción de la base, no una comprobación: aunque las dos anteriores fallaran, dos ventas no pueden ocupar la misma fecha en el mismo salón. El nodo lo detecta y el agente le dice al cliente que esa fecha ya no está. |
+
 La auditoría **no repite la lógica: la corre**. Los rangos salen del nodo `Leer
 Calendarios`, las filas las resuelve el código del nodo `Leer Calendarios en
 Filas` leído del `.json`, y el salón lo resuelve `fn_resolver_sede`. Lo único

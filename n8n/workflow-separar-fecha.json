@@ -323,6 +323,47 @@
       },
       "onError": "continueRegularOutput",
       "notes": "Anota la fila en la pestana \"Reservas\" del Excel del equipo (1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA).\n\nEscribe con una cuenta de servicio PROPIA (chris-164@rising-precinct-507407-c3.iam.gserviceaccount.com), no con la de Calendar. El motivo: la Google Sheets API se habilita en el proyecto dueno de la CREDENCIAL que hace la llamada, no donde vive la hoja, y el proyecto del cliente la tiene apagada sin forma de encenderla desde fuera. La hoja solo tiene que estar compartida con esta cuenta. La credencial solo lleva el scope de spreadsheets y solo puede hablar con sheets.googleapis.com.\n\nLas columnas de TEXTO van con un apostrofo delante a proposito: el nodo escribe con valueInputOption=USER_ENTERED, que interpreta la celda como si la teclearan, y lo que empieza por + - = @ entra como formula. El telefono de contacto sale en E.164 (+573001234567) y sin el apostrofo se guardaba como el numero 573001234567, sin el +57 y sin poder marcarse. Las de fecha van sin escapar, para que la hoja las ordene como fechas. `scripts/probar-excel.js` no deja que a ninguna se le olvide.\n\nSi falla no pasa nada: onError=continueRegularOutput, y la fecha ya quedo en Postgres y en Calendar, que son la fuente de verdad.\n\nLas dos ultimas celdas van vacias a proposito (2026-09-02): `cancelada` la escribe una persona cuando quiere liberar la fecha, y `sincronizado` la escribe el workflow `sincronizar_hoja`, que ademas SALTA las filas con origen=Bot -- estas ya estan en la base, las acaba de insertar el nodo de arriba. La fila se manda con las diez celdas igual, para que el array del nodo y los encabezados de la hoja no se puedan desfasar: es lo que comprueba `scripts/probar-excel.js`."
+    },
+    {
+      "name": "Sincronizar Antes de Apartar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        340,
+        200
+      ],
+      "id": "67369beb-3b4e-43b2-8b3c-f3d9051c6f08",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "INeFiJhftIxWbNcN",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "name": "Volver a los Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        200
+      ],
+      "id": "36c1e8e7-2025-41ed-94f3-b18e4fa18ac3",
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La sincronizacion devuelve lo suyo -- filas de la hoja, notas, lo que\n// haya corrido de ultimo -- y eso no es lo que necesita el insert. Aqui se\n// vuelve al dato validado, y a UN solo item.\n//\n// Lo de \"un solo item\" no es cosmetico: `Separar Fecha` corre una vez por\n// item de entrada, asi que si esto dejara pasar los quince items que\n// devolvio la sincronizacion, se harian quince inserts de la misma fecha.\n// Los pararia el candado de unicidad, pero el nodo devolveria quince\n// respuestas y el agente leeria la ultima.\nreturn [$('Validar Datos').first()];"
+      }
     }
   ],
   "connections": {
@@ -403,7 +444,7 @@
       "main": [
         [
           {
-            "node": "Separar Fecha",
+            "node": "Sincronizar Antes de Apartar",
             "type": "main",
             "index": 0
           }
@@ -422,6 +463,28 @@
         [
           {
             "node": "Reserva Confirmada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sincronizar Antes de Apartar": {
+      "main": [
+        [
+          {
+            "node": "Volver a los Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Volver a los Datos": {
+      "main": [
+        [
+          {
+            "node": "Separar Fecha",
             "type": "main",
             "index": 0
           }
