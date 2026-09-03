@@ -407,9 +407,9 @@ async function main() {
       delete from reservas where lead_id in (select id from leads where telefono in (${telefonos}));
       delete from mensajes_fragmentos where telefono in (${telefonos});
       -- La memoria se guarda con el TELÉFONO como session_id, no con el
-      -- sessionId que se manda al webhook: `Normalizar Chat` le antepone
+      -- sessionId que se manda al webhook: "Normalizar Chat" le antepone
       -- "test-" y de ahí en adelante el chat es ese teléfono. Borrar por
-      -- `p.sesion` no encontraba nada y dejaba la memoria colgando -- pasó el
+      -- p.sesion no encontraba nada y dejaba la memoria colgando -- pasó el
       -- 2026-09-02: 106 filas huérfanas de dos corridas de esta misma prueba,
       -- invisibles porque su lead ya no existía.
       delete from n8n_chat_histories where session_id in (${telefonos});
