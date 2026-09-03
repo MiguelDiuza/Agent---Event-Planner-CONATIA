@@ -49,6 +49,20 @@ daban cero sedes. El día que empezaran a usar la hoja, cada una de esas filas
 habría salido rechazada. Viven ahora en `sedes_alias`, y quien los traduce es
 `fn_resolver_sede` — la misma función para la sincronización y para la auditoría.
 
+### 4. Las sedes aliadas no se apartaban por chat… salvo si el modelo quería
+
+Las once sedes de terceros tienen agenda compartida y la separación la coordina
+el asesor. Estaba escrito en el prompt, Caso B, con todas las letras — y en
+ningún sitio más: el insert de `separar_fecha_evento` no miraba `es_propia`.
+
+Ahora lo exige, y devuelve `sede_aliada` con un mensaje que le dice al agente
+que **no** confirme nada y encamine a la llamada.
+
+Ojo con el alcance: esto **no** era un riesgo de doble venta —la restricción de
+unicidad ya lo impedía en las quince sedes, y desde hoy las fechas de las
+aliadas también están cargadas—. Lo que cierra es que apartara una fecha
+**libre** de una aliada saltándose al asesor.
+
 ### Y tres cierres, no uno
 
 | | |
@@ -120,7 +134,23 @@ Talismán, es ese mismo día. Los valores no cuadran (18.200.000 para 150 person
 contra 20.000.000 para 100), así que probablemente son dos eventos — pero es lo
 primero que hay que preguntarles.
 
-### 3. El equipo todavía no usa la hoja nueva
+### 3. Una pestaña NUEVA no se lee sola
+
+El nodo `Leer Calendarios` pide **trece rangos fijos**. Una pestaña que no esté
+en esa lista —el `GRANADA GOLD 2028` que abrirán en enero, un salón nuevo— no se
+lee, y **nada avisa por su cuenta**: la alarma de «no pude leer esta pestaña»
+salta cuando se pide una y no llega, no cuando existe una que nadie pide.
+
+Lo detecta `auditar-fechas-excel.js`, en el bloque **CALENDARIOS QUE NADIE LEE**,
+pero solo si alguien la corre. **Córrela cuando abran las pestañas de un año
+nuevo.**
+
+Se decidió dejarlo así el 2026-09-03, a propósito. La alternativa —que el
+workflow lea la lista de pestañas del Excel en cada pasada y coja todo lo que
+parezca un calendario— está pensada y es media hora de trabajo, si algún día
+cansa acordarse.
+
+### 4. El equipo todavía no usa la hoja nueva
 
 Dicho por el cliente: la van a usar **cuando todo esté probado**. Hasta
 entonces, los calendarios del Google Sheets son la copia del 2026-09-02 y no se
