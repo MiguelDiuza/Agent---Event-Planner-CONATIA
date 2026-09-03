@@ -68,8 +68,13 @@ const nodo = (n) => {
 
 // Un nodo Code de n8n es el cuerpo de una función con `$input` y `$` dentro.
 // Aquí se le pasan los dos a mano: es el mismo truco de `probar-excel.js`.
+//
+// `entrada` puede ser un objeto -- el json del único item que entra -- o ya la
+// lista de items. Hace falta desde que `Nuevas en Calendar` lee de `$input.all()`
+// en vez de nombrar a un nodo: le entran las dos ramas de sincronización.
 function correrCode(nombre, entrada, aguasArriba) {
-  const $input = { first: () => ({ json: entrada }) };
+  const items = Array.isArray(entrada) ? entrada : [{ json: entrada }];
+  const $input = { first: () => items[0], all: () => items };
   const $ = (n) => {
     if (!(n in aguasArriba)) {
       throw new Error(`"${nombre}" llama al nodo "${n}", que no está aguas arriba`);
@@ -160,6 +165,15 @@ const fila = (o = {}) => [
   o.origen || '', o.evento || '', o.cancelada || '', o.nota || '',
 ];
 
+// Un rango de los que devuelve values:batchGet, para la rama que lee los
+// calendarios por salón. El nombre de la pestaña viene entrecomillado igual
+// que lo devuelve Sheets cuando lleva espacios: el nodo tiene que saber
+// quitarle las comillas, y aquí se comprueba de paso.
+const rangoLeido = (pestana, filas) => ({
+  range: `'${pestana}'!A1:E${filas.length}`,
+  values: filas,
+});
+
 async function main() {
   console.log(c.gris(LOCAL
     ? `\ncontra la base LOCAL, por el contenedor ${CONTENEDOR}`
@@ -187,10 +201,37 @@ async function main() {
 
     const aguasArriba = { 'Leer Filas': [{ json: entrada }], 'Sincronizar': items };
     const notas = correrCode('Armar Nota', {}, aguasArriba);
-    const nuevas = correrCode('Nuevas en Calendar', {}, aguasArriba);
+    const nuevas = correrCode('Nuevas en Calendar', items, aguasArriba);
     return {
       filas: entrada.filas, resultados: res,
       notas: notas.length ? notas[0].json.data : [],
+      nuevas: nuevas.map(i => i.json),
+    };
+  }
+
+  // La otra rama: los calendarios por salón del libro del equipo.
+  //   Leer Calendarios -> Leer Calendarios en Filas -> Sincronizar Calendarios
+  //                    -> Armar Revisión / Nuevas en Calendar
+  //
+  // `rangos` llega con la forma exacta que devuelve values:batchGet, que es lo
+  // único que ve el nodo Code.
+  async function corridaCalendarios(rangos) {
+    const leidas = correrCode('Leer Calendarios en Filas', { valueRanges: rangos }, {});
+    if (!leidas.length) return { filas: [], resultados: [], revision: null, nuevas: [] };
+
+    const entrada = leidas[0].json;
+    const res = await consulta(ligar(qSync, [JSON.stringify(entrada.filas)]));
+    const items = res.map(r => ({ json: r }));
+
+    const aguasArriba = {
+      'Leer Calendarios en Filas': [{ json: entrada }],
+      'Sincronizar Calendarios': items,
+    };
+    const revision = correrCode('Armar Revisión', {}, aguasArriba);
+    const nuevas = correrCode('Nuevas en Calendar', items, aguasArriba);
+    return {
+      filas: entrada.filas, resultados: res,
+      revision: revision.length ? revision[0].json : null,
       nuevas: nuevas.map(i => i.json),
     };
   }
@@ -399,6 +440,115 @@ async function main() {
     const nada = await corrida([]);
     chequeo(nada.resultados.length === 0 && nada.notas.length === 0,
       'sin filas no se consulta la base ni se escribe nada');
+
+    // ----------------------------------------------------------------------
+    console.log(c.neg('\nLos calendarios por salón, como los escribe el equipo'));
+    // ----------------------------------------------------------------------
+    // Cada fila va tal como está en el libro: el año de la celda no vale nada
+    // y el día de la semana manda. Dentro de la ventana que mira el nodo
+    // (2025-2029 hoy), el 2 de junio cae en sábado SOLO en 2029, y el 24 de
+    // marzo también. Por eso las dos resuelven sin ambigüedad.
+    await limpiar();
+    const LIBRO = [
+      rangoLeido('AV 3 NTE', [
+        ['', 'FECHA', 'No FACTURA', 'NOMBRE', 'TELEFONO'],
+        ['JUNIO', '2028-06-02', 'SABADO', 'ROSA VELOSA', '3133384616'],
+        // El mes lo pone el titular de la sección, en la columna A.
+        ['MARZO', 'SABADO 24', '', 'MAIRA SOTO', ''],
+        // Una fila sin cliente no es una venta.
+        ['', '2028-06-09', 'SABADO', '', ''],
+        // El día de la semana no cuadra con ningún año: se rechaza.
+        ['JULIO', '2029-07-06', 'MIERCOLES', 'DEDAZO', ''],
+      ]),
+      rangoLeido('CIUDAD JARDIN', [
+        // Una fecha DE VERDAD llega como número de serie y no se toca.
+        ['JUNIO', SERIE_2029_06_16, 'SABADO', 'ANA LOPEZ', ''],
+        // Ya pasó: entra, se omite, y NO ensucia la lista de revisión.
+        ['ENERO', '2025-01-04', 'SABADO', 'VIEJA', ''],
+      ]),
+      rangoLeido('2029', [
+        // El maestro lleva la sede DENTRO de la fila, en la columna C.
+        ['SEPTIEMBRE', 'SABADO 15', 'MUNDO FOTO', 'ANGIE MOLINA', ''],
+        // Y este es el que no puede colarse: "GRANADA" a secas es el salón que
+        // no manejamos. Antes del 2026-09-02 casaba con el Gold por parecido.
+        ['SEPTIEMBRE', 'SABADO 15', 'GRANADA', 'DEL VECINO', ''],
+      ]),
+    ];
+
+    const cal = await corridaCalendarios(LIBRO);
+
+    const porCliente = (n) => cal.resultados.find(
+      r => (cal.filas.find(f => f.fila === Number(r.fila)) || {}).cliente === n) || {};
+
+    chequeo(porCliente('ROSA VELOSA').resultado === 'nueva' &&
+            porCliente('ROSA VELOSA').fecha === `${ANO}-06-02` &&
+            porCliente('ROSA VELOSA').sede === 'Sede Norte',
+      'el año de la celda no manda: "2028-06-02 SABADO" entra como ' +
+      `${ANO}-06-02 en Sede Norte`,
+      JSON.stringify(porCliente('ROSA VELOSA')));
+    chequeo(porCliente('MAIRA SOTO').resultado === 'nueva' &&
+            porCliente('MAIRA SOTO').fecha === `${ANO}-03-24`,
+      `"SABADO 24" bajo el titular MARZO entra como ${ANO}-03-24`,
+      JSON.stringify(porCliente('MAIRA SOTO')));
+    chequeo(porCliente('ANA LOPEZ').resultado === 'nueva' &&
+            porCliente('ANA LOPEZ').fecha === `${ANO}-06-16` &&
+            porCliente('ANA LOPEZ').sede === "Casa Christian's Ciudad Jardín",
+      'una fecha de verdad (número de serie) se cree tal cual',
+      JSON.stringify(porCliente('ANA LOPEZ')));
+    chequeo(porCliente('ANGIE MOLINA').resultado === 'nueva' &&
+            porCliente('ANGIE MOLINA').sede === 'Sede Sur 66 Mundo Foto',
+      'del maestro sale la sede de la columna C, con el nombre del libro',
+      JSON.stringify(porCliente('ANGIE MOLINA')));
+    chequeo(porCliente('DEL VECINO').resultado === 'omitida' &&
+            /no manejamos|otra administración/.test(porCliente('DEL VECINO').detalle || ''),
+      '"GRANADA" a secas NO entra como Granada Gold: se omite con su motivo',
+      JSON.stringify(porCliente('DEL VECINO')));
+    chequeo(porCliente('DEDAZO').resultado === 'rechazada',
+      'una fecha cuyo día de la semana no cuadra se rechaza, no se adivina',
+      JSON.stringify(porCliente('DEDAZO')));
+    chequeo(porCliente('VIEJA').resultado === 'omitida' &&
+            porCliente('VIEJA').detalle === 'la fecha ya pasó',
+      'una fecha pasada se omite');
+    chequeo(!cal.filas.some(f => f.cancelar),
+      'ninguna fila de estas pestañas puede liberar una fecha: borrar no libera');
+
+    const sinGold = await consulta(
+      `select count(*)::int as n from agenda_reservas a join sedes s on s.id_sede = a.sede_id
+        where s.nombre_sede = 'Sede Granada Gold' and a.fecha_solicitada >= date '${ANO}-01-01'`);
+    chequeo(Number(sinGold[0].n) === 0,
+      'y el Gold no se queda con una fecha del salón del vecino');
+
+    // ----------------------------------------------------------------------
+    console.log(c.neg('\nLa pestaña Revisar'));
+    // ----------------------------------------------------------------------
+    const filasRev = cal.revision.data[0].values;
+    const textos = filasRev.map(f => f.join(' | '));
+    chequeo(textos.some(t => /DEDAZO/.test(t)),
+      'la fila rechazada acaba escrita donde alguien la vea');
+    chequeo(textos.some(t => /DEL VECINO/.test(t)),
+      'y la del salón que no manejamos también, para que se entienda por qué falta');
+    chequeo(!textos.some(t => /VIEJA/.test(t)),
+      'las fechas pasadas NO salen: son cientos y enterrarían lo que importa');
+    chequeo(!textos.some(t => /ROSA VELOSA|ANA LOPEZ/.test(t)),
+      'lo que entró bien tampoco sale');
+
+    // Lo mismo otra vez, con la pestaña ya escrita: no se toca ni una celda.
+    const otraVez = await corridaCalendarios(
+      LIBRO.concat([{ range: 'Revisar!A2:F', values: filasRev }]));
+    chequeo(otraVez.revision === null,
+      'una segunda pasada sin novedad no reescribe la pestaña');
+    chequeo(otraVez.resultados.filter(r => r.resultado === 'nueva').length === 0,
+      'y no vuelve a insertar nada: las fechas ya estaban');
+    chequeo(otraVez.nuevas.length === 0,
+      'ni crea eventos de Calendar repetidos');
+
+    // Una pestaña que no llegó es más grave que cualquier fila: un salón
+    // entero dejando de sincronizarse, y en silencio.
+    const falta = await corridaCalendarios([
+      rangoLeido('AV 3 NTE', [['JUNIO', '2028-06-02', 'SABADO', 'ROSA VELOSA', '']]),
+    ]);
+    chequeo(falta.revision.data[0].values.some(f => /no pude leer esta pestaña/.test(f[5])),
+      'si falta una pestaña, lo dice arriba del todo en Revisar');
   } finally {
     await limpiar();
   }

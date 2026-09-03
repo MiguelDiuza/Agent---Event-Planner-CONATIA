@@ -80,6 +80,15 @@ const mal = t => { console.log('    ' + c.rojo('✗') + ' ' + t); fallos++; };
 console.log(c.neg('\nLas filas que arman los dos nodos de Excel'));
 
 for (const [pestana, def] of Object.entries(PESTANAS)) {
+  // `Revisar` no la escribe un nodo fila a fila: `Armar Revisión` recalcula la
+  // lista entera y la reescribe solo si cambió. No hay una fila que comparar
+  // contra los encabezados, así que aquí no hay nada que probar -- lo suyo lo
+  // cubre `probar-sincronizacion.js`, que corre ese nodo de verdad.
+  if (def.solo_encabezados) {
+    console.log('\n  ' + c.neg(`${pestana}  (${def.rango})`) +
+                c.gris('  sin nodo de fila: la escribe entera Armar Revisión'));
+    continue;
+  }
   console.log('\n  ' + c.neg(`${pestana}  (${def.rango})`) + c.gris(`  ${def.workflow} → ${def.nodo}`));
 
   const wf = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'n8n', def.workflow), 'utf8'));

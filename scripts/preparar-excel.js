@@ -78,6 +78,23 @@ const PESTANAS = {
               '2026-01-01T00:30:00-05:00', "'prueba", "'PRUEBA", "'+573000000000",
               "'+573000000000", "'PRUEBA", 'Prueba', "'prueba"],
   },
+  // Nació el 2026-09-03, con la rama que lee los calendarios por salón.
+  //
+  // No la escribe un nodo fila a fila como las dos de arriba: `Armar Revisión`
+  // recalcula la lista entera en cada pasada y la reescribe solo si cambió. Por
+  // eso no lleva `nodo` ni `ejemplo` -- no hay una fila que comparar contra los
+  // encabezados-- y `probar-excel.js` se la salta a propósito.
+  //
+  // Es donde acaban las filas del libro del equipo que la sincronización NO
+  // pudo meter en la agenda: una fecha que no se entiende, un salón que no
+  // existe, un choque con el bot. En los calendarios de ellos no se puede
+  // escribir la respuesta al lado -- son su documento -- así que si el rechazo
+  // no está aquí, no está en ninguna parte.
+  Revisar: {
+    rango: 'A:F',
+    solo_encabezados: true,
+    columnas: ['pestaña', 'fila', 'celda', 'salón', 'cliente', 'qué pasó'],
+  },
 };
 
 // `probar-excel.js` importa PESTANAS. Se exporta ANTES de todo lo demás y el

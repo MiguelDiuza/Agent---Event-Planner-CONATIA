@@ -185,6 +185,15 @@ En cuanto pase a APPROVED se enciende `Caso del Asesor` y se sube — los pasos
 exactos están arriba. **Antes no**, por lo que se explica ahí: el bot se
 callaría sin que el asesor se entere.
 
+> **Al día siguiente (2026-09-03).** Los calendarios por salón ya entran solos:
+> `workflow-sincronizar-hoja.json` lee las trece pestañas del libro cada quince
+> minutos, no solo `Reservas`. Lo de abajo sigue valiendo —`Reservas` es la
+> única forma de **soltar** una fecha y la única donde la respuesta queda al
+> lado de la fila—, pero **ya no hace falta que copien nada ahí para que el
+> agente vea una venta**: basta con que la anoten donde siempre.
+>
+> Lo que se comprueba con `node --env-file=.env scripts/auditar-fechas-excel.js`.
+
 ### 2. Enseñarle al equipo la hoja nueva
 
 La sincronización solo sirve si alguien escribe en la pestaña `Reservas`. Lo que
@@ -216,6 +225,32 @@ vendida cuya sede no se puede deducir del papel.
 
 Las dos se arreglan escribiendo la fila en la pestaña `Reservas`; la segunda,
 si estuviera mal, se suelta con `sí` en la columna `cancelada`.
+
+**2026-09-03: la auditoría añadió cinco más, y todas son de lo mismo.** El día
+de la semana escrito en el libro no cuadra con la fecha, y por eso esas filas no
+se pueden leer sin adivinar. Salen en la pestaña `Revisar` con el motivo, y son:
+
+| Dónde | Cliente | Qué dice la celda |
+|---|---|---|
+| `2026`!44 | YULIANA VASQUEZ | `1 SABADO` en un mes en que el 1 no cae sábado |
+| `2026`!45 | DIANA JARAMILLO | igual |
+| `2027`!27 | *(sin nombre)* `separado` | `sabado 11` |
+| `2027`!53 | ANGIE MOLINA | `SABADO 8` de septiembre |
+| `2027`!70 | VIVAN ANDREA RODRIGUEZ | `SABADO 27` |
+| `CIUDAD JARDIN`!48 | BIBIANA MINDINEIRO | `2026-06-10 VIERNES` (el 10 no cae viernes) |
+
+**Ninguna es urgente**: las cuatro con nombre ya están en la agenda desde la
+carga del 2026-09-01, y la de Ciudad Jardín ya pasó. Comprobado contra la base.
+Lo que hace falta es que alguien del equipo diga la fecha buena, y entonces se
+corrige la celda y entran solas.
+
+Y una que sí es un agujero, la única que quedaba: **`H. TALISMAN`!56, ZORAIDA
+MARTINEZ, sábado 18 de septiembre de 2027**, vendida en el libro y que el agente
+veía libre. La sincronización la mete sola en la primera pasada. Ojo con la
+coincidencia: LILIBETH RAMIREZ, la fecha sin salón del maestro, es **ese mismo
+día**. Los valores no cuadran (18.200.000 para 150 personas contra 20.000.000
+para 100), así que probablemente son dos eventos distintos — pero es lo primero
+que hay que preguntar.
 
 ### 4. Vigilar la primera semana
 

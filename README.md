@@ -58,6 +58,7 @@ node scripts/probar-fragmentos.js  # los mensajes que llegan por partes
 node scripts/probar-aforos.js      # cuántos salones salen para cada aforo, y con qué precio
 node scripts/probar-caso-asesor.js # el traspaso al asesor después de la cita
 node scripts/probar-sincronizacion.js # la vuelta del Excel a la agenda, workflow entero sin n8n ni Google
+node scripts/auditar-fechas-excel.js  # ¿alguna fecha vendida en el libro que el agente vea libre?
 ```
 
 `probar-caso-asesor.js` y `probar-sincronizacion.js` aceptan `--local` para
@@ -241,6 +242,70 @@ node --env-file=.env scripts/probar-sincronizacion.js --local  # el workflow ent
 node --env-file=.env scripts/volcar-agenda-a-calendar.js       # fechas ocupadas sin evento en Calendar
 ```
 
+### Y los calendarios por salón, que es donde el equipo vende (2026-09-03)
+
+Lo de arriba solo mira la pestaña `Reservas`, que es una tabla hecha para la
+máquina. **El equipo no vende ahí**: vende en el calendario de cada salón —
+`CIUDAD JARDIN`, `MUNDO FOTO`, `AV 3 NTE`, `GRANADA GOLD 2026`…— y en los dos
+maestros (`2026`, `2027`). De ahí salió, **una sola vez y a mano**, la carga del
+2026-09-01. Desde entonces cada venta nueva anotada en esos calendarios era
+invisible para el agente: la fecha seguía libre y podía confirmársela y
+apartársela a otro cliente. Ese es el agujero que trajo esta rama.
+
+Los cinco nodos nuevos de `workflow-sincronizar-hoja.json` leen esas trece
+pestañas cada quince minutos y las meten por la **misma**
+`fn_sincronizar_agenda_desde_hoja`, con las mismas cuatro decisiones de la tabla
+de arriba. Ni se le pide al equipo que cambie de costumbre, ni se duplica la
+lógica que decide.
+
+**El año de esas celdas no es de fiar y el día de la semana sí.** El libro nació
+como `2025.xlsx` y se reutilizó para 2026: media hoja conserva el año viejo, y
+la columna que dice la verdad es la del día. `2025-12-04 VIERNES` es el 4 de
+diciembre de **2026**, que es el que cae en viernes. Se resuelve buscando, en
+una ventana de cinco años, el único que cae en ese día — y si cayeran dos, se
+rechaza en vez de elegir. En los maestros no se busca nada: la pestaña `2027` es
+de 2027, y una fila suya con el día mal puesto se pregunta, no se mueve de año.
+Eso último no es teoría: `2027!B53 "SABADO 8"` acababa en **2029**, apartando un
+sábado que nadie ha vendido.
+
+**Borrar tampoco libera aquí.** Ninguna fila de esas pestañas puede soltar una
+fecha: si alguien borra un nombre de su calendario, la fecha sigue apartada.
+Para soltarla hay que decirlo en `Reservas`, con la columna `cancelada`, que es
+donde queda el rastro de quién la tenía.
+
+**La pestaña `Revisar`.** En los calendarios del equipo no se puede escribir la
+respuesta al lado de cada fila —son su documento, copia fiel del libro que
+llevan—, así que lo que no se pudo meter en la agenda se recoge en una lista
+aparte: qué pestaña, qué fila, qué celda y por qué. Nadie mira los logs de n8n;
+si el rechazo no está ahí, no está en ninguna parte. Las fechas pasadas **no**
+salen —son cientos y enterrarían lo que importa— y la lista se reescribe solo
+cuando cambia, así que en régimen esa pasada tampoco toca una celda.
+
+**Los nombres del equipo, en un solo sitio.** El equipo escribe `AVDA 3 NORTE`,
+`AV 3 NTE`, `LAS PILAS`, `3RA NORTE`, `H. TALISMAN` — y ninguno de los cinco
+resolvía a ninguna sede: comprobado contra la base antes de tocar nada. El día
+que empezaran a usar la hoja, cada una de esas filas habría salido rechazada.
+Ahora viven en la tabla `sedes_alias` (migración `20260902000004`), y quien los
+traduce es `fn_resolver_sede`, **la misma función** que usan la sincronización y
+la auditoría.
+
+Esa tabla también sabe decir «este salón no es nuestro»: un alias con
+`sede_id` en null es un nombre que se ignora a propósito, con el motivo escrito
+al lado. Ver el apartado de Granada, abajo.
+
+```bash
+node --env-file=.env scripts/auditar-fechas-excel.js   # ¿alguna fecha vendida que el agente vea libre?
+```
+
+La auditoría **no repite la lógica: la corre**. Los rangos salen del nodo `Leer
+Calendarios`, las filas las resuelve el código del nodo `Leer Calendarios en
+Filas` leído del `.json`, y el salón lo resuelve `fn_resolver_sede`. Lo único
+que no ejecuta es la sincronización, porque escribe: auditar no puede arreglar
+nada por su cuenta, o nunca sabrías si el arreglo estaba puesto. Además avisa de
+dos cosas que ninguna prueba veía: una pestaña de calendario que el workflow no
+está pidiendo, y una que pidió y no llegó —un salón entero sin sincronizar, en
+silencio—.
+
 ### El libro viejo, dentro del nuevo
 
 El archivo nuevo empezó siendo un recorte: de todo lo que el equipo tenía en
@@ -309,6 +374,27 @@ en vez de contestar. Con una sola Granada en el catálogo, se resuelve solo.
 Lo que se copió del libro viejo **no se tocó**: las hojas `GRANADA 2026`,
 `GRANADA 2027` y `GRANADA` siguen ahí como archivo, porque son copia fiel del
 documento del equipo. Lo que se quitó es la sede del catálogo del agente.
+
+**Ratificado el 2026-09-03, y con una consecuencia que faltaba.** El cliente lo
+volvió a decir con estas palabras: «Granada se ignora por completo. Solo se
+tiene en cuenta Granada Gold. Ninguna otra.» Vino a cuento de una captura: el
+agente le dijo a un cliente que el **viernes 4 de diciembre** estaba libre en
+Granada Gold, y en la pestaña `GRANADA 2026` ese día lo tiene MONICA BEDOYA.
+Son dos salones distintos y el agente acertó — en `GRANADA GOLD 2026` el 4 de
+diciembre no tiene fila—; el precio de la venta lo confirma: 7.000.000 para 60
+personas es la tarifa de Granada **Premium** menos el millón de descuento de
+viernes (la de Gold para 60 sería 6.500.000). El libro lleva los dos calendarios
+en paralelo, con clientes distintos el mismo día: el 12 de diciembre, ADRIANA en
+uno y NATALIA PLAZA en el otro.
+
+Lo que sí estaba mal era otra cosa, y no se veía: al quedar una sola Granada,
+**`"GRANADA"` a secas pasó a resolver a `Sede Granada Gold`** por el casado por
+contenido. Como el equipo distingue `GRANADA` y `GOLD` en su propia columna de
+salón, la primera fila que dijera «GRANADA» habría **bloqueado una fecha buena
+del Gold** con una venta del vecino. Desde `20260902000004` eso se rechaza con
+su motivo escrito —«si es del Gold, escribe "Granada Gold"»— en vez de
+adivinarse; `GRANADA GOLD 2026` sí se resuelve, porque dice Gold. Y las tres
+pestañas de Granada no se leen: no están entre las que pide el workflow.
 
 `volcar-agenda-a-calendar.js` es el arranque, no un guion de todos los días: de
 aquí en adelante el propio workflow crea el evento de cada fecha nueva. Se usó

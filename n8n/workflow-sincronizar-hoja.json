@@ -144,7 +144,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Las fechas que ACABAN de entrar en la agenda, para bloquearlas tambien en el\n// Google Calendar que abre el asesor.\n//\n// Solo las nuevas: una que ya estaba no tiene por que crear el evento otra\n// vez. En la corrida normal esto devuelve cero items y la rama entera no se\n// ejecuta, que es justo lo que se quiere -- ni una llamada a Google cada\n// quince minutos por unas fechas que no han cambiado.\n//\n// El `pairedItem` va a mano y no es adorno: un nodo Code en modo\n// runOnceForAllItems no puede saber de que item de entrada sale cada uno de\n// salida, asi que n8n no lo rellena solo. Sin el, la expresion de aguas abajo\n// que mira a este nodo se queda sin de donde agarrarse y el\n// id del evento no vuelve a la base -- callado, porque ese nodo continua en\n// error a proposito. El nodo que lo necesita es `Guardar Event ID`.\nconst salida = [];\n$('Sincronizar').all().forEach((item, i) => {\n  if (item.json.resultado === 'nueva') salida.push({ json: item.json, pairedItem: { item: i } });\n});\nreturn salida;\n"
+        "jsCode": "// Las fechas que ACABAN de entrar en la agenda, para bloquearlas tambien en el\n// Google Calendar que abre el asesor.\n//\n// Solo las nuevas: una que ya estaba no tiene por que crear el evento otra\n// vez. En la corrida normal esto devuelve cero items y la rama entera no se\n// ejecuta, que es justo lo que se quiere -- ni una llamada a Google cada\n// quince minutos por unas fechas que no han cambiado.\n//\n// El `pairedItem` va a mano y no es adorno: un nodo Code en modo\n// runOnceForAllItems no puede saber de que item de entrada sale cada uno de\n// salida, asi que n8n no lo rellena solo. Sin el, la expresion de aguas abajo\n// que mira a este nodo se queda sin de donde agarrarse y el\n// id del evento no vuelve a la base -- callado, porque ese nodo continua en\n// error a proposito. El nodo que lo necesita es `Guardar Event ID`.\nconst salida = [];\n$input.all().forEach((item, i) => {\n  if (item.json.resultado === 'nueva') salida.push({ json: item.json, pairedItem: { item: i } });\n});\nreturn salida;\n"
       },
       "id": "c5000000-0000-4000-8000-000000000007",
       "name": "Nuevas en Calendar",
@@ -209,6 +209,175 @@
       "onError": "continueRegularOutput",
       "alwaysOutputData": true,
       "notes": "Cierra el vinculo entre la fila y el evento, que es lo que permite borrar el bloqueo del calendario si la fecha se libera.\n\n`and google_event_id is null` para no pisar el evento de una fila que ya tenia el suyo, y `$json.id || null` porque si Google fallo el nodo de arriba sigue igual y no trae id."
+    },
+    {
+      "name": "Leer Calendarios",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -340,
+        560
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "ZzY1Zt2j9JaKlujB",
+          "name": "Google Service Account - Sheets"
+        }
+      },
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA/values:batchGet",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ranges",
+              "value": "'MUNDO FOTO'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'AV 3 NTE'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'CIUDAD JARDIN'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'GRANADA GOLD 2026'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'GRANDA GOLD 2027'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'LAS PILAS'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'CASA 4'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'CASA 5'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'CASA 74'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'ORQUIDEORAMA 1'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'H. TALISMAN'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'2026'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "'2027'!A:E"
+            },
+            {
+              "name": "ranges",
+              "value": "Revisar!A2:F"
+            },
+            {
+              "name": "valueRenderOption",
+              "value": "UNFORMATTED_VALUE"
+            },
+            {
+              "name": "majorDimension",
+              "value": "ROWS"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fd7aa462-0688-4932-9c09-55f9122e750b"
+    },
+    {
+      "name": "Leer Calendarios en Filas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Los calendarios por salon del libro del equipo, leidos como los escriben.\n//\n// POR QUE EXISTE. La otra rama de este mismo workflow lee la pestana\n// `Reservas`, que es una tabla hecha para la maquina. Pero el equipo no vende\n// ahi: vende en el calendario de cada salon -- `CIUDAD JARDIN`, `MUNDO FOTO`,\n// `AV 3 NTE`, `GRANADA GOLD 2026`... -- que es donde lleva la cuenta desde\n// siempre. Hasta el 2026-09-02 eso entraba a la base UNA vez, a mano, con la\n// migracion 20260901000000. Desde entonces, cada venta nueva que una persona\n// anotaba en su calendario era invisible para el agente: la fecha seguia\n// libre, y podia confirmarsela y apartarsela a otro cliente.\n//\n// Esta rama la mira cada quince minutos. No le pide al equipo que cambie de\n// costumbre, que es la unica forma de que esto funcione de verdad.\n//\n// AQUI NO SE DECIDE NADA DE LA AGENDA. Igual que en `Leer Filas`: esto lee\n// celdas y resuelve fechas; quien decide es `fn_sincronizar_agenda_desde_hoja`.\n// Lo que no se entiende viaja con un `motivo` en vez de tirarse.\n//\n// GRANADA. Las pestanas `GRANADA 2026`, `GRANADA 2027` y `GRANADA` NO se leen:\n// son del salon que el cliente mando ignorar (\"es de una administracion\n// diferente\", 2026-09-02, ratificado el mismo dia). El unico Granada que se\n// sincroniza es el Gold. Y si una fila de un maestro dice \"GRANADA\" a secas,\n// la base la rechaza con su motivo -- no la resuelve al Gold por parecido.\n\n// Las once pestanas de salon que SI son nuestras. El nombre de la pestana\n// viaja como nombre de sede: quien lo traduce al catalogo es `sedes_alias`, en\n// la base, para que los nombres del equipo vivan en un solo sitio.\nconst CALENDARIOS = ['MUNDO FOTO', 'AV 3 NTE', 'CIUDAD JARDIN', 'GRANADA GOLD 2026',\n                     'GRANDA GOLD 2027', 'LAS PILAS', 'CASA 4', 'CASA 5', 'CASA 74',\n                     'ORQUIDEORAMA 1', 'H. TALISMAN'];\n\n// Los maestros llevan otra forma: la sede va DENTRO de la fila, en la columna\n// C. Y llevan filas que los calendarios por salon no tienen, asi que no\n// sobran: se leen los dos y lo repetido vuelve como \"ya estaba\".\n//\n// Se reconocen por el nombre -- cuatro digitos, el ano -- y no por una lista:\n// el dia que el equipo abra la pestana del ano que viene, esta rama la lee\n// sola. Lo que sigue haciendo falta es meter el rango nuevo en la URL del nodo\n// de arriba, y de eso avisa `auditar-fechas-excel.js`.\nconst esMaestro = (nombre) => /^[0-9]{4}$/.test(nombre.trim());\n\n// La pestana donde se escribe lo que no se pudo leer. Se lee tambien, para no\n// reescribirla cuando no ha cambiado nada.\nconst REVISION = 'Revisar';\n\nconst DIAS = { DOMINGO: 0, LUNES: 1, MARTES: 2, MIERCOLES: 3, JUEVES: 4, VIERNES: 5, SABADO: 6 };\nconst MESES = { ENERO: 1, FEBRERO: 2, MARZO: 3, ABRIL: 4, MAYO: 5, JUNIO: 6, JULIO: 7,\n                AGOSTO: 8, SEPTIEMBRE: 9, OCTUBRE: 10, NOVIEMBRE: 11, DICIEMBRE: 12 };\n\nconst sinTildes = (s) => String(s === null || s === undefined ? '' : s)\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase().trim();\n\nconst dosDigitos = (n) => String(n).padStart(2, '0');\n\n// ---------------------------------------------------------------------------\n// EL ANO DE ESTAS CELDAS NO ES DE FIAR, Y EL DIA DE LA SEMANA SI\n// ---------------------------------------------------------------------------\n// El libro nacio como `2025.xlsx` y se reutilizo para 2026: media hoja\n// conserva el ano viejo. Lo que dice la verdad es el dia de la semana, que es\n// como lo lee una persona. `2025-12-04 VIERNES` es el 4 de diciembre de 2026,\n// que es el que cae en viernes. Asi se cargaron las 113 de la migracion\n// 20260901000000 y asi hay que leer cualquier fecha de estas pestanas.\n//\n// La ventana va del ano pasado a tres adelante. Con el dia de la semana fijo,\n// dentro de una ventana de cinco anos cae UNO solo -- el mismo dia de la\n// semana vuelve a los 5, 6 u 11 anos -- asi que no hay que elegir. Si cayeran\n// dos, se rechaza: adivinar aqui es dar por libre una fecha vendida.\nfunction resolverFecha(celdaFecha, celdaDia, mesEnCurso, hoy, anoFijo) {\n  // Una fecha DE VERDAD llega como numero de serie de Sheets y no tiene\n  // ninguna ambiguedad: se cree tal cual, sin mirar el dia de la semana. Es lo\n  // que van a escribir de aqui en adelante los que tecleen en la hoja nueva.\n  if (typeof celdaFecha === 'number' && Number.isFinite(celdaFecha)) {\n    const ms = Date.UTC(1899, 11, 30) + Math.round(celdaFecha) * 86400000;\n    return { fecha: new Date(ms).toISOString().slice(0, 10) };\n  }\n\n  const texto = sinTildes(celdaFecha);\n  const nombreDia = Object.keys(DIAS).find((d) => sinTildes(celdaDia).startsWith(d)) ||\n                    Object.keys(DIAS).find((d) => texto.includes(d));\n  const objetivo = nombreDia === undefined ? null : DIAS[nombreDia];\n\n  let anoCelda = null; let mes = null; let diaMes = null;\n  const iso = String(celdaFecha === null || celdaFecha === undefined ? '' : celdaFecha).trim()\n    .match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})$/);\n  if (iso) { anoCelda = +iso[1]; mes = +iso[2]; diaMes = +iso[3]; }\n  else {\n    // \"7 diciemnre\", \"4 de diciembre\", \"MARZO 20\": el mes va tecleado a mano y\n    // a veces con errata, asi que se compara por sus cuatro primeras letras.\n    const conMes = texto.match(/(\\d{1,2})\\s*(?:DE\\s*)?([A-Z]{4,})/) ||\n                   texto.match(/([A-Z]{4,})\\s*(\\d{1,2})/);\n    if (conMes) {\n      const numero = /^\\d/.test(conMes[1]) ? conMes[1] : conMes[2];\n      const palabra = /^\\d/.test(conMes[1]) ? conMes[2] : conMes[1];\n      const llave = Object.keys(MESES).find((k) => k.slice(0, 4) === palabra.slice(0, 4));\n      if (llave) { diaMes = +numero; mes = MESES[llave]; }\n    }\n    // \"SABADO 22\": el mes es el titular de la seccion, en la columna A.\n    if (!mes) {\n      const soloDia = texto.match(/(?:^|[^\\d])(\\d{1,2})(?:[^\\d]|$)/);\n      if (soloDia && nombreDia !== undefined && mesEnCurso) { diaMes = +soloDia[1]; mes = mesEnCurso; }\n    }\n  }\n  if (!mes || !diaMes || diaMes > 31) return { motivo: `no entiendo la fecha \"${celdaFecha}\"` };\n\n  // Con ano en la celda y sin dia de la semana no hay nada que resolver.\n  if (anoCelda !== null && objetivo === null) {\n    return { fecha: `${anoCelda}-${dosDigitos(mes)}-${dosDigitos(diaMes)}` };\n  }\n\n  // En los maestros el ano NO se busca: lo dice el nombre de la pestana. La\n  // 2027 es de 2027, y si una fila de ahi lleva mal el dia de la semana, lo\n  // que hay que hacer es preguntarlo -- no saltar dos anos hasta que cuadre.\n  // Paso de verdad: `2027!B53 \"SABADO 8\"` de SEPTIEMBRE acababa en 2029,\n  // apartando un sabado de 2029 que nadie ha vendido.\n  const desde = anoFijo || (hoy.getUTCFullYear() - 1);\n  const hasta = anoFijo || (desde + 4);\n  const candidatos = [];\n  for (let a = desde; a <= hasta; a++) {\n    const f = new Date(Date.UTC(a, mes - 1, diaMes));\n    if (f.getUTCMonth() !== mes - 1) continue;          // 31 de febrero y parecidos\n    if (objetivo === null || f.getUTCDay() === objetivo) candidatos.push(f);\n  }\n  if (!candidatos.length) {\n    return { motivo: `\"${celdaFecha}\" no cae en ${nombreDia || celdaDia} en ` +\n                     (anoFijo ? `${anoFijo}: revisa el día de la semana o el año`\n                              : `ningún año entre ${desde} y ${hasta}: revisa el día de la semana`) };\n  }\n  if (candidatos.length > 1) {\n    return { motivo: `no sé de qué año es \"${celdaFecha}\": podría ser ` +\n                     candidatos.map((f) => f.toISOString().slice(0, 10)).join(' o ') };\n  }\n  return { fecha: candidatos[0].toISOString().slice(0, 10) };\n}\n\n// Una fila esta vendida si la columna del nombre trae algo. \"LEY SECA\",\n// \"VOTACIONES\" y \"OCUPADO\" tambien: son dias que el equipo se bloquea a si\n// mismo, y para el agente valen lo mismo que una venta.\nconst estaVendida = (nombre) => {\n  const t = sinTildes(nombre);\n  return t !== '' && !/^[-.X\\s]+$/.test(t);\n};\n\n// ---------------------------------------------------------------------------\nconst respuesta = $input.first().json;\nconst rangos = respuesta.valueRanges || [];\n\n// Se casa por el nombre que devuelve Sheets, no por la posicion: si un dia\n// alguien quita un rango de la URL, esto se entera y lo dice, en vez de leer\n// una pestana creyendo que es otra.\nconst porPestana = new Map();\nfor (const r of rangos) {\n  const nombre = String(r.range || '').split('!')[0].replace(/^'|'$/g, '');\n  porPestana.set(nombre, r.values || []);\n}\n\nconst hoy = new Date();\nconst filas = [];\nconst revisar = [];\nconst faltan = [];\n\nfunction leerCalendario(pestana, conSedeDentro, anoFijo) {\n  const valores = porPestana.get(pestana);\n  if (valores === undefined) { faltan.push(pestana); return; }\n\n  let mesEnCurso = null;\n  for (let i = 0; i < valores.length; i++) {\n    const f = valores[i] || [];\n    const cel = (n) => (f[n] === undefined || f[n] === null ? '' : f[n]);\n\n    const titular = MESES[sinTildes(cel(0))];\n    if (titular) mesEnCurso = titular;\n\n    const celdaFecha = cel(1);\n    const cliente = String(cel(3)).trim();\n    // En los maestros la sede va en la columna C; en los calendarios de salon\n    // la columna C es el dia de la semana y la sede es la pestana.\n    const sede = conSedeDentro ? String(cel(2)).trim() : pestana;\n    const celdaDia = conSedeDentro ? '' : cel(2);\n\n    if (celdaFecha === '' || sinTildes(celdaFecha) === 'FECHA') continue;\n    if (!estaVendida(cliente)) continue;\n\n    const r = resolverFecha(celdaFecha, celdaDia, mesEnCurso, hoy, anoFijo);\n    const item = {\n      fila: filas.length,          // el indice aqui dentro: es como vuelve la respuesta\n      pestana,\n      fila_hoja: i + 1,\n      celda: String(celdaFecha),\n      sede,\n      cliente,\n      telefono: String(cel(4) || '').trim(),\n      fecha: r.fecha || null,\n      cancelar: false,             // estas pestanas no liberan fechas: ver abajo\n      motivo: r.motivo || (sede ? null : 'la fila no dice en qué salón es'),\n    };\n    filas.push(item);\n  }\n}\n\nfor (const p of CALENDARIOS) leerCalendario(p, false);\nfor (const p of porPestana.keys()) if (esMaestro(p)) leerCalendario(p, true, Number(p.trim()));\n\n// Lo que hay AHORA en la pestana de revision, para poder no reescribirla si no\n// ha cambiado nada. Va en el mismo viaje que todo lo demas.\nconst revisionActual = porPestana.get(REVISION) || [];\n\n// BORRAR NO LIBERA, TAMPOCO AQUI. Ninguna fila de estas pestanas puede soltar\n// una fecha: `cancelar` va siempre en false. Si alguien borra un nombre de su\n// calendario -- o filtra, o deshace de mas -- la fecha sigue apartada. Para\n// soltarla hay que decirlo en la pestana `Reservas`, con la columna\n// `cancelada`, que es donde queda el rastro de quien la solto.\n\nif (!filas.length) return [];\n\nreturn [{\n  json: {\n    filas,\n    revision_actual: revisionActual,\n    pestanas_leidas: rangos.length,\n    pestanas_que_faltan: faltan,\n    vendidas: filas.length,\n  },\n}];\n"
+      },
+      "id": "8f786443-14a7-4aab-9be3-be537fc91681"
+    },
+    {
+      "name": "Sincronizar Calendarios",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        100,
+        560
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Ou3OkUR92F7f6ofK",
+          "name": "Supabase - Christian Sierra (nuevo)"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from fn_sincronizar_agenda_desde_hoja($1::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json.filas)] }}"
+        }
+      },
+      "id": "ab73d7ae-3772-4041-91a6-472e071e3131"
+    },
+    {
+      "name": "Armar Revisión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        640
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La pestana `Revisar`: las filas del libro que la sincronizacion NO pudo\n// meter en la agenda, escritas donde alguien las vea.\n//\n// POR QUE UNA PESTANA APARTE. La rama de `Reservas` escribe el resultado de\n// cada fila al lado de la fila, en su columna `sincronizado`. Aqui no se puede:\n// los calendarios del equipo son SU documento -- una copia fiel del libro que\n// llevan -- y meterles una columna de la maquina seria cambiarles el papel\n// debajo de la mano. Asi que el rechazo se recoge en una lista aparte.\n//\n// Y tiene que estar en la hoja, no en los logs de n8n: nadie mira los logs. Si\n// el rechazo no esta aqui, no esta en ninguna parte -- y una fila rechazada es\n// una fecha vendida que el agente sigue viendo libre.\n//\n// LO QUE NO SALE. Las fechas que ya pasaron. Son cientos -- el libro arranca\n// en enero de 2025 -- y no hay nada que proteger en ellas: el propio agente\n// rechaza una fecha pasada antes de mirar la agenda. Si salieran, la lista\n// util quedaria enterrada debajo de ellas, que es la forma mas segura de que\n// nadie la lea.\n//\n// ES ESTABLE A PROPOSITO. Se calcula solo con el estado de ahora, sin fechas\n// ni horas dentro, y se compara con lo que ya hay en la pestana: dos corridas\n// seguidas sin novedad no escriben ni una celda. Sin eso, la hoja acumularia\n// una version nueva cada quince minutos.\n\nconst ENCABEZADO = ['pestaña', 'fila', 'celda', 'salón', 'cliente', 'qué pasó'];\n\n// Lo que merece que alguien lo mire.\n//   rechazada  no se pudo leer: fecha imposible, salón que no existe\n//   choque     el bot y una persona tienen la misma fecha\n//   omitida    solo cuando NO es una fecha pasada: ahí está el \"este salón no\n//              lo manejamos\", que conviene ver una vez.\nconst salePorResultado = (r) =>\n  r.resultado === 'rechazada' ||\n  r.resultado === 'choque' ||\n  (r.resultado === 'omitida' && r.detalle !== 'la fecha ya pasó');\n\nconst entrada = $('Leer Calendarios en Filas').first().json;\nconst porIndice = new Map(entrada.filas.map((f) => [f.fila, f]));\n\nconst lineas = [];\nfor (const item of $('Sincronizar Calendarios').all()) {\n  const r = item.json;\n  if (!salePorResultado(r)) continue;\n  const f = porIndice.get(r.fila);\n  if (!f) continue;                       // el indice viaja de ida y vuelta: no deberia faltar\n  lineas.push([f.pestana, f.fila_hoja, f.celda, f.sede || '', f.cliente || '', r.detalle || '']);\n}\n\n// Una pestana que la sincronizacion no encontro es mas grave que cualquier\n// fila: significa que un salon entero se esta quedando fuera. Va primero.\nfor (const p of (entrada.pestanas_que_faltan || [])) {\n  lineas.unshift([p, '', '', '', '',\n    'no pude leer esta pestaña: ¿la renombraron? Mientras tanto, ese salón no se está sincronizando']);\n}\n\n// Orden fijo: si el contenido no cambia, la lista tampoco.\nlineas.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || (Number(a[1]) || 0) - (Number(b[1]) || 0));\n\n// ¿Cambió algo respecto de lo que ya está escrito? Se compara celda a celda,\n// contra lo que se leyó de A2 hacia abajo en el mismo viaje.\nconst actual = (entrada.revision_actual || []).filter((f) => (f || []).some((c) => String(c || '').trim() !== ''));\nconst mismo = actual.length === lineas.length &&\n  lineas.every((l, i) => l.every((c, j) => String(c) === String((actual[i] || [])[j] === undefined ? '' : (actual[i] || [])[j])));\n\nif (mismo) return [];\n\n// Se escribe desde A2 y se rellena con filas vacías hasta cubrir lo que había\n// antes: sin eso, una lista que se acorta dejaría abajo los restos de la\n// anterior -- avisos ya resueltos que alguien volvería a perseguir.\nconst ancho = ENCABEZADO.length;\nconst vacia = new Array(ancho).fill('');\nconst valores = lineas.slice();\nwhile (valores.length < actual.length) valores.push(vacia.slice());\n\nreturn [{\n  json: {\n    data: [{ range: `Revisar!A2:F${1 + Math.max(valores.length, 1)}`,\n             values: valores.length ? valores : [vacia.slice()] }],\n    pendientes: lineas.length,\n  },\n}];\n"
+      },
+      "id": "ae985fa9-73ad-425f-a972-92075ce6ac35"
+    },
+    {
+      "name": "Escribir Revisión",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        640
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "ZzY1Zt2j9JaKlujB",
+          "name": "Google Service Account - Sheets"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1H1Sq3HGl0oWamnt7TLCg2X_Tvyj6blMF6TjJ7ihtDAA/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ valueInputOption: 'RAW', data: $json.data }) }}",
+        "options": {}
+      },
+      "id": "b1d30624-8b54-40fc-9640-a5df8b72fb82"
     }
   ],
   "connections": {
@@ -217,6 +386,11 @@
         [
           {
             "node": "Leer la Hoja",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Calendarios",
             "type": "main",
             "index": 0
           }
@@ -288,6 +462,55 @@
         [
           {
             "node": "Guardar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Calendarios": {
+      "main": [
+        [
+          {
+            "node": "Leer Calendarios en Filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Calendarios en Filas": {
+      "main": [
+        [
+          {
+            "node": "Sincronizar Calendarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sincronizar Calendarios": {
+      "main": [
+        [
+          {
+            "node": "Armar Revisión",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Nuevas en Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Revisión": {
+      "main": [
+        [
+          {
+            "node": "Escribir Revisión",
             "type": "main",
             "index": 0
           }
