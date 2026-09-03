@@ -165,6 +165,51 @@ async function main() {
   const sesiones = [];
   const nuevaSesion = (n) => { const s = `ocupadas-${n}-${Date.now()}`; sesiones.push('test-' + s); return s; };
 
+  // ========================================================================
+  console.log(c.neg('\n0. El candado de las sedes aliadas'));
+  console.log(c.gris('   Las once sedes de terceros no se apartan por chat: agenda compartida,\n' +
+                     '   lo coordina el asesor. Hasta el 2026-09-03 eso vivía SOLO en el prompt,\n' +
+                     '   así que lo único que lo sostenía era el criterio del modelo.\n'));
+  // ========================================================================
+  {
+    // Se corre la consulta del nodo `Separar Fecha` tal como está en el .json
+    // -- leída, no copiada -- contra una sede aliada. No inserta nada por
+    // definición, así que se puede correr contra la base de verdad sin dejar
+    // rastro. El caso contrario -- que en una sede PROPIA sí aparte -- lo
+    // cubre `probar-reserva-completa.js` de punta a punta.
+    const wf = JSON.parse(require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'n8n', 'workflow-separar-fecha.json'), 'utf8'));
+    const q = wf.nodes.find(n => n.name === 'Separar Fecha').parameters.query;
+    const lit = (v) => v === null ? 'null' : `'${String(v).replace(/'/g, "''")}'`;
+    const ligar = (sql, ps) => ps.reduce((o, v, i) => o.split('$' + (i + 1)).join(lit(v)), sql);
+
+    const aliadas = await sql(
+      'select nombre_sede from sedes where not coalesce(es_propia, false) order by nombre_sede limit 3');
+    // Una fecha a la que no llega el calendario de la empresa: si el candado se
+    // rompiera, se vería enseguida y no pisaría nada de nadie.
+    const lejos = `${new Date().getUTCFullYear() + 3}-08-04`;
+
+    for (const { nombre_sede } of aliadas) {
+      const r = await sql(ligar(q, [nombre_sede, lejos, 'PRUEBA CANDADO', 'test-candado-aliadas', '+573000000000']));
+      ok(r[0] && r[0].estado_resultado === 'sede_aliada' && !r[0].id_reserva,
+         `${nombre_sede}: no se aparta por chat (${r[0] && r[0].estado_resultado})`,
+         JSON.stringify(r[0]));
+    }
+
+    const quedo = await sql(`
+      select count(*)::int as n from agenda_reservas a join sedes s on s.id_sede = a.sede_id
+       where a.fecha_solicitada = date '${lejos}' and not coalesce(s.es_propia, false)`);
+    ok(Number(quedo[0].n) === 0, 'y en la agenda no quedó ni una de las tres', JSON.stringify(quedo[0]));
+
+    // No hace falta limpiar nada más: la consulta también llama a
+    // `fn_reserva_anotar`, pero esa cuelga la ficha de un lead y aquí el
+    // teléfono no es de ningún lead, así que no escribe. Comprobado.
+    const fichas = await sql(
+      "select count(*)::int as n from reservas r join leads l on l.id = r.lead_id" +
+      " where l.telefono = 'test-candado-aliadas'");
+    ok(Number(fichas[0].n) === 0, 'y tampoco dejó una ficha colgando');
+  }
+
   const conversar = async (sesion, turnos) => {
     const dichos = [];
     for (const t of turnos) {
